@@ -1,0 +1,22 @@
+concurrent = 1
+check_interval = 0
+shutdown_timeout = 0
+
+[session_server]
+  session_timeout = 1800
+
+[[runners]]
+  name = "marto"
+  url = "https://git.fhict.nl"
+  id = 10137
+  token = "glrt-fpgdzmV_4AsBrnt2sXvQ"
+  token_obtained_at = 2024-09-16T17:49:52Z
+  token_expires_at = 0001-01-01T00:00:00Z
+  executor = "shell"
+  shell = "powershell"
+  [runners.custom_build_dir]
+  [runners.cache]
+    MaxUploadedArchiveSize = 0
+    [runners.cache.s3]
+    [runners.cache.gcs]
+    [runners.cache.azure]
