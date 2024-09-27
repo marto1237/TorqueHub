@@ -9,8 +9,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import torquehub.torquehub.controllers.UserController;
-import torquehub.torquehub.domain.User;
-import torquehub.torquehub.business.service.UserService;
+import torquehub.torquehub.domain.model.User;
+import torquehub.torquehub.business.interfaces.UserService;
 
 import java.util.Arrays;
 

@@ -1,20 +1,15 @@
-package torquehub.torquehub.domain;
-
+package torquehub.torquehub.domain.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Builder
 @Data
+@Builder
 @AllArgsConstructor
-public class User {
-    private Long id;
-
+@NoArgsConstructor
+public class UserUpdateRequest {
     private String username;
-
     private String email;
-
-    private String password;
 }

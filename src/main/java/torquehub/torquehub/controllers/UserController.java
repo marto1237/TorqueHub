@@ -4,9 +4,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import torquehub.torquehub.controllers.DTO.UserDto;
-import torquehub.torquehub.domain.User;
-import torquehub.torquehub.business.service.UserService;
+import torquehub.torquehub.business.interfaces.UserService;
+import torquehub.torquehub.domain.request.UserCreateRequest;
+import torquehub.torquehub.domain.request.UserUpdateRequest;
+import torquehub.torquehub.domain.response.MessageResponse;
+import torquehub.torquehub.domain.response.UserResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,44 +21,36 @@ public class UserController {
     private UserService userService;
 
     @GetMapping
-    public List<User> getUsers() {
+    public List<UserResponse> getUsers() {
         return userService.getAllUsers();
     }
 
-    @GetMapping("{id}")
-    public ResponseEntity<User> getStudent(@PathVariable(value = "id") final long id){
-        final Optional<User> userOptional = Optional.ofNullable(userService.getUserById(id));
-        if (userOptional.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok().body(userOptional.get());
+    @GetMapping("/{id}")
+    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
+        Optional<UserResponse> user = userService.getUserById(id);
+        return user.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<UserDto> createUser(@RequestBody User user) {
-        User createdUser = userService.createUser(user);
-        UserDto userDto = new UserDto();
-        userDto.setId(createdUser.getId());
-        userDto.setUsername(createdUser.getUsername());
-        userDto.setEmail(createdUser.getEmail());
-        return ResponseEntity.status(HttpStatus.CREATED).body(userDto);
+    public ResponseEntity<UserResponse> createUser(@RequestBody UserCreateRequest userDto) {
+        UserResponse createdUser = userService.createUser(userDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 
-    @DeleteMapping("{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ResponseEntity<Void> deleteUser(@PathVariable long id) {
+    @PutMapping("/{id}")
+    public ResponseEntity<MessageResponse> updateUser(@PathVariable Long id, @RequestBody UserUpdateRequest updateDto) {
+        MessageResponse response = new MessageResponse();
+        if (userService.updateUserById(id, updateDto)) {
+            response.setMessage("User updated successfully.");
+        } else {
+            response.setMessage("User with ID " + id + " not found.");
+        }
+        return  ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PutMapping("{id}")
-    public ResponseEntity<Void> updateUser(@PathVariable("id") long id,
-                                          @RequestBody User user) {
-
-        user.setId(id);
-        userService.updateUserById(user);
-
         return ResponseEntity.noContent().build();
     }
 }
