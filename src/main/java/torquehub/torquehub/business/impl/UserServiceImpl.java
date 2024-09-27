@@ -94,29 +94,6 @@ public class UserServiceImpl implements UserService {
         }
         return false;
     }
-    @Override
-    public LoginResponse login(LoginRequest loginRequest) {
-        Optional<User> userOptional = userRepository.findByEmail(loginRequest.getEmail());
-
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-
-            // Check the hashed password with the salt
-            String saltedPassword = loginRequest.getPassword() + user.getSalt();
-            if (passwordEncoder.matches(saltedPassword, user.getPassword())) {
-                return LoginResponse.builder()
-                        .id(user.getId())
-                        .username(user.getUsername())
-                        .email(user.getEmail())
-                        .build();
-            } else {
-                throw new IllegalArgumentException("Invalid password.");
-            }
-        } else {
-            throw new IllegalArgumentException("User not found.");
-        }
-    }
-
 
     @Override
     public Optional<UserResponse> findByUsername(String username) {
@@ -140,5 +117,30 @@ public class UserServiceImpl implements UserService {
         byte[] saltBytes = new byte[16];
         random.nextBytes(saltBytes);
         return new String(saltBytes); // or use a Base64 encoding
+    }
+
+    @Override
+    public LoginResponse login(LoginRequest loginRequest) {
+        Optional<User> userOptional = userRepository.findByEmail(loginRequest.getEmail());
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+
+            // Check the hashed password with the salt
+            String saltedPassword = loginRequest.getPassword() + user.getSalt();
+            if (passwordEncoder.matches(saltedPassword, user.getPassword())) {
+                return LoginResponse.builder()
+                        .id(user.getId())
+                        .username(user.getUsername())
+                        .email(user.getEmail())
+                        .build();
+            } else {
+                // Generic error message: Invalid credentials (even though the email is valid)
+                throw new IllegalArgumentException("Invalid credentials");
+            }
+        } else {
+            // Generic error message: Invalid credentials (email not found)
+            throw new IllegalArgumentException("Invalid credentials");
+        }
     }
 }

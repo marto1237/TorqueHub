@@ -30,6 +30,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<MessageResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
         MessageResponse response = new MessageResponse();
         response.setMessage(ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+        if (ex.getMessage().equals("Invalid credentials")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);  // 401 Unauthorized for wrong password or email
+        } else if (ex.getMessage().equals("User not found")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);      // 404 Not Found for missing users
+        } else {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);       // 409 Conflict for other cases
+        }
     }
 }

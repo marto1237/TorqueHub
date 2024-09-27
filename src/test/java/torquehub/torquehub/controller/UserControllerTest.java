@@ -8,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import torquehub.torquehub.configuration.SecurityConfig;
 import torquehub.torquehub.controllers.UserController;
@@ -39,6 +40,17 @@ public class UserControllerTest {
 
     private UserResponse testUserResponse;
 
+    @Test
+    @WithMockUser
+    public void shouldReturnNoUsers_whenGetAllUsers() throws Exception {
+        given(userService.getAllUsers()).willReturn(Arrays.asList());
+
+        mockMvc.perform(get("/users"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
     @BeforeEach
     public void setup() {
         testUserResponse = UserResponse.builder()
@@ -49,7 +61,8 @@ public class UserControllerTest {
     }
 
     @Test
-    public void testGetUsers() throws Exception {
+    @WithMockUser
+    public void shouldReturnListOfUsers_whenGetAllUsers() throws Exception {
         given(userService.getAllUsers()).willReturn(Arrays.asList(testUserResponse));
 
         mockMvc.perform(get("/users"))
@@ -59,7 +72,8 @@ public class UserControllerTest {
     }
 
     @Test
-    public void testGetUserById() throws Exception {
+    @WithMockUser
+    void shouldReturnUser_whenGetUserById() throws Exception {
         given(userService.getUserById(1L)).willReturn(Optional.of(testUserResponse));
 
         mockMvc.perform(get("/users/1"))
@@ -68,8 +82,19 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.username").value("testuser"));
     }
 
+
     @Test
-    public void testCreateUser() throws Exception {
+    @WithMockUser
+    void shouldReturnNotFound_whenGetUserById() throws Exception {
+        given(userService.getUserById(1L)).willReturn(Optional.empty());
+
+        mockMvc.perform(get("/users/1"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser
+    void shouldCreateUser_whenValidRequest() throws Exception {
         UserCreateRequest newUserRequest = UserCreateRequest.builder()
                 .username("newuser")
                 .email("new@example.com")
@@ -92,7 +117,44 @@ public class UserControllerTest {
     }
 
     @Test
-    public void testDeleteUser() throws Exception {
+    @WithMockUser
+    void shouldReturnBadRequest_whenCreateUserWithInvalidData()  throws Exception {
+        UserCreateRequest invalidUserRequest = UserCreateRequest.builder()
+                .username("AB") // Invalid : too short min 3 characters max 50 characters
+                .email("invlaid-email") // Invalid : invalid email format
+                .password("123") // Invalid : too short min 6 characters
+                .build();
+
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidUserRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.username").value("Username must be between 3 and 50 characters"))
+                .andExpect(jsonPath("$.email").value("Email should be valid"))
+                .andExpect(jsonPath("$.password").value("Password must be at least 6 characters"));
+    }
+
+    @Test
+    @WithMockUser
+    void shouldReturnBadRequest_whenCreateUserWithDuplicateEmailOrUsername() throws Exception {
+        UserCreateRequest duplicateUserRequest = UserCreateRequest.builder()
+                .username("newuser")
+                .email("new@example.com")
+                .password("newpassword")
+                .build();
+
+        given(userService.createUser(duplicateUserRequest)).willThrow(new IllegalArgumentException("Username or email already exists."));
+
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(duplicateUserRequest)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Username or email already exists."));
+    }
+
+    @Test
+    @WithMockUser
+    void shouldDeleteUser_whenUserExists() throws Exception {
         mockMvc.perform(delete("/users/1"))
                 .andExpect(status().isNoContent());
 
@@ -100,7 +162,15 @@ public class UserControllerTest {
     }
 
     @Test
-    public void testUpdateUser() throws Exception {
+    @WithMockUser
+    void shouldReturnNotFound_whenDeleteNonExistingUser() throws Exception {
+        mockMvc.perform(delete("/users/999"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser
+    void shouldUpdateUser_whenValidRequest() throws Exception {
         UserUpdateRequest updatedUserRequest = UserUpdateRequest.builder()
                 .username("updateduser")
                 .email("updated@example.com")
@@ -117,4 +187,43 @@ public class UserControllerTest {
 
         then(userService).should().updateUserById(1L, updatedUserRequest);
     }
+
+    @Test
+    @WithMockUser
+    void shouldReturnNotFound_whenUpdateNonExistentUser() throws Exception {
+        UserUpdateRequest updatedUserRequest = UserUpdateRequest.builder()
+                .username("updateduser")
+                .email("update@gmail.com")
+                .build();
+
+        given(userService.updateUserById(999L, updatedUserRequest)).willReturn(false);
+
+        mockMvc.perform(put("/users/999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updatedUserRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("User with ID 999 not found."));
+
+    }
+
+    @Test
+    @WithMockUser
+    void shouldReturnBadRequest_whenUpdateUserWithInvalidData() throws Exception {
+        UserUpdateRequest invalidUserRequest = UserUpdateRequest.builder()
+                .username("AB") // Invalid : too short min 3 characters max 50 characters
+                .email("invlaid-email") // Invalid : invalid email format
+                .password("123") // Invalid : too short min 6 characters
+                .build();
+
+        mockMvc.perform(put("/users/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidUserRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.username").value("Username must be between 3 and 50 characters"))
+                .andExpect(jsonPath("$.email").value("Email should be valid"))
+                .andExpect(jsonPath("$.password").value("Password must be at least 6 characters"));
+
+    }
+
+
 }
