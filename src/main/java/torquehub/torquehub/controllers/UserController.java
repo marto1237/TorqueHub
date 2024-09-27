@@ -1,20 +1,23 @@
 package torquehub.torquehub.controllers;
 
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.UserService;
-import torquehub.torquehub.domain.request.UserCreateRequest;
-import torquehub.torquehub.domain.request.UserUpdateRequest;
+import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
+import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
 import torquehub.torquehub.domain.response.MessageResponse;
-import torquehub.torquehub.domain.response.UserResponse;
+import torquehub.torquehub.domain.response.UserDtos.UserResponse;
 
 import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/users")
+@Validated
 public class UserController {
 
     @Autowired
@@ -32,13 +35,13 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<UserResponse> createUser(@RequestBody UserCreateRequest userDto) {
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserCreateRequest userDto) {
         UserResponse createdUser = userService.createUser(userDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MessageResponse> updateUser(@PathVariable Long id, @RequestBody UserUpdateRequest updateDto) {
+    public ResponseEntity<MessageResponse> updateUser(@PathVariable Long id,@Valid @RequestBody UserUpdateRequest updateDto) {
         MessageResponse response = new MessageResponse();
         if (userService.updateUserById(id, updateDto)) {
             response.setMessage("User updated successfully.");

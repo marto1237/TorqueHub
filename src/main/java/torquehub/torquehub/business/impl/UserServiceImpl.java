@@ -1,15 +1,19 @@
 package torquehub.torquehub.business.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import torquehub.torquehub.business.interfaces.UserService;
 import torquehub.torquehub.domain.model.User;
-import torquehub.torquehub.domain.request.UserCreateRequest;
-import torquehub.torquehub.domain.request.UserUpdateRequest;
-import torquehub.torquehub.domain.response.UserResponse;
+import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
+import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
+import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
+import torquehub.torquehub.domain.response.LoginDtos.LoginResponse;
+import torquehub.torquehub.domain.response.UserDtos.UserResponse;
 import torquehub.torquehub.persistence.repository.UserRepository;
 
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -22,9 +26,10 @@ public class UserServiceImpl implements UserService {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+    private final SecureRandom random = new SecureRandom();
+
     @Override
     public List<UserResponse> getAllUsers() {
-        // Fetch users and map to UserResponse DTO
         return userRepository.findAll().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -32,28 +37,34 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse createUser(UserCreateRequest userDto) {
-        // Hash the password
-        String hashedPassword = passwordEncoder.encode(userDto.getPassword());
+        try {
+            // Hash password and generate salt
+            String salt = generateSalt();
+            String hashedPassword = passwordEncoder.encode(userDto.getPassword() + salt);
 
-        // Create user entity
-        User user = User.builder()
-                .username(userDto.getUsername())
-                .email(userDto.getEmail())
-                .password(hashedPassword)
-                .build();
+            // Create user entity
+            User user = User.builder()
+                    .username(userDto.getUsername())
+                    .email(userDto.getEmail())
+                    .password(hashedPassword)
+                    .salt(salt)
+                    .build();
 
-        // Save the user
-        User savedUser = userRepository.save(user);
+            // Save user
+            User savedUser = userRepository.save(user);
+            return mapToResponse(savedUser);
 
-        // Return the response DTO
-        return mapToResponse(savedUser);
+        } catch (DataIntegrityViolationException e) {
+            if (e.getCause() instanceof org.hibernate.exception.ConstraintViolationException) {
+                throw new IllegalArgumentException("Username or email already exists.");
+            }
+            throw e;  // Re-throw other exceptions
+        }
     }
 
     @Override
     public Optional<UserResponse> getUserById(long id) {
-        // Fetch the user by ID and map to response DTO
-        return userRepository.findById(id)
-                .map(this::mapToResponse);
+        return userRepository.findById(id).map(this::mapToResponse);
     }
 
     @Override
@@ -83,11 +94,33 @@ public class UserServiceImpl implements UserService {
         }
         return false;
     }
+    @Override
+    public LoginResponse login(LoginRequest loginRequest) {
+        Optional<User> userOptional = userRepository.findByEmail(loginRequest.getEmail());
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+
+            // Check the hashed password with the salt
+            String saltedPassword = loginRequest.getPassword() + user.getSalt();
+            if (passwordEncoder.matches(saltedPassword, user.getPassword())) {
+                return LoginResponse.builder()
+                        .id(user.getId())
+                        .username(user.getUsername())
+                        .email(user.getEmail())
+                        .build();
+            } else {
+                throw new IllegalArgumentException("Invalid password.");
+            }
+        } else {
+            throw new IllegalArgumentException("User not found.");
+        }
+    }
+
 
     @Override
     public Optional<UserResponse> findByUsername(String username) {
-        return userRepository.findByUsername(username)
-                .map(this::mapToResponse);
+        return userRepository.findByUsername(username).map(this::mapToResponse);
     }
 
     // Helper method to map User entity to UserResponse DTO
@@ -97,5 +130,15 @@ public class UserServiceImpl implements UserService {
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .build();
+    }
+
+    @Override
+    public Optional<UserResponse> findByEmail(String email) {
+        return userRepository.findByEmail(email).map(this::mapToResponse);
+    }
+    private String generateSalt() {
+        byte[] saltBytes = new byte[16];
+        random.nextBytes(saltBytes);
+        return new String(saltBytes); // or use a Base64 encoding
     }
 }

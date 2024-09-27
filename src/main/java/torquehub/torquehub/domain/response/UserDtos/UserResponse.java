@@ -1,4 +1,4 @@
-package torquehub.torquehub.domain.request;
+package torquehub.torquehub.domain.response.UserDtos;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserUpdateRequest {
+public class UserResponse {
+    private Long id;
     private String username;
     private String email;
 }

@@ -1,21 +1,20 @@
 package torquehub.torquehub.business.interfaces;
 
-import torquehub.torquehub.domain.request.UserCreateRequest;
-import torquehub.torquehub.domain.request.UserUpdateRequest;
-import torquehub.torquehub.domain.response.UserResponse;
+import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
+import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
+import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
+import torquehub.torquehub.domain.response.LoginDtos.LoginResponse;
+import torquehub.torquehub.domain.response.UserDtos.UserResponse;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface UserService {
 
-    // Return a list of UserResponse instead of List<User>
     List<UserResponse> getAllUsers();
 
-    // Method to create a user and return a UserResponse
     UserResponse createUser(UserCreateRequest userCreateRequest);
 
-    // Return Optional<UserResponse> instead of User
     Optional<UserResponse> getUserById(long id);
 
     void deleteUser(long id);
@@ -24,9 +23,11 @@ public interface UserService {
 
     boolean userExistsByUsername(String username);
 
-    // Update method that returns boolean
     boolean updateUserById(long id, UserUpdateRequest userUpdateRequest);
 
-    // Find user by username and return Optional<UserResponse>
     Optional<UserResponse> findByUsername(String username);
+
+    LoginResponse login(LoginRequest loginRequest);
+
+    Optional<UserResponse> findByEmail(String email);
 }
