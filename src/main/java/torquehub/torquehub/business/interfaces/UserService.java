@@ -15,15 +15,15 @@ public interface UserService {
 
     UserResponse createUser(UserCreateRequest userCreateRequest);
 
-    Optional<UserResponse> getUserById(long id);
+    Optional<UserResponse> getUserById(Long id);
 
-    void deleteUser(long id);
+    void deleteUser(Long id);
 
-    boolean userExistsById(long id);
+    boolean userExistsById(Long id);
 
     boolean userExistsByUsername(String username);
 
-    boolean updateUserById(long id, UserUpdateRequest userUpdateRequest);
+    boolean updateUserById(Long id, UserUpdateRequest userUpdateRequest);
 
     Optional<UserResponse> findByUsername(String username);
 

@@ -51,6 +51,8 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
+    String role = "USER";
+
     @BeforeEach
     public void setup() {
         testUserResponse = UserResponse.builder()
@@ -118,6 +120,25 @@ public class UserControllerTest {
 
     @Test
     @WithMockUser
+    void shouldReturnBadRequest_whenCreateUserWithInvalidRole() throws Exception {
+        UserCreateRequest invalidUserRequest = UserCreateRequest.builder()
+                .username("newuser")
+                .email("new@example.com")
+                .password("newpassword")
+                .role("INVALID_ROLE") // Invalid role
+                .build();
+
+        given(userService.createUser(invalidUserRequest)).willThrow(new IllegalArgumentException("Invalid role"));
+
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidUserRequest)))
+                .andExpect(status().isConflict()) // Expecting 400 Bad Request
+                .andExpect(jsonPath("$.message").value("Invalid role"));
+    }
+
+    @Test
+    @WithMockUser
     void shouldReturnBadRequest_whenCreateUserWithInvalidData()  throws Exception {
         UserCreateRequest invalidUserRequest = UserCreateRequest.builder()
                 .username("AB") // Invalid : too short min 3 characters max 50 characters
@@ -155,8 +176,11 @@ public class UserControllerTest {
     @Test
     @WithMockUser
     void shouldDeleteUser_whenUserExists() throws Exception {
+        given(userService.getUserById(1L)).willReturn(Optional.of(testUserResponse));
+
         mockMvc.perform(delete("/users/1"))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())  // Expecting 200 OK status
+                .andExpect(jsonPath("$.message").value("User deleted successfully."));  // Check for the success message
 
         then(userService).should().deleteUser(1L);
     }
@@ -164,9 +188,16 @@ public class UserControllerTest {
     @Test
     @WithMockUser
     void shouldReturnNotFound_whenDeleteNonExistingUser() throws Exception {
+        given(userService.getUserById(999L)).willReturn(Optional.empty());
+
         mockMvc.perform(delete("/users/999"))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isNotFound())  // Expecting 404 Not Found status
+                .andExpect(jsonPath("$.message").value("User with ID 999 not found."));
+
+        then(userService).should().getUserById(999L);
+        then(userService).shouldHaveNoMoreInteractions();
     }
+
 
     @Test
     @WithMockUser

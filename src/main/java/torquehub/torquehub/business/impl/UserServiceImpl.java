@@ -5,17 +5,20 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import torquehub.torquehub.business.interfaces.UserService;
+import torquehub.torquehub.domain.model.Role;
 import torquehub.torquehub.domain.model.User;
 import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
 import torquehub.torquehub.domain.response.LoginDtos.LoginResponse;
 import torquehub.torquehub.domain.response.UserDtos.UserResponse;
+import torquehub.torquehub.persistence.repository.RoleRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
 
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,6 +26,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private RoleRepository roleRepository;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -42,12 +48,21 @@ public class UserServiceImpl implements UserService {
             String salt = generateSalt();
             String hashedPassword = passwordEncoder.encode(userDto.getPassword() + salt);
 
+            // Fetch the role from the database
+            String roleName = (userDto.getRole() == null || userDto.getRole().isEmpty()) ? "USER" : userDto.getRole();
+            Optional<Role> roleOptional = roleRepository.findByName(roleName);
+            if (roleOptional.isEmpty()) {
+                throw new IllegalArgumentException("Invalid role: " + roleName);
+            }
+            Role role = roleOptional.get();
+
             // Create user entity
             User user = User.builder()
                     .username(userDto.getUsername())
                     .email(userDto.getEmail())
                     .password(hashedPassword)
                     .salt(salt)
+                    .role(role)
                     .build();
 
             // Save user
@@ -55,25 +70,22 @@ public class UserServiceImpl implements UserService {
             return mapToResponse(savedUser);
 
         } catch (DataIntegrityViolationException e) {
-            if (e.getCause() instanceof org.hibernate.exception.ConstraintViolationException) {
-                throw new IllegalArgumentException("Username or email already exists.");
-            }
-            throw e;  // Re-throw other exceptions
+            throw new IllegalArgumentException("Username or email already exists.");
         }
     }
 
     @Override
-    public Optional<UserResponse> getUserById(long id) {
+    public Optional<UserResponse> getUserById(Long id) {
         return userRepository.findById(id).map(this::mapToResponse);
     }
 
     @Override
-    public void deleteUser(long id) {
+    public void deleteUser(Long id) {
         userRepository.deleteById(id);
     }
 
     @Override
-    public boolean userExistsById(long id) {
+    public boolean userExistsById(Long id) {
         return userRepository.existsById(id);
     }
 
@@ -83,7 +95,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean updateUserById(long id, UserUpdateRequest userUpdateRequest) {
+    public boolean updateUserById(Long id, UserUpdateRequest userUpdateRequest) {
         Optional<User> userOptional = userRepository.findById(id);
         if (userOptional.isPresent()) {
             User existingUser = userOptional.get();
@@ -106,6 +118,7 @@ public class UserServiceImpl implements UserService {
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
+                .role(user.getRole().getName())
                 .build();
     }
 
@@ -133,6 +146,7 @@ public class UserServiceImpl implements UserService {
                         .id(user.getId())
                         .username(user.getUsername())
                         .email(user.getEmail())
+                        .role(user.getRole().getName())
                         .build();
             } else {
                 // Generic error message: Invalid credentials (even though the email is valid)

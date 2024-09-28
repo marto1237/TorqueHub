@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import torquehub.torquehub.business.interfaces.UserService;
 import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
+import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
 import torquehub.torquehub.domain.response.LoginDtos.LoginResponse;
 import torquehub.torquehub.domain.response.MessageResponse;
 import torquehub.torquehub.domain.response.UserDtos.UserResponse;
@@ -29,4 +30,12 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
 
     }
+    @PostMapping("/register")
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody UserCreateRequest userCreateRequest) {
+        UserResponse createdUser = userService.createUser(userCreateRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+    }
+
+
+
 }

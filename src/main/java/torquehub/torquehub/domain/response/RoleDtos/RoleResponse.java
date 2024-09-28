@@ -1,4 +1,4 @@
-package torquehub.torquehub.domain.response.UserDtos;
+package torquehub.torquehub.domain.response.RoleDtos;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,9 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserResponse {
+public class RoleResponse {
     private Long id;
-    private String username;
-    private String email;
-    private String role;
+    private String name;
 }

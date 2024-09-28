@@ -10,6 +10,7 @@ import torquehub.torquehub.business.interfaces.UserService;
 import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
 import torquehub.torquehub.domain.response.MessageResponse;
+import torquehub.torquehub.domain.response.RoleDtos.RoleResponse;
 import torquehub.torquehub.domain.response.UserDtos.UserResponse;
 
 import java.util.List;
@@ -52,8 +53,17 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<MessageResponse> deleteUser(@PathVariable Long id) {
+        MessageResponse response = new MessageResponse();
+        Optional<UserResponse> user = userService.getUserById(id);
+        if (user.isPresent()) {
+            userService.deleteUser(id);
+            response.setMessage("User deleted successfully.");
+            return ResponseEntity.ok(response);
+        } else {
+            response.setMessage("User with ID " + id + " not found.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
     }
+
 }

@@ -25,4 +25,7 @@ public class UserCreateRequest {
     @NotBlank
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
+
+    private String role;
+
 }
