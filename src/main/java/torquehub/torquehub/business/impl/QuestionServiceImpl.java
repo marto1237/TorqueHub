@@ -8,6 +8,7 @@ import torquehub.torquehub.domain.model.User;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionCreateRequest;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionUpdateRequest;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionResponse;
+import torquehub.torquehub.persistence.repository.AnswerRepository;
 import torquehub.torquehub.persistence.repository.QuestionRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
 
@@ -18,6 +19,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class QuestionServiceImpl implements QuestionService {
+
+    @Autowired
+    private AnswerRepository answerRepository;
 
     @Autowired
     private QuestionRepository questionRepository;
@@ -79,12 +83,12 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     public Optional<List<QuestionResponse>>getQuestionsByUser(Long userId) {
-        Optional<List<Question>> questions = questionRepository.findByUserId(userId);
+        List<Question> questions = questionRepository.findByUserId(userId);
 
         if (questions.isEmpty()) {
             return Optional.empty();
         }else {
-            return Optional.of(questions.get().stream()
+            return Optional.of(questions.stream()
                     .map(this::convertToResponse)
                     .collect(Collectors.toList()));
         }
@@ -92,13 +96,13 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     public List<QuestionResponse> getQuestionsByTag(String tag) {
-        Optional<List<Question>> questions = questionRepository.findByTags(tag);
+        List<Question> questions = questionRepository.findByTags(tag);
 
         if (questions.isEmpty()) {
             throw new IllegalArgumentException("No questions found for this tag.");
         }
 
-        return questions.get().stream()
+        return questions.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
