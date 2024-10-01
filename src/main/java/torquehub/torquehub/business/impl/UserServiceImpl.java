@@ -4,7 +4,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.UserService;
+import torquehub.torquehub.domain.mapper.UserMapper;
 import torquehub.torquehub.domain.model.Role;
 import torquehub.torquehub.domain.model.User;
 import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
@@ -17,6 +19,7 @@ import torquehub.torquehub.persistence.repository.UserRepository;
 
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,6 +33,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private RoleRepository roleRepository;
 
+    @Autowired
+    private UserMapper userMapper;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     private final SecureRandom random = new SecureRandom();
@@ -37,24 +43,24 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
-                .map(this::mapToResponse)
+                .map(userMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
+
     @Override
     public UserResponse createUser(UserCreateRequest userDto) {
+        String roleName = (userDto.getRole() == null || userDto.getRole().isEmpty()) ? "USER" : userDto.getRole();
+        Optional<Role> roleOptional = roleRepository.findByName(roleName);
+        if (roleOptional.isEmpty()) {
+            throw new IllegalArgumentException("Invalid role: " + roleName);
+        }
+        Role role = roleOptional.get();
+
         try {
             // Hash password and generate salt
             String salt = generateSalt();
             String hashedPassword = passwordEncoder.encode(userDto.getPassword() + salt);
-
-            // Fetch the role from the database
-            String roleName = (userDto.getRole() == null || userDto.getRole().isEmpty()) ? "USER" : userDto.getRole();
-            Optional<Role> roleOptional = roleRepository.findByName(roleName);
-            if (roleOptional.isEmpty()) {
-                throw new IllegalArgumentException("Invalid role: " + roleName);
-            }
-            Role role = roleOptional.get();
 
             // Create user entity
             User user = User.builder()
@@ -67,16 +73,19 @@ public class UserServiceImpl implements UserService {
 
             // Save user
             User savedUser = userRepository.save(user);
-            return mapToResponse(savedUser);
+            return userMapper.toResponse(savedUser);
 
         } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("Username or email already exists.");
+        }catch (Exception e) {
+            // General error handling
+            throw new RuntimeException("Failed to create user. Please try again later.");
         }
     }
 
     @Override
     public Optional<UserResponse> getUserById(Long id) {
-        return userRepository.findById(id).map(this::mapToResponse);
+        return userRepository.findById(id).map(userMapper::toResponse);
     }
 
     @Override
@@ -95,36 +104,35 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public boolean updateUserById(Long id, UserUpdateRequest userUpdateRequest) {
-        Optional<User> userOptional = userRepository.findById(id);
-        if (userOptional.isPresent()) {
-            User existingUser = userOptional.get();
-            existingUser.setUsername(userUpdateRequest.getUsername());
-            existingUser.setEmail(userUpdateRequest.getEmail());
-            userRepository.save(existingUser);
-            return true;
+        try {
+            Optional<User> userOptional = userRepository.findById(id);
+            if (userOptional.isPresent()) {
+                User existingUser = userOptional.get();
+                existingUser.setUsername(userUpdateRequest.getUsername());
+                existingUser.setEmail(userUpdateRequest.getEmail());
+
+                userRepository.save(existingUser);
+                return true;
+            } else {
+                throw new IllegalArgumentException("User with ID " + id + " not found.");
+            }
+        } catch (Exception e) {
+            // Log the exception (if needed)
+            throw new RuntimeException("Failed to update user: " + e.getMessage());
         }
-        return false;
     }
 
     @Override
     public Optional<UserResponse> findByUsername(String username) {
-        return userRepository.findByUsername(username).map(this::mapToResponse);
+        return userRepository.findByUsername(username).map(userMapper::toResponse);
     }
 
-    // Helper method to map User entity to UserResponse DTO
-    private UserResponse mapToResponse(User user) {
-        return UserResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .role(user.getRole().getName())
-                .build();
-    }
 
     @Override
     public Optional<UserResponse> findByEmail(String email) {
-        return userRepository.findByEmail(email).map(this::mapToResponse);
+        return userRepository.findByEmail(email).map(userMapper::toResponse);
     }
     private String generateSalt() {
         byte[] saltBytes = new byte[16];

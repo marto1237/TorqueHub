@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import torquehub.torquehub.domain.mapper.UserMapper;
 import torquehub.torquehub.domain.model.Role;
 import torquehub.torquehub.domain.model.User;
 import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
@@ -36,6 +37,10 @@ public class UserServiceImplTest {
 
     @Mock
     private RoleRepository roleRepository;
+
+    @Mock
+    private UserMapper userMapper;  // Add this mock
+
 
     @Mock
     private BCryptPasswordEncoder passwordEncoder;
@@ -85,10 +90,20 @@ public class UserServiceImplTest {
     void shouldReturnUserById_whenUserExists() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 
+        UserResponse mappedResponse = UserResponse.builder()
+                .id(testUser.getId())
+                .username(testUser.getUsername())
+                .email(testUser.getEmail())
+                .role(testUser.getRole().getName())
+                .build();
+
+        when(userMapper.toResponse(testUser)).thenReturn(mappedResponse);
+
         Optional<UserResponse> response = userService.getUserById(1L);
 
         assertTrue(response.isPresent());
         assertEquals("testUser", response.get().getUsername());
+        assertEquals("test@email.com", response.get().getEmail());
     }
 
     @Test
@@ -105,12 +120,20 @@ public class UserServiceImplTest {
         when(roleRepository.findByName("USER")).thenReturn(Optional.of(userRole));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
+        UserResponse mappedResponse = UserResponse.builder()
+                .id(testUser.getId())
+                .username(testUser.getUsername())
+                .email(testUser.getEmail())
+                .role(testUser.getRole().getName())
+                .build();
+        when(userMapper.toResponse(any(User.class))).thenReturn(mappedResponse);
         UserResponse response = userService.createUser(userCreateRequest);
 
         assertNotNull(response);
         assertEquals("testUser", response.getUsername());
         assertEquals("test@email.com", response.getEmail());
     }
+
 
     @Test
     void shouldThrowException_whenRoleNotFoundWhileCreatingUser() {
@@ -137,6 +160,7 @@ public class UserServiceImplTest {
     @Test
     void shouldReturnEmptyOptional_whenUserNotFoundById() {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
 
         Optional<UserResponse> response = userService.getUserById(1L);
 
@@ -198,20 +222,36 @@ public class UserServiceImplTest {
     void shouldNotUpdateUser_whenUserDoesNotExist() {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-        boolean updated = userService.updateUserById(1L, userUpdateRequest);
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            userService.updateUserById(1L, userUpdateRequest);
+        });
 
-        assertFalse(updated);
+        assertEquals("Failed to update user: User with ID 1 not found.", exception.getMessage());
+
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
     void shouldReturnUser_whenUsernameExists() {
         when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(testUser));
 
+        UserResponse mappedResponse = UserResponse.builder()
+                .id(testUser.getId())
+                .username(testUser.getUsername())
+                .email(testUser.getEmail())
+                .role(testUser.getRole().getName())
+                .build();
+
+        when(userMapper.toResponse(testUser)).thenReturn(mappedResponse);
+
+        // Act: Call the service method
         Optional<UserResponse> response = userService.findByUsername("testUser");
 
+        // Assert: Verify the expected results
         assertTrue(response.isPresent());
         assertEquals("testUser", response.get().getUsername());
     }
+
 
     @Test
     void shouldReturnEmpty_whenUsernameDoesNotExist() {
@@ -226,6 +266,14 @@ public class UserServiceImplTest {
     void shouldReturnUser_whenEmailExists() {
         when(userRepository.findByEmail(testemail)).thenReturn(Optional.of(testUser));
 
+        UserResponse mappedResponse = UserResponse.builder()
+                .id(testUser.getId())
+                .username(testUser.getUsername())
+                .email(testUser.getEmail())
+                .role(testUser.getRole().getName())
+                .build();
+
+        when(userMapper.toResponse(testUser)).thenReturn(mappedResponse);
         Optional<UserResponse> response = userService.findByEmail(testemail);
 
         assertTrue(response.isPresent());
