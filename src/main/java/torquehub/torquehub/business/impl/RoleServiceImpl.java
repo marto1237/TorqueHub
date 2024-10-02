@@ -3,7 +3,9 @@ package torquehub.torquehub.business.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.RoleService;
+import torquehub.torquehub.domain.mapper.RoleMapper;
 import torquehub.torquehub.domain.model.Role;
 import torquehub.torquehub.domain.request.RoleDtos.RoleCreateRequest;
 import torquehub.torquehub.domain.request.RoleDtos.RoleUpdateRequest;
@@ -20,6 +22,9 @@ public class RoleServiceImpl implements RoleService {
     @Autowired
     private RoleRepository roleRepository;
 
+    @Autowired
+    private RoleMapper roleMapper;
+
     @Override
     public RoleResponse createRole(RoleCreateRequest roleCreateRequest) {
         // Check if a role with the same name already exists
@@ -31,32 +36,39 @@ public class RoleServiceImpl implements RoleService {
         // If not, create a new role
         Role role = Role.builder().name(roleCreateRequest.getRoleName()).build();
         Role createdRole = roleRepository.save(role);
-        return mapToResponse(createdRole);
+        return roleMapper.toResponse(createdRole);
     }
 
     @Override
     public List<RoleResponse> getAllRoles() {
         return roleRepository.findAll().stream()
-                .map(this::mapToResponse)
+                .map(roleMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     public Optional<RoleResponse> getRoleById(Long id) {
-        return roleRepository.findById(id).map(this::mapToResponse);
+        return roleRepository.findById(id).map(roleMapper::toResponse);
     }
 
     @Override
+    @Transactional
     public boolean updateRole(long id, RoleUpdateRequest roleUpdateRequest) {
-        Optional<Role> roleOptional = roleRepository.findById(id);
-        if (roleOptional.isPresent()) {
-            Role existingRole = roleOptional.get();
-            existingRole.setName(roleUpdateRequest.getName());
-            Role updatedRole = roleRepository.save(existingRole);
+        try {
+            Optional<Role> roleOptional = roleRepository.findById(id);
+            if (roleOptional.isPresent()) {
+                Role existingRole = roleOptional.get();
+                existingRole.setName(roleUpdateRequest.getName());
+                roleRepository.save(existingRole);
 
-            return true;
+                return true;
+            } else {
+                throw new IllegalArgumentException("Role with ID " + id + " not found.");
+
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update role: " + e.getMessage());
         }
-        return false;
     }
 
     @Override
@@ -64,11 +76,6 @@ public class RoleServiceImpl implements RoleService {
         roleRepository.deleteById(id);
     }
 
-    // Helper method to map Role entity to RoleResponse DTO
-    private RoleResponse mapToResponse(Role role) {
-        return RoleResponse.builder()
-                .id(role.getId())
-                .name(role.getName())
-                .build();
-    }
+
+
 }
