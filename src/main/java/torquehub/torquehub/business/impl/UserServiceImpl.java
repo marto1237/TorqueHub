@@ -49,6 +49,7 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
+    @Transactional
     public UserResponse createUser(UserCreateRequest userDto) {
         String roleName = (userDto.getRole() == null || userDto.getRole().isEmpty()) ? "USER" : userDto.getRole();
         Optional<Role> roleOptional = roleRepository.findByName(roleName);

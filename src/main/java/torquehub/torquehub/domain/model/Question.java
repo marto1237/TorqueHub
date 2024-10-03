@@ -1,9 +1,6 @@
 package torquehub.torquehub.domain.model;
 
-
-import jakarta.persistence.Entity;
 import jakarta.persistence.*;
-import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,8 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Data
@@ -20,7 +17,6 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "questions")
-
 public class Question {
 
     @Id
@@ -28,27 +24,33 @@ public class Question {
     private Long id;
 
     @NotBlank
+    @Lob
+    @Column(name = "title", columnDefinition = "TEXT")
     private String title;
 
     @NotBlank
     @Lob
+    @Column(name = "description", columnDefinition = "LONGTEXT")
     private String description;
-
-    @ElementCollection
-    private List<String> tags;
 
     private int views = 0;
     private int votes = 0;
     private int totalAnswers = 0;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Answer> answers = new ArrayList<>();
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "question_tags",
+            joinColumns = @JoinColumn(name = "question_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private Set<Tag> tags = new HashSet<>();
 
+    @OneToMany(mappedBy = "question", cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, fetch = FetchType.LAZY)
+    private Set<Answer> answers = new HashSet<>();
 
-    @NotBlank
     private LocalDateTime askedTime;
 }

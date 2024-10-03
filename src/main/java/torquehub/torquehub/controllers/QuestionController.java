@@ -14,12 +14,15 @@ import torquehub.torquehub.domain.request.RoleDtos.RoleCreateRequest;
 import torquehub.torquehub.domain.request.RoleDtos.RoleUpdateRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
 import torquehub.torquehub.domain.response.MessageResponse;
+import torquehub.torquehub.domain.response.QuestionDtos.QuestionDetailResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionResponse;
+import torquehub.torquehub.domain.response.QuestionDtos.QuestionSummaryResponse;
 import torquehub.torquehub.domain.response.RoleDtos.RoleResponse;
 import torquehub.torquehub.domain.response.UserDtos.UserResponse;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/questions")
@@ -30,19 +33,25 @@ public class QuestionController {
     private QuestionService questionService;
 
     @GetMapping
-    public List<QuestionResponse> getAllQuestions() {
+    public List<QuestionSummaryResponse> getAllQuestions() {
         return questionService.getAllQuestions();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<QuestionResponse> getQuestionById(@PathVariable Long id) {
-        Optional<QuestionResponse> question = questionService.getQuestionbyId(id);
+    public ResponseEntity<QuestionDetailResponse> getQuestionById(@PathVariable Long id) {
+        Optional<QuestionDetailResponse> question = questionService.getQuestionbyId(id);
         return question.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/tags")
+    public ResponseEntity<List<QuestionSummaryResponse>> getQuestionsByTags(@RequestParam Set<String> tags) {
+        List<QuestionSummaryResponse> questions = questionService.getQuestionsByTags(tags);
+        return ResponseEntity.ok(questions);
+    }
+
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<QuestionResponse>> getQuestionsByUser(@PathVariable Long userId) {
-        Optional<List<QuestionResponse>> questions = questionService.getQuestionsByUser(userId);
+    public ResponseEntity<List<QuestionSummaryResponse>> getQuestionsByUser(@PathVariable Long userId) {
+        Optional<List<QuestionSummaryResponse>> questions = questionService.getQuestionsByUser(userId);
         return questions.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -66,7 +75,7 @@ public class QuestionController {
     @DeleteMapping("/{id}")
     public ResponseEntity<MessageResponse> deleteQuestion(@PathVariable Long id) {
         MessageResponse response = new MessageResponse();
-        Optional<QuestionResponse> question = questionService.getQuestionbyId(id);
+        Optional<QuestionDetailResponse> question = questionService.getQuestionbyId(id);
         if (question.isPresent()) {
             questionService.deleteQuestion(id);
             response.setMessage("Question deleted successfully.");

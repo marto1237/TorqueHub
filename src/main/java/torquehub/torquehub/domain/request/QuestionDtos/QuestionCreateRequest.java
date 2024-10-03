@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Set;
 
 @Data
 @Builder
@@ -17,13 +18,14 @@ import java.util.List;
 public class QuestionCreateRequest {
 
     @NotBlank
-    @Size(min = 3, max = 250,message = "Title must be between 3 and 250 characters")
+    @Size(min = 3, max = 500,message = "Title must be between 3 and 500 characters")
     private String title;
 
     @NotBlank(message = "Description cannot be blank")
     private String description;
 
-    private List<String> tags;
+    @NotNull(message = "At least one tag is required")
+    private Set<String> tags;
 
     @NotNull(message = "User ID is required")
     private Long userId;

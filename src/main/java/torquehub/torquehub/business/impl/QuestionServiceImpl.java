@@ -2,19 +2,29 @@ package torquehub.torquehub.business.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.QuestionService;
+import torquehub.torquehub.domain.mapper.AnswerMapper;
+import torquehub.torquehub.domain.mapper.QuestionMapper;
 import torquehub.torquehub.domain.model.Question;
+import torquehub.torquehub.domain.model.Tag;
 import torquehub.torquehub.domain.model.User;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionCreateRequest;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionUpdateRequest;
+import torquehub.torquehub.domain.response.AnswerDtos.AnswerResponse;
+import torquehub.torquehub.domain.response.QuestionDtos.QuestionDetailResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionResponse;
+import torquehub.torquehub.domain.response.QuestionDtos.QuestionSummaryResponse;
 import torquehub.torquehub.persistence.repository.AnswerRepository;
 import torquehub.torquehub.persistence.repository.QuestionRepository;
+import torquehub.torquehub.persistence.repository.TagRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,100 +37,118 @@ public class QuestionServiceImpl implements QuestionService {
     private QuestionRepository questionRepository;
 
     @Autowired
+    private TagRepository tagRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private QuestionMapper questionMapper;
+
+    @Autowired
+    private AnswerMapper answerMapper;
 
     @Override
     public QuestionResponse askQuestion(QuestionCreateRequest questionCreateRequest) {
         User user = userRepository.findById(questionCreateRequest.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new IllegalArgumentException("User with ID " + questionCreateRequest.getUserId() + " not found"));
+
+        Set<Tag> tags = convertTagNamesToTags(questionCreateRequest.getTags());
 
         Question question = Question.builder()
                 .title(questionCreateRequest.getTitle())
                 .description(questionCreateRequest.getDescription())
-                .tags(questionCreateRequest.getTags())
+                .tags(tags)
                 .user(user)
                 .askedTime(LocalDateTime.now())
                 .build();
 
         Question savedQuestion = questionRepository.save(question);
-
-        return convertToResponse(savedQuestion);
+        return questionMapper.toResponse(savedQuestion);
     }
 
     @Override
     public void deleteQuestion(Long questionId) {
-        questionRepository.deleteById(questionId);
-    }
-
-    @Override
-    public boolean updateQuestion(Long questionId, QuestionUpdateRequest questionUpdateRequest) {
-        Optional<Question> optionalQuestion = questionRepository.findById(questionId);
-        if (optionalQuestion.isPresent()) {
-            Question existingQuestion = optionalQuestion.get();
-            existingQuestion.setTitle(questionUpdateRequest.getTitle());
-            existingQuestion.setDescription(questionUpdateRequest.getDescription());
-            existingQuestion.setTags(questionUpdateRequest.getTags());
-            questionRepository.save(existingQuestion);
-            return true;
+        // Ensure the question exists before deleting
+        if (questionRepository.existsById(questionId)) {
+            questionRepository.deleteById(questionId);
+        } else {
+            throw new IllegalArgumentException("Question with ID " + questionId + " not found");
         }
-        return false;
-
     }
 
     @Override
-    public Optional<QuestionResponse> getQuestionbyId(Long questionId) {
-        return  questionRepository.findById(questionId)
-                .map(this::convertToResponse);
+    @Transactional
+    public boolean updateQuestion(Long questionId, QuestionUpdateRequest questionUpdateRequest) {
+        try{
+            Optional<Question> optionalQuestion = questionRepository.findById(questionId);
+            if (optionalQuestion.isPresent()) {
+                Question existingQuestion = optionalQuestion.get();
+
+                // Convert Set<String> to Set<Tag>
+                Set<Tag> tags = convertTagNamesToTags(questionUpdateRequest.getTags());
+
+                existingQuestion.setTitle(questionUpdateRequest.getTitle());
+                existingQuestion.setDescription(questionUpdateRequest.getDescription());
+                existingQuestion.setTags(tags);
+
+                questionRepository.save(existingQuestion);
+                return true;
+            } else {
+                throw new IllegalArgumentException("Question with ID " + questionId + " not found.");
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Error updating question with ID " + questionId);
+        }
+
+    }
+
+
+    @Override
+    public Optional<QuestionDetailResponse> getQuestionbyId(Long questionId) {
+        return questionRepository.findById(questionId)
+                .map(questionMapper::toDetailResponse);
     }
 
     @Override
-    public List<QuestionResponse> getAllQuestions() {
+    public List<QuestionSummaryResponse> getAllQuestions() {
         return questionRepository.findAll().stream()
-                .map(this::convertToResponse)
+                .map(questionMapper::toSummaryResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<List<QuestionResponse>>getQuestionsByUser(Long userId) {
+    public Optional<List<QuestionSummaryResponse>> getQuestionsByUser(Long userId) {
         List<Question> questions = questionRepository.findByUserId(userId);
 
         if (questions.isEmpty()) {
             return Optional.empty();
-        }else {
+        } else {
             return Optional.of(questions.stream()
-                    .map(this::convertToResponse)
+                    .map(questionMapper::toSummaryResponse)
                     .collect(Collectors.toList()));
         }
     }
 
     @Override
-    public List<QuestionResponse> getQuestionsByTag(String tag) {
-        List<Question> questions = questionRepository.findByTags(tag);
+    public List<QuestionSummaryResponse> getQuestionsByTags(Set<String> tagsNames) {
+        List<Question> filteredQuestions = questionRepository.findQuestionsByTagNames(tagsNames);
 
-        if (questions.isEmpty()) {
-            throw new IllegalArgumentException("No questions found for this tag.");
+        if (filteredQuestions.isEmpty()) {
+            throw new IllegalArgumentException("No questions found for these tags: " + tagsNames);
         }
-
-        return questions.stream()
-                .map(this::convertToResponse)
+        return filteredQuestions.stream()
+                .map(questionMapper::toSummaryResponse)
                 .collect(Collectors.toList());
     }
 
-
-
-    private QuestionResponse convertToResponse(Question question) {
-        return QuestionResponse.builder()
-                .id(question.getId())
-                .title(question.getTitle())
-                .description(question.getDescription())
-                .tags(question.getTags())
-                .views(question.getViews())
-                .votes(question.getVotes())
-                .totalAnswers(question.getTotalAnswers())
-                .user(question.getUser())
-                .askedTime(question.getAskedTime())
-                .build();
+    private Set<Tag> convertTagNamesToTags(Set<String> tagNames) {
+        return tagNames.stream()
+                .map(tagName -> tagRepository.findByName(tagName)
+                        .orElseThrow(() -> new IllegalArgumentException("Tag not found: " + tagName)))
+                .collect(Collectors.toSet());
     }
 
+
 }
+
