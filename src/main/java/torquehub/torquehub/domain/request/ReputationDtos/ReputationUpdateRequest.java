@@ -10,14 +10,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ReputationUpdateResponse {
+public class ReputationUpdateRequest {
 
     @NotNull(message = "User id is required")
     private Long userId;
 
     @NotNull(message = "Updated reputation points is required")
-    private String action;
-
-    @
-    private String message;
+    private int points;
 }

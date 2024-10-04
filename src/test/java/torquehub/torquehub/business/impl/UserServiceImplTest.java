@@ -55,13 +55,14 @@ public class UserServiceImplTest {
     private User testUser;
     private String testemail = "test@email.com";
     private Role userRole;
+    private final Long roleId = 1L;
 
     @BeforeEach
     void setUp() {
         userRole = Role.builder().name("USER").build();
 
         testUser = User.builder()
-                .id(1L)
+                .id(roleId)
                 .email("test@email.com")
                 .username("testUser")
                 .password("hashedPassword")
@@ -92,7 +93,7 @@ public class UserServiceImplTest {
 
     @Test
     void shouldReturnUserById_whenUserExists() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(userRepository.findById(roleId)).thenReturn(Optional.of(testUser));
 
         UserResponse mappedResponse = UserResponse.builder()
                 .id(testUser.getId())
@@ -112,9 +113,9 @@ public class UserServiceImplTest {
 
     @Test
     void shouldReturnEmpty_whenUserDoesNotExist() {
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById(roleId)).thenReturn(Optional.empty());
 
-        Optional<UserResponse> response = userService.getUserById(1L);
+        Optional<UserResponse> response = userService.getUserById(roleId);
 
         assertTrue(response.isEmpty());
     }
@@ -163,7 +164,7 @@ public class UserServiceImplTest {
 
     @Test
     void shouldReturnEmptyOptional_whenUserNotFoundById() {
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById(roleId)).thenReturn(Optional.empty());
 
 
         Optional<UserResponse> response = userService.getUserById(1L);
@@ -173,23 +174,25 @@ public class UserServiceImplTest {
 
     @Test
     void shouldDeleteUserSuccessfully_whenUserExists() {
-        doNothing().when(userRepository).deleteById(1L);
+        when(userRepository.findById(roleId)).thenReturn(Optional.of(testUser));
 
-        userService.deleteUser(1L);
+        boolean deleted = userService.deleteUser(roleId);
+
+        assertTrue(deleted);
     }
 
     @Test
     void shouldReturnTrue_whenUserExistsById() {
-        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userRepository.existsById(roleId)).thenReturn(true);
 
-        assertTrue(userService.userExistsById(1L));
+        assertTrue(userService.userExistsById(roleId));
     }
 
     @Test
     void shouldReturnFalse_whenUserDoesNotExistById() {
-        when(userRepository.existsById(1L)).thenReturn(false);
+        when(userRepository.existsById(roleId)).thenReturn(false);
 
-        boolean result = userService.userExistsById(1L);
+        boolean result = userService.userExistsById(roleId);
 
         assertFalse(result);
     }
@@ -217,14 +220,14 @@ public class UserServiceImplTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        boolean updated = userService.updateUserById(1L, userUpdateRequest);
+        boolean updated = userService.updateUserById(roleId, userUpdateRequest);
 
         assertTrue(updated);
     }
 
     @Test
     void shouldNotUpdateUser_whenUserDoesNotExist() {
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById(roleId)).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
             userService.updateUserById(1L, userUpdateRequest);

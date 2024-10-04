@@ -9,6 +9,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Data
@@ -24,11 +26,15 @@ public class Answer {
 
     @NotBlank
     @Lob
+    @Column(name = "text", columnDefinition = "LONGTEXT")
     private String text;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_id", nullable = false)
     private Question question;
+
+    @OneToMany(mappedBy = "answer", cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, fetch = FetchType.LAZY)
+    private Set<Comment> comments = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
@@ -37,7 +43,6 @@ public class Answer {
     @Column(nullable = false)
     private int votes = 0;
 
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(nullable = false)
     private LocalDateTime answeredTime;
 

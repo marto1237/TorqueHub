@@ -15,7 +15,7 @@ public interface TagService {
 
     Optional<TagResponse> getTagById(Long id);
 
-    void deleteTag(Long id);
+    boolean deleteTag(Long id);
 
     boolean tagExistsById(Long id);
 

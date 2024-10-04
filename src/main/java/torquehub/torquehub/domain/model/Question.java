@@ -52,5 +52,6 @@ public class Question {
     @OneToMany(mappedBy = "question", cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, fetch = FetchType.LAZY)
     private Set<Answer> answers = new HashSet<>();
 
+    @Column(nullable = false)
     private LocalDateTime askedTime;
 }

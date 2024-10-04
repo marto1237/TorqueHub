@@ -17,7 +17,7 @@ public interface UserService {
 
     Optional<UserResponse> getUserById(Long id);
 
-    void deleteUser(Long id);
+    boolean deleteUser(Long id);
 
     boolean userExistsById(Long id);
 

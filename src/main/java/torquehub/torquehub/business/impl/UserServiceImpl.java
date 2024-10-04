@@ -90,8 +90,20 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteUser(Long id) {
-        userRepository.deleteById(id);
+    @Transactional
+    public boolean deleteUser(Long id) {
+        try {
+            Optional<User> userOptional = userRepository.findById(id);
+            if(userOptional.isPresent()){
+                User user = userOptional.get();
+                userRepository.delete(user);
+                return true;
+            }else {
+                throw new IllegalArgumentException("User with ID " + id + " not found.");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete user: " + e.getMessage());
+        }
     }
 
     @Override

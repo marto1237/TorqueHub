@@ -22,6 +22,7 @@ public class QuestionUpdateRequest {
     private String title;
 
     @NotBlank(message = "Description cannot be blank")
+    @Size(min = 3, max = 100000, message = "Description must be at least 3 and 100000 characters")
     private String description;
 
     @NotNull(message = "At least one tag is required")

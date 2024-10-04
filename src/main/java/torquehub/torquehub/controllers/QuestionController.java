@@ -75,14 +75,14 @@ public class QuestionController {
     @DeleteMapping("/{id}")
     public ResponseEntity<MessageResponse> deleteQuestion(@PathVariable Long id) {
         MessageResponse response = new MessageResponse();
-        Optional<QuestionDetailResponse> question = questionService.getQuestionbyId(id);
-        if (question.isPresent()) {
-            questionService.deleteQuestion(id);
+        boolean deleted = questionService.deleteQuestion(id);
+        if (deleted) {
             response.setMessage("Question deleted successfully.");
+            return ResponseEntity.ok(response);
         } else {
             response.setMessage("Question with ID " + id + " not found.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
-        return ResponseEntity.ok(response);
     }
 
 

@@ -1,7 +1,6 @@
 package torquehub.torquehub.domain.request.AnswerDtos;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,10 +11,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class EditAnswerRequest {
+public class AnswerEditRequest {
 
     @NotBlank
-    @Size(min = 3, message = "Text must be at least 3 characters")
+    @Size(min = 3, max = 100000, message = "Text must be between 3 and 100000 characters")
     private String text;
 
 

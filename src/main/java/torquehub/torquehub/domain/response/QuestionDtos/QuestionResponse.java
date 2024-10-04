@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import torquehub.torquehub.domain.model.Tag;
 import torquehub.torquehub.domain.model.User;
+import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,5 +25,6 @@ public class QuestionResponse {
     private int votes;
     private int totalAnswers;
     private String username;
+    private ReputationResponse reputationUpdate;
     private LocalDateTime askedTime;
 }

@@ -13,7 +13,7 @@ import torquehub.torquehub.persistence.repository.RoleRepository;
 import java.util.List;
 import java.util.Optional;
 
-@Service
+
 public interface RoleService {
 
     RoleResponse createRole(RoleCreateRequest roleCreateRequest);
@@ -25,6 +25,6 @@ public interface RoleService {
 
     boolean updateRole(long id, RoleUpdateRequest roleUpdateRequest);
 
-    void deleteRole(Long id);
+    boolean deleteRole(Long id);
 
 }

@@ -11,13 +11,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-@Service
 public interface QuestionService {
 
     QuestionResponse askQuestion(QuestionCreateRequest questionCreateRequest);
 
 
-    void deleteQuestion(Long questionId);
+    boolean deleteQuestion(Long questionId);
 
     boolean updateQuestion(Long questionId, QuestionUpdateRequest questionUpdateRequest);
 

@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.QuestionService;
+import torquehub.torquehub.business.interfaces.ReputationService;
+import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.QuestionMapper;
 import torquehub.torquehub.domain.model.Question;
@@ -11,17 +13,17 @@ import torquehub.torquehub.domain.model.Tag;
 import torquehub.torquehub.domain.model.User;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionCreateRequest;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionUpdateRequest;
-import torquehub.torquehub.domain.response.AnswerDtos.AnswerResponse;
+import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionDetailResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionSummaryResponse;
+import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
 import torquehub.torquehub.persistence.repository.AnswerRepository;
 import torquehub.torquehub.persistence.repository.QuestionRepository;
 import torquehub.torquehub.persistence.repository.TagRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -46,34 +48,72 @@ public class QuestionServiceImpl implements QuestionService {
     private QuestionMapper questionMapper;
 
     @Autowired
+    private ReputationService reputationService;
+
+    @Autowired
     private AnswerMapper answerMapper;
 
     @Override
+    @Transactional
     public QuestionResponse askQuestion(QuestionCreateRequest questionCreateRequest) {
-        User user = userRepository.findById(questionCreateRequest.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("User with ID " + questionCreateRequest.getUserId() + " not found"));
+        try {
+            User user = userRepository.findById(questionCreateRequest.getUserId())
+                    .orElseThrow(() -> new IllegalArgumentException("User with ID " + questionCreateRequest.getUserId() + " not found"));
 
-        Set<Tag> tags = convertTagNamesToTags(questionCreateRequest.getTags());
 
-        Question question = Question.builder()
-                .title(questionCreateRequest.getTitle())
-                .description(questionCreateRequest.getDescription())
-                .tags(tags)
-                .user(user)
-                .askedTime(LocalDateTime.now())
-                .build();
 
-        Question savedQuestion = questionRepository.save(question);
-        return questionMapper.toResponse(savedQuestion);
+            Set<Tag> tags = convertTagNamesToTags(questionCreateRequest.getTags());
+
+            Question question = Question.builder()
+                    .title(questionCreateRequest.getTitle())
+                    .description(questionCreateRequest.getDescription())
+                    .tags(tags)
+                    .user(user)
+                    .askedTime(LocalDateTime.now())
+                    .build();
+
+            Question savedQuestion = questionRepository.save(question);
+
+            ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(user.getId(), ReputationConstants.POINTS_NEW_QUESTION);
+            ReputationResponse reputationResponse = reputationService.updateReputationForNewQuestion(reputationUpdateRequest);
+
+
+            QuestionResponse questionResponse = questionMapper.toResponse(savedQuestion);
+            questionResponse.setReputationUpdate(reputationResponse);
+
+            return questionResponse;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error asking question"+ e.getMessage());
+        }
+
+
     }
 
     @Override
-    public void deleteQuestion(Long questionId) {
-        // Ensure the question exists before deleting
-        if (questionRepository.existsById(questionId)) {
-            questionRepository.deleteById(questionId);
-        } else {
-            throw new IllegalArgumentException("Question with ID " + questionId + " not found");
+    @Transactional
+    public boolean deleteQuestion(Long questionId) {
+        try {
+            Optional<Question> optionalQuestion = questionRepository.findById(questionId);
+            if (optionalQuestion.isPresent()) {
+                Question questionToDelete = optionalQuestion.get();
+
+                User user = questionToDelete.getUser();
+                ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(user.getId(), ReputationConstants.POINTS_QUESTION_WHEN_DELETED);
+                boolean isReputationUpdated = reputationService.updateReputationForQuestionWhenQuestionIsDeleted(reputationUpdateRequest);
+                if(!isReputationUpdated) {
+                    throw new IllegalArgumentException("Error updating reputation for user with ID " + user.getId());
+                }else{
+                    questionRepository.deleteById(questionId);
+                    return true;
+                }
+
+            } else {
+                throw new IllegalArgumentException("Question with ID " + questionId + " not found");
+
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete question: " + e.getMessage());
         }
     }
 

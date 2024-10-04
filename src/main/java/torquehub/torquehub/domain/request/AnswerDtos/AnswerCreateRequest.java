@@ -12,10 +12,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class AddAnswerRequest {
+public class AnswerCreateRequest {
 
     @NotBlank
-    @Size(min = 3, message = "Text must be atleast 3 characters")
+    @Size(min = 3, max = 100000, message = "Text must be between 3 and  100000 characters")
     private String text;
 
     @NotBlank(message = "Question ID is required")

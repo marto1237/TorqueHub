@@ -34,13 +34,14 @@ public class RoleServiceImplTest {
     private RoleMapper roleMapper;
 
     private Role testRole;
+    private final Long roleId = 1L;
     private RoleCreateRequest roleCreateRequest;
     private RoleUpdateRequest roleUpdateRequest;
     private RoleResponse roleResponse;
 
     @BeforeEach
     void setUp() {
-        testRole = Role.builder().id(1L).name("ADMIN").build();
+        testRole = Role.builder().id(roleId).name("ADMIN").build();
 
         roleCreateRequest = RoleCreateRequest.builder()
                 .roleName("ADMIN")
@@ -51,7 +52,7 @@ public class RoleServiceImplTest {
                 .build();
 
         roleResponse = RoleResponse.builder()
-                .id(1L)
+                .id(roleId)
                 .name("ADMIN")
                 .build();
     }
@@ -66,7 +67,7 @@ public class RoleServiceImplTest {
 
         assertNotNull(response);
         assertEquals("ADMIN", response.getName());
-        assertEquals(1L, response.getId());
+        assertEquals(roleId, response.getId());
 
 
         verify(roleRepository, times(1)).findByName("ADMIN");
@@ -96,7 +97,7 @@ public class RoleServiceImplTest {
         assertNotNull(response);
         assertEquals(1, response.size());
         assertEquals("ADMIN", response.get(0).getName());
-        assertEquals(1L, response.get(0).getId());
+        assertEquals(roleId, response.get(0).getId());
 
         verify(roleRepository, times(1)).findAll();
         verify(roleMapper, times(1)).toResponse(testRole);
@@ -111,7 +112,7 @@ public class RoleServiceImplTest {
 
         assertTrue(response.isPresent());
         assertEquals("ADMIN", response.get().getName());
-        assertEquals(1L, response.get().getId());
+        assertEquals(roleId, response.get().getId());
 
         verify(roleRepository, times(1)).findById(1L);
         verify(roleMapper, times(1)).toResponse(testRole);
@@ -119,13 +120,13 @@ public class RoleServiceImplTest {
 
     @Test
     void shouldReturnEmpty_whenRoleDoesNotExist(){
-        when(roleRepository.findById(1L)).thenReturn(Optional.empty());
+        when(roleRepository.findById(roleId)).thenReturn(Optional.empty());
 
         Optional<RoleResponse> response = roleService.getRoleById(1L);
 
         assertTrue(response.isEmpty());
 
-        verify(roleRepository, times(1)).findById(1L);
+        verify(roleRepository, times(1)).findById(roleId);
         verify(roleMapper, never()).toResponse(any(Role.class));
     }
 
@@ -134,21 +135,21 @@ public class RoleServiceImplTest {
         when(roleRepository.findById(testRole.getId())).thenReturn(Optional.of(testRole));
         when(roleRepository.save(any(Role.class))).thenReturn(testRole);
 
-        boolean response = roleService.updateRole(1L, roleUpdateRequest);
+        boolean response = roleService.updateRole(roleId, roleUpdateRequest);
 
         assertTrue(response);
 
-        verify(roleRepository, times(1)).findById(1L);
+        verify(roleRepository, times(1)).findById(roleId);
         verify(roleRepository, times(1)).save(any(Role.class));
     }
 
     @Test
     void shouldThrowException_whenRoleDoesNotExist(){
-        when(roleRepository.findById(1L)).thenReturn(Optional.empty());
+        when(roleRepository.findById(roleId)).thenReturn(Optional.empty());
 
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            roleService.updateRole(1L, roleUpdateRequest);
+            roleService.updateRole(roleId, roleUpdateRequest);
         });
 
         assertEquals("Failed to update role: Role with ID 1 not found.", exception.getMessage());
@@ -158,9 +159,25 @@ public class RoleServiceImplTest {
     }
 
     @Test
-    void shouldDeleteRoleSuccessfully(){
-        roleService.deleteRole(1L);
+    void shouldDeleteRoleSuccessfully() {
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(new Role()));
 
-        verify(roleRepository, times(1)).deleteById(1L);
+        boolean result = roleService.deleteRole(roleId);
+
+        assertTrue(result);
+        verify(roleRepository, times(1)).delete(any(Role.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenRoleToDeleteDoesNotExist() {
+        when(roleRepository.findById(roleId)).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            roleService.deleteRole(roleId);
+        });
+
+        assertEquals("Failed to delete role: Role with ID " + roleId + " not found.", exception.getMessage());
+        verify(roleRepository, times(1)).findById(roleId);
+        verify(roleRepository, never()).delete(any(Role.class));
     }
 }

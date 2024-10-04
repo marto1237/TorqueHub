@@ -52,8 +52,20 @@ public class TagServiceImpl implements TagService {
     }
 
     @Override
-    public void deleteTag(Long id) {
-        tagRepository.deleteById(id);
+    public boolean deleteTag(Long id) {
+        try{
+            Optional<Tag> tagOptional = tagRepository.findById(id);
+            if(tagOptional.isPresent()){
+                Tag tag = tagOptional.get();
+                tagRepository.delete(tag);
+                return true;
+            }else {
+                throw new IllegalArgumentException("Tag with ID " + id + " not found.");
+            }
+
+        }catch (Exception e){
+            throw new RuntimeException("Failed to delete tag: " + e.getMessage());
+        }
     }
 
     @Override
