@@ -77,8 +77,8 @@ public class ReputationServiceImpl  implements ReputationService {
     }
 
     @Override
-    public boolean updateReputationForBestAnswerIsDeleted(ReputationUpdateRequest reputationUpdateRequest) {
-        return updateReputation(reputationUpdateRequest.getUserId(), ReputationConstants.POINTS_BEST_ANSWER_WHEN_DELETED, "Best Answer Removed") != null;
+    public ReputationResponse updateReputationForBestAnswerIsDeleted(ReputationUpdateRequest reputationUpdateRequest) {
+        return updateReputation(reputationUpdateRequest.getUserId(), ReputationConstants.POINTS_BEST_ANSWER_WHEN_DELETED, "Best Answer Removed");
     }
 
     @Override
@@ -102,6 +102,12 @@ public class ReputationServiceImpl  implements ReputationService {
     @Transactional
     public ReputationResponse updateReputationForUpvoteComment(ReputationUpdateRequest reputationUpdateRequest) {
         return updateReputation(reputationUpdateRequest.getUserId(), ReputationConstants.POINTS_UPVOTE_COMMENT, "Comment Upvoted");
+    }
+
+    @Override
+    @Transactional
+    public ReputationResponse updateReputationForDownvoteComment(ReputationUpdateRequest reputationUpdateRequest) {
+        return updateReputation(reputationUpdateRequest.getUserId(), ReputationConstants.POINTS_DOWNVOTE_COMMENT, "Comment Downvoted");
     }
 
     private ReputationResponse updateReputation(Long userId, int points, String action) {

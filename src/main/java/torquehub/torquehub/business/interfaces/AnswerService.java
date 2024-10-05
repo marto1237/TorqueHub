@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import torquehub.torquehub.domain.request.AnswerDtos.AnswerCreateRequest;
 import torquehub.torquehub.domain.request.AnswerDtos.AnswerEditRequest;
 import torquehub.torquehub.domain.response.AnswerDtos.AnswerResponse;
+import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,4 +17,9 @@ public interface AnswerService {
     boolean deleteAnswer(Long answerId);
     AnswerResponse getAnswerById(Long answerId);
     Optional<List<AnswerResponse>> getAnswersByUser(Long userId);
+    ReputationResponse upvoteAnswer(Long answerId, Long userId);
+    ReputationResponse downvoteAnswer(Long answerId, Long userId);
+    ReputationResponse approveBestAnswer(Long questionId, Long answerId, Long userId);
+
+
 }

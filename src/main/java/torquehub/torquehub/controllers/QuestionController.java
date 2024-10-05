@@ -7,18 +7,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.QuestionService;
-import torquehub.torquehub.business.interfaces.RoleService;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionCreateRequest;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionUpdateRequest;
-import torquehub.torquehub.domain.request.RoleDtos.RoleCreateRequest;
-import torquehub.torquehub.domain.request.RoleDtos.RoleUpdateRequest;
-import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
 import torquehub.torquehub.domain.response.MessageResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionDetailResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionSummaryResponse;
-import torquehub.torquehub.domain.response.RoleDtos.RoleResponse;
-import torquehub.torquehub.domain.response.UserDtos.UserResponse;
+import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -59,6 +54,16 @@ public class QuestionController {
     public ResponseEntity<QuestionResponse> askQuestion(@Valid @RequestBody QuestionCreateRequest questionCreateRequest) {
         QuestionResponse createdQuestion = questionService.askQuestion(questionCreateRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdQuestion);
+    }
+
+    @PostMapping("/{questionId}/upvote")
+    public ResponseEntity<ReputationResponse> upvoteAnswer(@PathVariable Long questionId, @RequestParam Long userId) {
+        return ResponseEntity.ok(questionService.upvoteQuestion(questionId, userId));
+    }
+
+    @PostMapping("/{questionId}/downvote")
+    public ResponseEntity<ReputationResponse> downvoteAnswer(@PathVariable Long questionId, @RequestParam Long userId) {
+        return ResponseEntity.ok(questionService.downvoteQuestion(questionId, userId));
     }
 
     @PutMapping("/{id}")

@@ -8,6 +8,7 @@ import torquehub.torquehub.business.interfaces.CommentService;
 import torquehub.torquehub.domain.request.CommentDtos.CommentCreateRequest;
 import torquehub.torquehub.domain.request.CommentDtos.CommentEditRequest;
 import torquehub.torquehub.domain.response.CommentDtos.CommentResponse;
+import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +44,16 @@ public class CommentController {
         return ResponseEntity.ok(commentResponse);
     }
 
+    @PostMapping("/{commentId}/upvote")
+    public ResponseEntity<ReputationResponse> upvoteAnswer(@PathVariable Long commentId, @RequestParam Long userId) {
+        return ResponseEntity.ok(commentService.upvoteComment(commentId, userId));
+    }
+
+    @PostMapping("/{commentId}/downvote")
+    public ResponseEntity<ReputationResponse> downvoteAnswer(@PathVariable Long commentId, @RequestParam Long userId) {
+        return ResponseEntity.ok(commentService.downvoteComment(commentId, userId));
+    }
+
     @PutMapping("/{commentId}")
     public ResponseEntity<CommentResponse> editComment(@PathVariable Long commentId, @RequestBody @Validated CommentEditRequest commentEditRequest) {
         CommentResponse commentResponse = commentService.editComment(commentId, commentEditRequest);
@@ -50,7 +61,7 @@ public class CommentController {
     }
 
     @DeleteMapping("/{commentId}")
-    public ResponseEntity<Boolean> deleteComment(@PathVariable Long commentId) {
+    public ResponseEntity<ReputationResponse> deleteComment(@PathVariable Long commentId) {
         boolean isDeleted = commentService.deleteComment(commentId);
         if (isDeleted) {
             return ResponseEntity.noContent().build();

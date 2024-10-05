@@ -15,4 +15,5 @@ public class ReputationConstants {
     public static final int POINTS_NEW_COMMENT = 1;
     public static final int POINTS_COMMENT_WHEN_DELETED = -1;
     public static final int POINTS_UPVOTE_COMMENT = 1;
+    public static final int POINTS_DOWNVOTE_COMMENT = -1;
 }

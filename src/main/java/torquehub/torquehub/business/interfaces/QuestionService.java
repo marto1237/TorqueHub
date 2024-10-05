@@ -6,6 +6,7 @@ import torquehub.torquehub.domain.request.QuestionDtos.QuestionUpdateRequest;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionDetailResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionSummaryResponse;
+import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,5 +28,7 @@ public interface QuestionService {
     Optional<List<QuestionSummaryResponse>> getQuestionsByUser(Long userId);
 
     List<QuestionSummaryResponse> getQuestionsByTags(Set<String> tags);
+    ReputationResponse upvoteQuestion(Long commentId, Long userId);
+    ReputationResponse downvoteQuestion(Long commentId, Long userId);
 
 }

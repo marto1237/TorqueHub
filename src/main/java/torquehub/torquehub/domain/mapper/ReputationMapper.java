@@ -12,4 +12,5 @@ public interface ReputationMapper {
     @Mapping(target = "updatedReputationPoints", source = "user.points")
     @Mapping(target = "message", source = "message")
     ReputationResponse toResponse(User user, String message, int points);
+
 }

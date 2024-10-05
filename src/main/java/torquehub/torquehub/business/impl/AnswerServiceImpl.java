@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.AnswerService;
+import torquehub.torquehub.business.interfaces.NotificationService;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.AnswerMapper;
@@ -11,16 +12,18 @@ import torquehub.torquehub.domain.mapper.CommentMapper;
 import torquehub.torquehub.domain.model.Answer;
 import torquehub.torquehub.domain.model.Question;
 import torquehub.torquehub.domain.model.User;
+import torquehub.torquehub.domain.model.Vote;
 import torquehub.torquehub.domain.request.AnswerDtos.AnswerCreateRequest;
 import torquehub.torquehub.domain.request.AnswerDtos.AnswerEditRequest;
 import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
 import torquehub.torquehub.domain.response.AnswerDtos.AnswerResponse;
-import torquehub.torquehub.domain.response.QuestionDtos.QuestionResponse;
 import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
 import torquehub.torquehub.persistence.repository.AnswerRepository;
 import torquehub.torquehub.persistence.repository.QuestionRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
+import torquehub.torquehub.persistence.repository.VoteRepository;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -29,7 +32,7 @@ import java.util.Optional;
 public class AnswerServiceImpl implements AnswerService {
 
     @Autowired
-    AnswerMapper answerMapper;
+    private AnswerMapper answerMapper;
 
     @Autowired
     private CommentMapper commentMapper;
@@ -45,6 +48,12 @@ public class AnswerServiceImpl implements AnswerService {
 
     @Autowired
     private ReputationService reputationService;
+
+    @Autowired
+    private VoteRepository voteRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Override
     @Transactional
@@ -158,5 +167,127 @@ public class AnswerServiceImpl implements AnswerService {
         }
     }
 
+    @Override
+    @Transactional
+    public ReputationResponse upvoteAnswer(Long answerId, Long userId) {
+        try {
+            Answer answer = answerRepository.findById(answerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
+            Optional<Vote> existingVote = voteRepository.findByUserAndAnswer(user, answer);
+
+            if (existingVote.isPresent()) {
+                Vote vote = existingVote.get();
+
+                if (vote.isUpvote()) {
+                    voteRepository.delete(vote);
+                    answer.setVotes(answer.getVotes() - 1);
+                } else {
+                    vote.setUpvote(true);
+                    voteRepository.save(vote);
+                    answer.setVotes(answer.getVotes() + 2);
+                }
+            } else {
+                Vote vote = new Vote();
+                vote.setUser(user);
+                vote.setAnswer(answer);
+                vote.setUpvote(true);
+                vote.setVotedAt(LocalDateTime.now());
+                voteRepository.save(vote);
+
+                answer.setVotes(answer.getVotes() + 1);
+            }
+
+            answerRepository.save(answer);
+
+            ReputationResponse authorReputation = reputationService.updateReputationForUpvote(
+                    new ReputationUpdateRequest(answer.getUser().getId(), ReputationConstants.POINTS_UPVOTE_RECEIVED)
+            );
+
+            notificationService.notifyAnswerOwner(answer.getUser(), answer, true, authorReputation);
+
+            return reputationService.updateReputationForUpvoteGiven(
+                    new ReputationUpdateRequest(userId, ReputationConstants.POINTS_UPVOTE_GIVEN)
+            );
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error upvoting answer: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public ReputationResponse downvoteAnswer(Long answerId, Long userId) {
+        try {
+            Answer answer = answerRepository.findById(answerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            Optional<Vote> existingVote = voteRepository.findByUserAndAnswer(user, answer);
+
+            if (existingVote.isPresent()) {
+                Vote vote = existingVote.get();
+
+                if (!vote.isUpvote()) {
+                    voteRepository.delete(vote);
+                    answer.setVotes(answer.getVotes() + 1);
+                } else {
+                    vote.setUpvote(false);
+                    voteRepository.save(vote);
+                    answer.setVotes(answer.getVotes() - 2);
+                }
+            } else {
+                Vote vote = new Vote();
+                vote.setUser(user);
+                vote.setAnswer(answer);
+                vote.setUpvote(false);
+                vote.setVotedAt(LocalDateTime.now());
+                voteRepository.save(vote);
+
+                answer.setVotes(answer.getVotes() - 1);
+            }
+
+            answerRepository.save(answer);
+
+            ReputationResponse authorReputation = reputationService.updateReputationForDownvote(
+                    new ReputationUpdateRequest(answer.getUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED)
+            );
+
+            return reputationService.updateReputationForDownvoteGiven(
+                    new ReputationUpdateRequest(userId, ReputationConstants.POINTS_DOWNVOTE_GIVEN)
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Error downvoting answer: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public ReputationResponse approveBestAnswer(Long questionId, Long answerId, Long userId) {
+        try {
+            Question question = questionRepository.findById(questionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Question not found"));
+
+            if (!question.getUser().getId().equals(userId)) {
+                throw new IllegalArgumentException("Only the question owner can approve the best answer");
+            }
+
+            Answer answer = answerRepository.findById(answerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
+
+
+
+            question.setBestAnswerId(answerId);
+            questionRepository.save(question);
+
+            return reputationService.updateReputationForBestAnswer(
+                    new ReputationUpdateRequest(answer.getUser().getId(), ReputationConstants.POINTS_BEST_ANSWER)
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Error approving best answer: " + e.getMessage());
+        }
+    }
 }

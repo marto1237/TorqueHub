@@ -10,6 +10,7 @@ import torquehub.torquehub.domain.mapper.CommentMapper;
 import torquehub.torquehub.domain.model.Answer;
 import torquehub.torquehub.domain.model.Comment;
 import torquehub.torquehub.domain.model.User;
+import torquehub.torquehub.domain.model.Vote;
 import torquehub.torquehub.domain.request.CommentDtos.CommentCreateRequest;
 import torquehub.torquehub.domain.request.CommentDtos.CommentEditRequest;
 import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
@@ -18,7 +19,9 @@ import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
 import torquehub.torquehub.persistence.repository.AnswerRepository;
 import torquehub.torquehub.persistence.repository.CommentRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
+import torquehub.torquehub.persistence.repository.VoteRepository;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +43,9 @@ public class CommentServiceImpl implements CommentService {
 
     @Autowired
     private ReputationService reputationService;
+
+    @Autowired
+    private VoteRepository voteRepository;
 
 
     @Override
@@ -146,6 +152,101 @@ public class CommentServiceImpl implements CommentService {
             return Optional.of(comments.stream()
                     .map(commentMapper::toResponse)
                     .toList());
+        }
+    }
+
+    @Override
+    public ReputationResponse upvoteComment(Long commentId, Long userId) {
+        try {
+            Comment comment = commentRepository.findById(commentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            Optional<Vote> existingVote = voteRepository.findByUserAndComment(user, comment);
+
+            if (existingVote.isPresent()) {
+                Vote vote = existingVote.get();
+
+                if (vote.isUpvote()) {
+                    voteRepository.delete(vote);
+                    comment.setVotes(comment.getVotes() - 1);
+                } else {
+                    vote.setUpvote(true);
+                    voteRepository.save(vote);
+                    comment.setVotes(comment.getVotes() + 2);
+                }
+            } else {
+                Vote vote = new Vote();
+                vote.setUser(user);
+                vote.setComment(comment);
+                vote.setUpvote(true);
+                vote.setVotedAt(LocalDateTime.now());
+                voteRepository.save(vote);
+
+                comment.setVotes(comment.getVotes() + 1);
+            }
+
+            commentRepository.save(comment);
+
+
+            ReputationResponse authorReputation = reputationService.updateReputationForUpvote(
+                    new ReputationUpdateRequest(comment.getUser().getId(), ReputationConstants.POINTS_UPVOTE_RECEIVED)
+            );
+
+            return reputationService.updateReputationForUpvoteGiven(
+                    new ReputationUpdateRequest(userId, ReputationConstants.POINTS_UPVOTE_COMMENT)
+            );
+
+        }catch (Exception e){
+            throw new RuntimeException("Error upvoting comment: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ReputationResponse downvoteComment(Long commentId, Long userId) {
+        try {
+            Comment comment = commentRepository.findById(commentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            Optional<Vote> existingVote = voteRepository.findByUserAndComment(user, comment);
+
+            if(existingVote.isPresent()){
+                Vote vote = existingVote.get();
+
+                if(!vote.isUpvote()){
+                    voteRepository.delete(vote);
+                    comment.setVotes(comment.getVotes() + 1);
+                }else{
+                    vote.setUpvote(false);
+                    voteRepository.save(vote);
+                    comment.setVotes(comment.getVotes() - 2);
+
+                }
+            }else{
+                Vote vote = new Vote();
+                vote.setUser(user);
+                vote.setComment(comment);
+                vote.setUpvote(false);
+                vote.setVotedAt(LocalDateTime.now());
+                voteRepository.save(vote);
+
+                comment.setVotes(comment.getVotes() - 1);
+            }
+            commentRepository.save(comment);
+
+            ReputationResponse authorReputation = reputationService.updateReputationForDownvote(
+                    new ReputationUpdateRequest(comment.getUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED)
+            );
+
+            return reputationService.updateReputationForDownvoteGiven(
+                    new ReputationUpdateRequest(userId, ReputationConstants.POINTS_DOWNVOTE_COMMENT)
+            );
+
+        }catch (Exception e){
+            throw new RuntimeException("Error downvoting comment: " + e.getMessage());
         }
     }
 

@@ -22,7 +22,7 @@ public interface ReputationService {
 
     ReputationResponse updateReputationForBestAnswer(ReputationUpdateRequest reputationUpdateRequest);
 
-    boolean updateReputationForBestAnswerIsDeleted(ReputationUpdateRequest reputationUpdateRequest);
+    ReputationResponse updateReputationForBestAnswerIsDeleted(ReputationUpdateRequest reputationUpdateRequest);
 
     ReputationResponse updateReputationForConsecutiveActivity(ReputationUpdateRequest reputationUpdateRequest);
 
@@ -31,4 +31,6 @@ public interface ReputationService {
     boolean updateReputationForCommentWhenCommentIsDeleted(ReputationUpdateRequest reputationUpdateRequest);
 
     ReputationResponse updateReputationForUpvoteComment(ReputationUpdateRequest reputationUpdateRequest);
+
+    ReputationResponse updateReputationForDownvoteComment(ReputationUpdateRequest reputationUpdateRequest);
 }

@@ -43,6 +43,9 @@ public class Answer {
     @Column(nullable = false)
     private int votes = 0;
 
+    @OneToMany(mappedBy = "answer", cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, fetch = FetchType.LAZY)
+    private Set<Vote> votesList = new HashSet<>();
+
     @Column(nullable = false)
     private LocalDateTime answeredTime;
 

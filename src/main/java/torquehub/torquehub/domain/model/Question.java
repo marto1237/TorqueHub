@@ -33,6 +33,8 @@ public class Question {
     @Column(name = "description", columnDefinition = "LONGTEXT")
     private String description;
 
+    private Long bestAnswerId;
+
     private int views = 0;
     private int votes = 0;
     private int totalAnswers = 0;
