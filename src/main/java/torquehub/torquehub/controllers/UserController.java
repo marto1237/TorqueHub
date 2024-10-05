@@ -10,7 +10,6 @@ import torquehub.torquehub.business.interfaces.UserService;
 import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
 import torquehub.torquehub.domain.response.MessageResponse;
-import torquehub.torquehub.domain.response.RoleDtos.RoleResponse;
 import torquehub.torquehub.domain.response.UserDtos.UserResponse;
 
 import java.util.List;

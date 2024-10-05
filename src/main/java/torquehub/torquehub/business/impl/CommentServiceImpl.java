@@ -194,7 +194,7 @@ public class CommentServiceImpl implements CommentService {
                     new ReputationUpdateRequest(comment.getUser().getId(), ReputationConstants.POINTS_UPVOTE_RECEIVED)
             );
 
-            return reputationService.updateReputationForUpvoteGiven(
+            return reputationService.updateReputationForUpvoteComment(
                     new ReputationUpdateRequest(userId, ReputationConstants.POINTS_UPVOTE_COMMENT)
             );
 
@@ -241,7 +241,7 @@ public class CommentServiceImpl implements CommentService {
                     new ReputationUpdateRequest(comment.getUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED)
             );
 
-            return reputationService.updateReputationForDownvoteGiven(
+            return reputationService.updateReputationForDownvoteComment(
                     new ReputationUpdateRequest(userId, ReputationConstants.POINTS_DOWNVOTE_COMMENT)
             );
 

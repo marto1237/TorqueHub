@@ -15,14 +15,17 @@ public interface UserMapper {
     @Mapping(source = "role", target = "role", qualifiedByName = "stringToRole")
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "salt", ignore = true)
+    @Mapping(target = "points", ignore = true)
     User toEntity(UserCreateRequest userCreateRequest);
 
     @Mapping(source = "email", target = "role", qualifiedByName = "stringToRole")
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "salt", ignore = true)
+    @Mapping(target = "points", ignore = true)
     User toEntity(UserUpdateRequest userUpdateRequest);
 
     @Mapping(source = "role.name", target = "role")
+    @Mapping(target = "points", source = "points")
     UserResponse toResponse(User user);
 }
 
