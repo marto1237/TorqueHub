@@ -128,15 +128,27 @@ public class AnswerServiceImpl implements AnswerService {
             Optional<Answer> optionalAnswer = answerRepository.findById(answerId);
             if (optionalAnswer.isPresent()) {
 
+                Question question = optionalAnswer.get().getQuestion();
                 User user = optionalAnswer.get().getUser();
                 ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(user.getId(), ReputationConstants.POINTS_ANSWER_WHEN_DELETED);
+
                 boolean isReputationUpdated = reputationService.updateReputationForAnswerWhenAnswerIsDeleted(reputationUpdateRequest);
                 if(!isReputationUpdated) {
                     throw new IllegalArgumentException("Error updating reputation for user with ID " + user.getId());
-                }else {
-                    answerRepository.deleteById(answerId);
-                    return true;
                 }
+                if (question.getBestAnswerId() != null && question.getBestAnswerId().equals(answerId)) {
+
+                    ReputationUpdateRequest bestAnswerReputationUpdateRequest = new ReputationUpdateRequest(user.getId(), ReputationConstants.POINTS_BEST_ANSWER_WHEN_DELETED);
+                    reputationService.updateReputationForBestAnswerIsDeleted(bestAnswerReputationUpdateRequest);
+
+                    question.setBestAnswerId(null);
+                    questionRepository.save(question);
+
+                }
+
+                answerRepository.deleteById(answerId);
+                return true;
+
             } else {
                 throw new IllegalArgumentException("Answer with ID " + answerId + " not found");
             }

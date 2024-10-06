@@ -3,6 +3,7 @@ package torquehub.torquehub.business.impl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.NotificationService;
 import torquehub.torquehub.domain.model.Answer;
 import torquehub.torquehub.domain.model.Notification;
@@ -43,6 +44,28 @@ public class NotificationServiceImpl implements NotificationService {
         );
     }
 
-    
+    @Override
+    @Transactional
+    public void notifyUserAboutPoints(User user, int points, String reason, User voter) {
+        String message = "You have gained " + points + " points for " + reason + ".";
+
+        Notification notification = Notification.builder()
+                .user(user)
+                .voter(voter)
+                .message(message)
+                .points(points)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        notificationRepository.save(notification);
+
+        messagingTemplate.convertAndSendToUser(
+                user.getUsername(),
+                "/queue/notifications",
+                notification
+        );
+    }
+
+
 
 }

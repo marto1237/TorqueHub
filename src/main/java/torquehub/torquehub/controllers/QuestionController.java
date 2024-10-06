@@ -2,6 +2,9 @@ package torquehub.torquehub.controllers;
 
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -28,20 +31,30 @@ public class QuestionController {
     private QuestionService questionService;
 
     @GetMapping
-    public List<QuestionSummaryResponse> getAllQuestions() {
-        return questionService.getAllQuestions();
+    public ResponseEntity<Page<QuestionSummaryResponse>> getAllQuestions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<QuestionSummaryResponse> questions = questionService.getAllQuestions(pageable);
+        return ResponseEntity.ok(questions);
     }
+    @GetMapping("/tags")
+    public ResponseEntity<Page<QuestionSummaryResponse>> getQuestionsByTags(
+            @RequestParam Set<String> tags,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<QuestionSummaryResponse> questions = questionService.getQuestionsByTags(tags, pageable);
+        return ResponseEntity.ok(questions);
+    }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<QuestionDetailResponse> getQuestionById(@PathVariable Long id) {
         Optional<QuestionDetailResponse> question = questionService.getQuestionbyId(id);
         return question.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/tags")
-    public ResponseEntity<List<QuestionSummaryResponse>> getQuestionsByTags(@RequestParam Set<String> tags) {
-        List<QuestionSummaryResponse> questions = questionService.getQuestionsByTags(tags);
-        return ResponseEntity.ok(questions);
     }
 
     @GetMapping("/user/{userId}")

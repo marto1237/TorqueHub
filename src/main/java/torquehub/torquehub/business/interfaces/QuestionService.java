@@ -1,5 +1,7 @@
 package torquehub.torquehub.business.interfaces;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionCreateRequest;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionUpdateRequest;
@@ -23,11 +25,11 @@ public interface QuestionService {
 
     Optional<QuestionDetailResponse> getQuestionbyId(Long questionId);
 
-    List<QuestionSummaryResponse> getAllQuestions();
+    Page<QuestionSummaryResponse> getAllQuestions(Pageable pageable);
 
     Optional<List<QuestionSummaryResponse>> getQuestionsByUser(Long userId);
 
-    List<QuestionSummaryResponse> getQuestionsByTags(Set<String> tags);
+    Page<QuestionSummaryResponse> getQuestionsByTags(Set<String> tags,Pageable pageable);
     ReputationResponse upvoteQuestion(Long commentId, Long userId);
     ReputationResponse downvoteQuestion(Long commentId, Long userId);
 

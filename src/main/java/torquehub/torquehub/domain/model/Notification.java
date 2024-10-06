@@ -24,6 +24,13 @@ public class Notification {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "voter_id", nullable = true)
+    private User voter;
+
+    @Column(name = "points", nullable = true)
+    private Integer points;
+
     @Column(name = "message", nullable = false)
     private String message;
 

@@ -1,6 +1,8 @@
 package torquehub.torquehub.business.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.QuestionService;
@@ -143,10 +145,9 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
-    public List<QuestionSummaryResponse> getAllQuestions() {
-        return questionRepository.findAll().stream()
-                .map(questionMapper::toSummaryResponse)
-                .collect(Collectors.toList());
+    public Page<QuestionSummaryResponse> getAllQuestions(Pageable pageable) {
+        Page<Question> questionsPage = questionRepository.findAll(pageable);
+        return questionsPage.map(questionMapper::toSummaryResponse);
     }
 
     @Override
@@ -163,15 +164,15 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
-    public List<QuestionSummaryResponse> getQuestionsByTags(Set<String> tagsNames) {
-        List<Question> filteredQuestions = questionRepository.findQuestionsByTagNames(tagsNames);
-
-        if (filteredQuestions.isEmpty()) {
-            throw new IllegalArgumentException("No questions found for these tags: " + tagsNames);
-        }
-        return filteredQuestions.stream()
-                .map(questionMapper::toSummaryResponse)
+    public Page<QuestionSummaryResponse> getQuestionsByTags(Set<String> tags, Pageable pageable) {
+        List<Tag> tagEntities = tags.stream()
+                .map(tag -> tagRepository.findByName(tag)
+                        .orElseThrow(() -> new IllegalArgumentException("Tag not found: " + tag)))
                 .collect(Collectors.toList());
+
+        Page<Question> filteredQuestions = questionRepository.findQuestionsByTags(tagEntities, pageable);
+
+        return filteredQuestions.map(questionMapper::toSummaryResponse);
     }
 
     @Override
