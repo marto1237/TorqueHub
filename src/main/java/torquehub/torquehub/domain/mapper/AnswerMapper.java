@@ -28,6 +28,11 @@ public interface AnswerMapper {
 
     // Method to limit the number of comments and use @Context to access commentMapper
     default List<CommentResponse> limitComments(Set<Comment> comments, int startIndex, @Context CommentMapper commentMapper) {
+        if (comments == null || comments.isEmpty()) {
+            // Return an empty list if comments are null or empty
+            return List.of();
+        }
+
         PriorityQueue<Comment> priorityQueue = new PriorityQueue<>((c1, c2) -> Integer.compare(c2.getVotes(), c1.getVotes()));
 
         // Add all comments to the priority queue

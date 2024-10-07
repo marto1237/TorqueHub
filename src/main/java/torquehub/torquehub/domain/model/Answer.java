@@ -26,7 +26,7 @@ public class Answer {
 
     @NotBlank
     @Lob
-    @Column(name = "text", columnDefinition = "LONGTEXT")
+    @Column(name = "text", columnDefinition = "LONGTEXT", nullable = false)
     private String text;
 
     @ManyToOne(fetch = FetchType.LAZY)

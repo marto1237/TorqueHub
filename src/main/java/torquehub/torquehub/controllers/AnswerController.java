@@ -51,7 +51,7 @@ public class AnswerController {
         return ResponseEntity.ok(answerResponse);
     }
 
-    @GetMapping("/{questionId}")
+    @GetMapping("/questions/{questionId}")
     public ResponseEntity<List<AnswerResponse>> getAnswersByQuestion(@PathVariable Long questionId) {
         Optional<List<AnswerResponse>> answerResponses = answerService.getAnswersByQuestion(questionId);
         return answerResponses.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
@@ -63,7 +63,7 @@ public class AnswerController {
         return answerResponses.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/{answerId}")
+    @GetMapping("/byId/{answerId}")
     public ResponseEntity<AnswerResponse> getAnswerById(@PathVariable Long answerId) {
         AnswerResponse answerResponse = answerService.getAnswerById(answerId);
         return ResponseEntity.ok(answerResponse);

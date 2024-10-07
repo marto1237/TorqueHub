@@ -1,5 +1,6 @@
 package torquehub.torquehub.business.impl;
 
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,12 +65,16 @@ public class AnswerServiceImpl implements AnswerService {
             Question question = questionRepository.findById(answerCreateRequest.getQuestionId())
                     .orElseThrow(() -> new IllegalArgumentException("Question not found"));
 
+            // If FetchType.LAZY is required, ensure the objects are fully initialized before using them.
+            Hibernate.initialize(user);
+            Hibernate.initialize(question);
+
             Answer answer = Answer.builder()
                     .text(answerCreateRequest.getText())
                     .user(user)
                     .question(question)
                     .isEdited(false)
-                    .answeredTime(new Date().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime())
+                    .answeredTime(LocalDateTime.now())
                     .votes(0)
                     .build();
 
@@ -83,7 +88,7 @@ public class AnswerServiceImpl implements AnswerService {
             return answerResponse;
         }
         catch (Exception e){
-            throw new RuntimeException("Error adding answer " + e.getMessage());
+            throw new RuntimeException("Error adding answer " + e.getMessage(), e);
         }
 
     }
@@ -112,6 +117,7 @@ public class AnswerServiceImpl implements AnswerService {
     @Override
     public Optional<List<AnswerResponse>> getAnswersByQuestion(Long questionId) {
         List<Answer> answers = answerRepository.findByQuestionId(questionId);
+        System.out.println("Answers found: " + answers.size());
         if (answers.isEmpty()) {
             return Optional.empty();
         }else {

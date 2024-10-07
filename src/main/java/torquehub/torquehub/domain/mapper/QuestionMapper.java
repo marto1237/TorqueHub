@@ -31,7 +31,7 @@ public interface QuestionMapper {
     @Mapping(target = "userName", source = "user.username")
     QuestionSummaryResponse toSummaryResponse(Question question);
 
-    @Mapping(target = "answers", source = "answers")
+    @Mapping(target = "answers", source = "question.answers")
     @Mapping(target = "tags", expression = "java(mapTagsToTagNames(question.getTags()))")
     @Mapping(target = "userName", source = "question.user.username")
     @Mapping(target = "userPoints", source = "question.user.points")

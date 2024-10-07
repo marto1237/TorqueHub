@@ -24,6 +24,11 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
     @Query("SELECT q FROM Question q JOIN q.tags t WHERE t.name IN :tags GROUP BY q")
     Page<Question> findQuestionsByTags(@Param("tags") List<Tag> tags, Pageable pageable);
 
+    @Query("SELECT q FROM Question q LEFT JOIN FETCH q.answers a LEFT JOIN FETCH a.comments WHERE q.id = :id")
+    Optional<Question> findByIdWithAnswersAndComments(@Param("id") Long id);
+
+
+
 
 
 

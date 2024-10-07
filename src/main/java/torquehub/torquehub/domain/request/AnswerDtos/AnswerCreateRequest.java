@@ -18,7 +18,7 @@ public class AnswerCreateRequest {
     @Size(min = 3, max = 100000, message = "Text must be between 3 and  100000 characters")
     private String text;
 
-    @NotBlank(message = "Question ID is required")
+    @NotNull(message = "Question ID is required")
     private Long questionId;
 
     @NotNull(message = "User ID is required")
