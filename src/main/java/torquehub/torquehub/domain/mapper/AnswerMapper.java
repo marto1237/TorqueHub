@@ -22,25 +22,19 @@ public interface AnswerMapper {
     Answer toEntity(AnswerEditRequest answerEditRequest);
 
     @Mapping(target = "username", source = "user.username")
+    @Mapping(target = "userPoints", source = "user.points")
     @Mapping(target = "comments", expression = "java(limitComments(answer.getComments(), 0, commentMapper))")
     @Mapping(target = "postedTime", expression = "java(java.util.Date.from(answer.getAnsweredTime().atZone(java.time.ZoneId.systemDefault()).toInstant()))")
     AnswerResponse toResponse(Answer answer, @Context CommentMapper commentMapper);
 
-    // Method to limit the number of comments and use @Context to access commentMapper
-    default List<CommentResponse> limitComments(Set<Comment> comments, int startIndex, @Context CommentMapper commentMapper) {
+    default List<CommentResponse> limitComments(List<Comment> comments, int startIndex, @Context CommentMapper commentMapper) {
         if (comments == null || comments.isEmpty()) {
-            // Return an empty list if comments are null or empty
             return List.of();
         }
 
-        PriorityQueue<Comment> priorityQueue = new PriorityQueue<>((c1, c2) -> Integer.compare(c2.getVotes(), c1.getVotes()));
-
-        // Add all comments to the priority queue
-        priorityQueue.addAll(comments);
-
-        // Extract and map the top 5 comments based on votes
-        return priorityQueue.stream()
-                .skip(startIndex) // Skip comments if we want to load more
+        // Limit to the top 5 comments, starting at startIndex
+        return comments.stream()
+                .skip(startIndex) // Skip comments if we want to paginate
                 .limit(5)         // Limit to 5 comments
                 .map(commentMapper::toResponse)  // Map Comment to CommentResponse
                 .collect(Collectors.toList());

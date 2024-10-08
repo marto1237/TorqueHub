@@ -18,7 +18,7 @@ public class CommentCreateRequest {
     @Size(min = 3,max = 100000, message = "Text must be between 3 and 100000 characters")
     private String text;
 
-    @NotBlank(message = "Answer ID is required")
+    @NotNull(message = "Answer ID is required")
     private Long answerId;
 
     @NotNull(message = "User ID is required")

@@ -9,6 +9,7 @@ import torquehub.torquehub.business.interfaces.QuestionService;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.AnswerMapper;
+import torquehub.torquehub.domain.mapper.CommentMapper;
 import torquehub.torquehub.domain.mapper.QuestionMapper;
 import torquehub.torquehub.domain.model.*;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionCreateRequest;
@@ -49,6 +50,9 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Autowired
     private VoteRepository voteRepository;
+
+    @Autowired
+    private CommentMapper commentMapper;
 
     @Override
     public QuestionResponse askQuestion(QuestionCreateRequest questionCreateRequest) {
@@ -141,7 +145,7 @@ public class QuestionServiceImpl implements QuestionService {
     @Override
     public Optional<QuestionDetailResponse> getQuestionbyId(Long questionId) {
         return questionRepository.findById(questionId)
-                .map(questionMapper::toDetailResponse);
+                .map(question -> questionMapper.toDetailResponse(question, commentMapper));
     }
 
     @Override

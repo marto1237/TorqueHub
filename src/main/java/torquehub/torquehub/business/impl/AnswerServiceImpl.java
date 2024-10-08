@@ -117,7 +117,6 @@ public class AnswerServiceImpl implements AnswerService {
     @Override
     public Optional<List<AnswerResponse>> getAnswersByQuestion(Long questionId) {
         List<Answer> answers = answerRepository.findByQuestionId(questionId);
-        System.out.println("Answers found: " + answers.size());
         if (answers.isEmpty()) {
             return Optional.empty();
         }else {

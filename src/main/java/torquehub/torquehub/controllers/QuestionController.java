@@ -57,6 +57,7 @@ public class QuestionController {
         return question.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<QuestionSummaryResponse>> getQuestionsByUser(@PathVariable Long userId) {
         Optional<List<QuestionSummaryResponse>> questions = questionService.getQuestionsByUser(userId);
