@@ -4,14 +4,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.BookmarkService;
-import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.BookmarkMapper;
 import torquehub.torquehub.domain.model.*;
 import torquehub.torquehub.domain.request.BookmarkDtos.BookmarkRequest;
-import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
 import torquehub.torquehub.domain.response.BookmarkDtos.BookmarkResponse;
-import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
-import torquehub.torquehub.persistence.repository.AnswerRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaBookmarkRepository;
 import torquehub.torquehub.persistence.repository.BookmarkRepository;
 import torquehub.torquehub.persistence.repository.QuestionRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
@@ -23,6 +21,11 @@ import java.util.Optional;
 @Service
 public class BookmarkServiceImpl implements BookmarkService {
 
+    private final JpaBookmarkRepository bookmarkRepository;
+
+    public BookmarkServiceImpl(JpaBookmarkRepository bookmarkRepository) {
+        this.bookmarkRepository = bookmarkRepository;
+    }
     @Autowired
     private UserRepository userRepository;
 
@@ -30,10 +33,8 @@ public class BookmarkServiceImpl implements BookmarkService {
     private QuestionRepository questionRepository;
 
     @Autowired
-    private AnswerRepository answerRepository;
+    private JpaAnswerRepository answerRepository;
 
-    @Autowired
-    private BookmarkRepository bookmarkRepository;
 
     @Autowired
     private BookmarkMapper bookmarkMapper;

@@ -9,14 +9,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import torquehub.torquehub.domain.mapper.RoleMapper;
-import torquehub.torquehub.domain.mapper.RoleMapperHelper;
 import torquehub.torquehub.domain.mapper.UserMapper;
 import torquehub.torquehub.domain.model.Role;
 import torquehub.torquehub.domain.model.User;
 import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
-import torquehub.torquehub.domain.response.LoginDtos.LoginResponse;
 import torquehub.torquehub.domain.response.UserDtos.UserResponse;
 import torquehub.torquehub.persistence.repository.RoleRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
@@ -25,7 +23,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)

@@ -16,7 +16,7 @@ import torquehub.torquehub.domain.request.CommentDtos.CommentEditRequest;
 import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
 import torquehub.torquehub.domain.response.CommentDtos.CommentResponse;
 import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
-import torquehub.torquehub.persistence.repository.AnswerRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.repository.CommentRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
 import torquehub.torquehub.persistence.repository.VoteRepository;
@@ -39,7 +39,7 @@ public class CommentServiceImpl implements CommentService {
     private UserRepository userRepository;
 
     @Autowired
-    private AnswerRepository answerRepository;
+    private JpaAnswerRepository answerRepository;
 
     @Autowired
     private ReputationService reputationService;

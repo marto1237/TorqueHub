@@ -19,13 +19,12 @@ import torquehub.torquehub.domain.request.AnswerDtos.AnswerEditRequest;
 import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
 import torquehub.torquehub.domain.response.AnswerDtos.AnswerResponse;
 import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
-import torquehub.torquehub.persistence.repository.AnswerRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.repository.QuestionRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
 import torquehub.torquehub.persistence.repository.VoteRepository;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,7 +38,7 @@ public class AnswerServiceImpl implements AnswerService {
     private CommentMapper commentMapper;
 
     @Autowired
-    private AnswerRepository answerRepository;
+    private JpaAnswerRepository answerRepository;
 
     @Autowired
     private UserRepository userRepository;

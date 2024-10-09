@@ -8,11 +8,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import torquehub.torquehub.domain.model.Question;
 import torquehub.torquehub.domain.model.Tag;
-import torquehub.torquehub.domain.model.User;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @Repository
 public interface QuestionRepository extends JpaRepository<Question, Long> {

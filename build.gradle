@@ -6,6 +6,7 @@ plugins {
 
 group = 'torquehub'
 version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '19'
 
 java {
     toolchain {

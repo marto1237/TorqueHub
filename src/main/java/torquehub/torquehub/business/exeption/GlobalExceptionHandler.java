@@ -1,4 +1,4 @@
-package torquehub.torquehub.exeption;
+package torquehub.torquehub.business.exeption;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

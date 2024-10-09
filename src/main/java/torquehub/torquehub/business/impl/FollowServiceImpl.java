@@ -12,11 +12,13 @@ import torquehub.torquehub.domain.model.User;
 import torquehub.torquehub.domain.request.FollowDtos.FollowAnswerRequest;
 import torquehub.torquehub.domain.request.FollowDtos.FollowQuestionRequest;
 import torquehub.torquehub.domain.response.FollowRequest.FollowResponse;
-import torquehub.torquehub.persistence.repository.*;
+import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
+import torquehub.torquehub.persistence.repository.FollowRepository;
+import torquehub.torquehub.persistence.repository.QuestionRepository;
+import torquehub.torquehub.persistence.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class FollowServiceImpl implements FollowService {
@@ -31,7 +33,7 @@ public class FollowServiceImpl implements FollowService {
     private QuestionRepository questionRepository;
 
     @Autowired
-    private AnswerRepository answerRepository;
+    private JpaAnswerRepository answerRepository;
 
     @Autowired
     private FollowMapper followMapper;

@@ -23,6 +23,7 @@ public interface AnswerMapper {
 
     @Mapping(target = "username", source = "user.username")
     @Mapping(target = "userPoints", source = "user.points")
+    @Mapping(target = "isEdited", source = "edited")
     @Mapping(target = "comments", expression = "java(limitComments(answer.getComments(), 0, commentMapper))")
     @Mapping(target = "postedTime", expression = "java(java.util.Date.from(answer.getAnsweredTime().atZone(java.time.ZoneId.systemDefault()).toInstant()))")
     AnswerResponse toResponse(Answer answer, @Context CommentMapper commentMapper);

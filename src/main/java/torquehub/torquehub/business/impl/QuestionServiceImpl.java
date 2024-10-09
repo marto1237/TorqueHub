@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.QuestionService;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.domain.ReputationConstants;
-import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.CommentMapper;
 import torquehub.torquehub.domain.mapper.QuestionMapper;
 import torquehub.torquehub.domain.model.*;
@@ -29,9 +28,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class QuestionServiceImpl implements QuestionService {
-
-    @Autowired
-    private AnswerRepository answerRepository;
 
     @Autowired
     private QuestionRepository questionRepository;

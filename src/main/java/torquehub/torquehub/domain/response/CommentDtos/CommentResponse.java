@@ -16,6 +16,7 @@ public class CommentResponse {
     private Long id;
     private String text;
     private String username;
+    private int userPoints;
     private int votes;
     private boolean isEdited;
     private ReputationResponse reputationResponse;
