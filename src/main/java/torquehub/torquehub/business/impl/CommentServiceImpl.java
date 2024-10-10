@@ -1,6 +1,5 @@
 package torquehub.torquehub.business.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.CommentService;
@@ -17,9 +16,9 @@ import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest
 import torquehub.torquehub.domain.response.CommentDtos.CommentResponse;
 import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
-import torquehub.torquehub.persistence.repository.CommentRepository;
-import torquehub.torquehub.persistence.repository.UserRepository;
-import torquehub.torquehub.persistence.repository.VoteRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaCommentRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaVoteRepository;
 
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -29,24 +28,26 @@ import java.util.Optional;
 @Service
 public class CommentServiceImpl implements CommentService {
 
-    @Autowired
-    private CommentMapper commentMapper;
+    private final CommentMapper commentMapper;
+    private final JpaCommentRepository commentRepository;
+    private final JpaUserRepository userRepository;
+    private final JpaAnswerRepository answerRepository;
+    private final ReputationService reputationService;
+    private final JpaVoteRepository voteRepository;
 
-    @Autowired
-    private CommentRepository commentRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private JpaAnswerRepository answerRepository;
-
-    @Autowired
-    private ReputationService reputationService;
-
-    @Autowired
-    private VoteRepository voteRepository;
-
+    public CommentServiceImpl(CommentMapper commentMapper,
+                              JpaCommentRepository commentRepository,
+                              JpaUserRepository userRepository,
+                              JpaAnswerRepository answerRepository,
+                              ReputationService reputationService,
+                              JpaVoteRepository voteRepository) {
+        this.commentMapper = commentMapper;
+        this.commentRepository = commentRepository;
+        this.userRepository = userRepository;
+        this.answerRepository = answerRepository;
+        this.reputationService = reputationService;
+        this.voteRepository = voteRepository;
+    }
 
     @Override
     @Transactional

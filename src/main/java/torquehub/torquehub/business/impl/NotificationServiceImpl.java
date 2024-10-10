@@ -1,6 +1,5 @@
 package torquehub.torquehub.business.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,18 +8,21 @@ import torquehub.torquehub.domain.model.Answer;
 import torquehub.torquehub.domain.model.Notification;
 import torquehub.torquehub.domain.model.User;
 import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
-import torquehub.torquehub.persistence.repository.NotificationRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaNotificationRepository;
 
 import java.time.LocalDateTime;
 
 @Service
 public class NotificationServiceImpl implements NotificationService {
 
-    @Autowired
-    private NotificationRepository notificationRepository;
+    private final JpaNotificationRepository notificationRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
+    public NotificationServiceImpl(JpaNotificationRepository notificationRepository,
+                                   SimpMessagingTemplate messagingTemplate) {
+        this.notificationRepository = notificationRepository;
+        this.messagingTemplate = messagingTemplate;
+    }
 
     @Override
     public void notifyAnswerOwner(User owner, Answer answer, boolean isUpvote, ReputationResponse authorReputation) {

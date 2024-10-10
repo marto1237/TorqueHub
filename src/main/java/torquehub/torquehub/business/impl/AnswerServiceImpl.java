@@ -1,7 +1,6 @@
 package torquehub.torquehub.business.impl;
 
 import org.hibernate.Hibernate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.AnswerService;
@@ -20,9 +19,9 @@ import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest
 import torquehub.torquehub.domain.response.AnswerDtos.AnswerResponse;
 import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
-import torquehub.torquehub.persistence.repository.QuestionRepository;
-import torquehub.torquehub.persistence.repository.UserRepository;
-import torquehub.torquehub.persistence.repository.VoteRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaVoteRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,29 +30,34 @@ import java.util.Optional;
 @Service
 public class AnswerServiceImpl implements AnswerService {
 
-    @Autowired
-    private AnswerMapper answerMapper;
+    private final AnswerMapper answerMapper;
+    private final CommentMapper commentMapper;
+    private final JpaUserRepository userRepository;
+    private final JpaQuestionRepository questionRepository;
+    private final ReputationService reputationService;
+    private final JpaVoteRepository voteRepository;
+    private final NotificationService notificationService;
+    private final JpaAnswerRepository answerRepository;
 
-    @Autowired
-    private CommentMapper commentMapper;
 
-    @Autowired
-    private JpaAnswerRepository answerRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private QuestionRepository questionRepository;
-
-    @Autowired
-    private ReputationService reputationService;
-
-    @Autowired
-    private VoteRepository voteRepository;
-
-    @Autowired
-    private NotificationService notificationService;
+    public AnswerServiceImpl(
+            AnswerMapper answerMapper,
+            CommentMapper commentMapper,
+            JpaUserRepository userRepository,
+            JpaQuestionRepository questionRepository,
+            ReputationService reputationService,
+            JpaVoteRepository voteRepository,
+            NotificationService notificationService,
+            JpaAnswerRepository answerRepository) {
+        this.answerMapper = answerMapper;
+        this.commentMapper = commentMapper;
+        this.userRepository = userRepository;
+        this.questionRepository = questionRepository;
+        this.reputationService = reputationService;
+        this.voteRepository = voteRepository;
+        this.notificationService = notificationService;
+        this.answerRepository = answerRepository;
+    }
 
     @Override
     @Transactional
@@ -61,6 +65,7 @@ public class AnswerServiceImpl implements AnswerService {
         try{
             User user = userRepository.findById(answerCreateRequest.getUserId())
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            Hibernate.initialize(user.getPoints());
             Question question = questionRepository.findById(answerCreateRequest.getQuestionId())
                     .orElseThrow(() -> new IllegalArgumentException("Question not found"));
 

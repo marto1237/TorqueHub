@@ -12,6 +12,6 @@ public interface BookmarkRepository {
     List<Bookmark> findByUserId(Long userId);
     Optional<Bookmark> findByUserIdAndQuestionId(Long userId, Long questionId);
     Optional<Bookmark> findByUserIdAndAnswerId(Long userId, Long answerId);
-    void delete(Bookmark bookmark);
+    boolean delete(Bookmark bookmark);
     void deleteById(Long id);
 }

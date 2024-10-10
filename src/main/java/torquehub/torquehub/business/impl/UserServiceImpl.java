@@ -1,6 +1,5 @@
 package torquehub.torquehub.business.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,8 +13,8 @@ import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
 import torquehub.torquehub.domain.response.LoginDtos.LoginResponse;
 import torquehub.torquehub.domain.response.UserDtos.UserResponse;
-import torquehub.torquehub.persistence.repository.RoleRepository;
-import torquehub.torquehub.persistence.repository.UserRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaRoleRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 
 import java.security.SecureRandom;
 import java.util.List;
@@ -25,14 +24,15 @@ import java.util.stream.Collectors;
 @Service
 public class UserServiceImpl implements UserService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final JpaUserRepository userRepository;
+    private final JpaRoleRepository roleRepository;
+    private final UserMapper userMapper;
 
-    @Autowired
-    private RoleRepository roleRepository;
-
-    @Autowired
-    private UserMapper userMapper;
+    public UserServiceImpl(JpaUserRepository userRepository, JpaRoleRepository roleRepository, UserMapper userMapper) {
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.userMapper = userMapper;
+    }
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 

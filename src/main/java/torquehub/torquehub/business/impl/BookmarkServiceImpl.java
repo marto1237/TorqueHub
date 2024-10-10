@@ -1,6 +1,5 @@
 package torquehub.torquehub.business.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.BookmarkService;
@@ -10,9 +9,8 @@ import torquehub.torquehub.domain.request.BookmarkDtos.BookmarkRequest;
 import torquehub.torquehub.domain.response.BookmarkDtos.BookmarkResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaBookmarkRepository;
-import torquehub.torquehub.persistence.repository.BookmarkRepository;
-import torquehub.torquehub.persistence.repository.QuestionRepository;
-import torquehub.torquehub.persistence.repository.UserRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,22 +20,22 @@ import java.util.Optional;
 public class BookmarkServiceImpl implements BookmarkService {
 
     private final JpaBookmarkRepository bookmarkRepository;
+    private final JpaAnswerRepository answerRepository;
+    private final JpaUserRepository userRepository;
+    private final JpaQuestionRepository questionRepository;
+    private final BookmarkMapper bookmarkMapper;
 
-    public BookmarkServiceImpl(JpaBookmarkRepository bookmarkRepository) {
+    public BookmarkServiceImpl(JpaBookmarkRepository bookmarkRepository,
+                               JpaAnswerRepository answerRepository,
+                               JpaUserRepository userRepository,
+                               JpaQuestionRepository questionRepository,
+                               BookmarkMapper bookmarkMapper) {
         this.bookmarkRepository = bookmarkRepository;
+        this.answerRepository = answerRepository;
+        this.userRepository = userRepository;
+        this.questionRepository = questionRepository;
+        this.bookmarkMapper = bookmarkMapper;
     }
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private QuestionRepository questionRepository;
-
-    @Autowired
-    private JpaAnswerRepository answerRepository;
-
-
-    @Autowired
-    private BookmarkMapper bookmarkMapper;
 
 
     @Override

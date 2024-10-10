@@ -1,6 +1,5 @@
 package torquehub.torquehub.business.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.FollowService;
@@ -13,9 +12,9 @@ import torquehub.torquehub.domain.request.FollowDtos.FollowAnswerRequest;
 import torquehub.torquehub.domain.request.FollowDtos.FollowQuestionRequest;
 import torquehub.torquehub.domain.response.FollowRequest.FollowResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
-import torquehub.torquehub.persistence.repository.FollowRepository;
-import torquehub.torquehub.persistence.repository.QuestionRepository;
-import torquehub.torquehub.persistence.repository.UserRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaFollowRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,20 +22,24 @@ import java.util.List;
 @Service
 public class FollowServiceImpl implements FollowService {
 
-    @Autowired
-    private FollowRepository followRepository;
+    private final JpaFollowRepository followRepository;
+    private final JpaUserRepository userRepository;
+    private final JpaQuestionRepository questionRepository;
+    private final JpaAnswerRepository answerRepository;
+    private final FollowMapper followMapper;
 
-    @Autowired
-    private UserRepository userRepository;
+    public FollowServiceImpl(JpaFollowRepository followRepository,
+                             JpaUserRepository userRepository,
+                             JpaQuestionRepository questionRepository,
+                             JpaAnswerRepository answerRepository,
+                             FollowMapper followMapper) {
+        this.followRepository = followRepository;
+        this.userRepository = userRepository;
+        this.questionRepository = questionRepository;
+        this.answerRepository = answerRepository;
+        this.followMapper = followMapper;
+    }
 
-    @Autowired
-    private QuestionRepository questionRepository;
-
-    @Autowired
-    private JpaAnswerRepository answerRepository;
-
-    @Autowired
-    private FollowMapper followMapper;
 
     @Override
     @Transactional

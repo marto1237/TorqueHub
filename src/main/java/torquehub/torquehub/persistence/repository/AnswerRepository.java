@@ -9,6 +9,6 @@ public interface AnswerRepository {
     Optional<Answer> findById(Long id);
     List<Answer> findByQuestionId(Long questionId);
     List<Answer> findByUserId(Long userId);
-    void deleteById(Long id);
+    boolean deleteById(Long id);
 
 }

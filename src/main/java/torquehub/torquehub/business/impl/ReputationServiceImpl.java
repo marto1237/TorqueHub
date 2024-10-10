@@ -1,6 +1,5 @@
 package torquehub.torquehub.business.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.ReputationService;
@@ -9,18 +8,20 @@ import torquehub.torquehub.domain.mapper.ReputationMapper;
 import torquehub.torquehub.domain.model.User;
 import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
 import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
-import torquehub.torquehub.persistence.repository.UserRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 
 import java.util.Optional;
 
 @Service
 public class ReputationServiceImpl  implements ReputationService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final JpaUserRepository userRepository;
+    private final ReputationMapper reputationMapper;
 
-    @Autowired
-    private ReputationMapper reputationMapper;
+    public ReputationServiceImpl(JpaUserRepository userRepository, ReputationMapper reputationMapper) {
+        this.userRepository = userRepository;
+        this.reputationMapper = reputationMapper;
+    }
 
     @Override
     @Transactional

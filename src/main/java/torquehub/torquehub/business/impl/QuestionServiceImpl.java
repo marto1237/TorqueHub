@@ -1,6 +1,5 @@
 package torquehub.torquehub.business.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,6 +17,10 @@ import torquehub.torquehub.domain.response.QuestionDtos.QuestionDetailResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionSummaryResponse;
 import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
+import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaTagRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaVoteRepository;
 import torquehub.torquehub.persistence.repository.*;
 
 import java.time.LocalDateTime;
@@ -29,26 +32,29 @@ import java.util.stream.Collectors;
 @Service
 public class QuestionServiceImpl implements QuestionService {
 
-    @Autowired
-    private QuestionRepository questionRepository;
+    private final JpaQuestionRepository questionRepository;
+    private final JpaTagRepository tagRepository;
+    private final JpaUserRepository userRepository;
+    private final QuestionMapper questionMapper;
+    private final ReputationService reputationService;
+    private final JpaVoteRepository voteRepository;
+    private final CommentMapper commentMapper;
 
-    @Autowired
-    private TagRepository tagRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private QuestionMapper questionMapper;
-
-    @Autowired
-    private ReputationService reputationService;
-
-    @Autowired
-    private VoteRepository voteRepository;
-
-    @Autowired
-    private CommentMapper commentMapper;
+    public QuestionServiceImpl(JpaQuestionRepository questionRepository,
+                               JpaTagRepository tagRepository,
+                               JpaUserRepository userRepository,
+                               QuestionMapper questionMapper,
+                               ReputationService reputationService,
+                               JpaVoteRepository voteRepository,
+                               CommentMapper commentMapper) {
+        this.questionRepository = questionRepository;
+        this.tagRepository = tagRepository;
+        this.userRepository = userRepository;
+        this.questionMapper = questionMapper;
+        this.reputationService = reputationService;
+        this.voteRepository = voteRepository;
+        this.commentMapper = commentMapper;
+    }
 
     @Override
     public QuestionResponse askQuestion(QuestionCreateRequest questionCreateRequest) {

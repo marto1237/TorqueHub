@@ -4,8 +4,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import torquehub.torquehub.domain.model.Comment;
 
 import java.util.List;
+import java.util.Optional;
 
-public interface CommentRepository extends JpaRepository<Comment, Long> {
+public interface CommentRepository {
+    Comment save(Comment comment);
+    Optional<Comment> findById(Long commentId);
+    boolean deleteById(Long commentId);
     List<Comment> findByAnswerId(Long answerId);
     List<Comment> findByUserId(Long userId);
 }

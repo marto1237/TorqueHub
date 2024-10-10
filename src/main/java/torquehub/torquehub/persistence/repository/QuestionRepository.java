@@ -13,20 +13,13 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface QuestionRepository extends JpaRepository<Question, Long> {
+public interface QuestionRepository  {
+    Question save(Question question);
+    Optional<Question> findById(Long questionId);
+    boolean deleteById(Long questionId);
     Page<Question> findAll(Pageable pageable);
-    Optional<Question> findById(Long aLong);
-    Optional<Question> findByTitle(String title);
-    List<Question> findByUserId(Long aLong);
-
-    @Query("SELECT q FROM Question q JOIN q.tags t WHERE t.name IN :tags GROUP BY q")
-    Page<Question> findQuestionsByTags(@Param("tags") List<Tag> tags, Pageable pageable);
-
-    @Query("SELECT q FROM Question q LEFT JOIN FETCH q.answers a LEFT JOIN FETCH a.comments WHERE q.id = :id")
-    Optional<Question> findByIdWithAnswersAndComments(@Param("id") Long id);
-
-    @Query("SELECT q FROM Question q LEFT JOIN FETCH q.answers WHERE q.id = :id")
-    Optional<Question> findByIdWithAnswers(@Param("id") Long id);
+    Page<Question> findQuestionsByTags(List<Tag> tagEntities, Pageable pageable);
+    List<Question> findByUserId(Long userId);
 
 
 

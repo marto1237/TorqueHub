@@ -7,8 +7,12 @@ import torquehub.torquehub.domain.model.*;
 import java.util.Optional;
 
 @Repository
-public interface VoteRepository extends JpaRepository<Vote, Long> {
+public interface VoteRepository {
+
     Optional<Vote> findByUserAndAnswer(User user, Answer answer);
-    Optional<Vote> findByUserAndQuestion(User user, Question question);
+    boolean delete(Vote vote);
+    Vote save(Vote vote);
     Optional<Vote> findByUserAndComment(User user, Comment comment);
+    Optional<Vote> findByUserAndQuestion(User user, Question question);
+
 }

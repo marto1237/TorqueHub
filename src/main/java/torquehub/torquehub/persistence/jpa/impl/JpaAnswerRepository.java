@@ -36,7 +36,12 @@ public class JpaAnswerRepository implements AnswerRepository {
     }
 
     @Override
-    public void deleteById(Long id) {
-        answerRepository.deleteById(id);
+    public boolean deleteById(Long id) {
+        if (answerRepository.existsById(id)) {
+            answerRepository.deleteById(id);
+            return true;
+        } else {
+            return false;
+        }
     }
 }

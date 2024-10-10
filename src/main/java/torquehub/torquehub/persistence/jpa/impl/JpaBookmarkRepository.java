@@ -42,8 +42,13 @@ public class JpaBookmarkRepository implements BookmarkRepository {
     }
 
     @Override
-    public void delete(Bookmark bookmark) {
-        bookmarkRepository.delete(bookmark);
+    public boolean delete(Bookmark bookmark) {
+        if (bookmarkRepository.existsById(bookmark.getId())) {
+            bookmarkRepository.delete(bookmark);
+            return true;
+        } else {
+            return false;
+        }
     }
 
 

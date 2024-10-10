@@ -1,7 +1,5 @@
 package torquehub.torquehub.business.impl;
 
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.RoleService;
@@ -10,7 +8,7 @@ import torquehub.torquehub.domain.model.Role;
 import torquehub.torquehub.domain.request.RoleDtos.RoleCreateRequest;
 import torquehub.torquehub.domain.request.RoleDtos.RoleUpdateRequest;
 import torquehub.torquehub.domain.response.RoleDtos.RoleResponse;
-import torquehub.torquehub.persistence.repository.RoleRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaRoleRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,11 +17,13 @@ import java.util.stream.Collectors;
 @Service
 public class RoleServiceImpl implements RoleService {
 
-    @Autowired
-    private RoleRepository roleRepository;
+    private final JpaRoleRepository roleRepository;
+    private final RoleMapper roleMapper;
 
-    @Autowired
-    private RoleMapper roleMapper;
+    public RoleServiceImpl(JpaRoleRepository roleRepository, RoleMapper roleMapper) {
+        this.roleRepository = roleRepository;
+        this.roleMapper = roleMapper;
+    }
 
     @Override
     public RoleResponse createRole(RoleCreateRequest roleCreateRequest) {

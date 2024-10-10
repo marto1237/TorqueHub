@@ -1,6 +1,5 @@
 package torquehub.torquehub.business.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.TagService;
@@ -9,7 +8,7 @@ import torquehub.torquehub.domain.model.Tag;
 import torquehub.torquehub.domain.request.TagDtos.TagCreateRequest;
 import torquehub.torquehub.domain.request.TagDtos.TagUpdateRequest;
 import torquehub.torquehub.domain.response.TagDtos.TagResponse;
-import torquehub.torquehub.persistence.repository.TagRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaTagRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,11 +17,13 @@ import java.util.stream.Collectors;
 @Service
 public class TagServiceImpl implements TagService {
 
-    @Autowired
-    private TagRepository tagRepository;
+    private  final JpaTagRepository tagRepository;
+    private final TagMapper tagMapper;
 
-    @Autowired
-    private TagMapper tagMapper;
+    public TagServiceImpl(JpaTagRepository tagRepository, TagMapper tagMapper) {
+        this.tagRepository = tagRepository;
+        this.tagMapper = tagMapper;
+    }
 
 
     @Override
