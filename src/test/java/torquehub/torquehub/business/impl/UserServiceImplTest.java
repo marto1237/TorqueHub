@@ -16,8 +16,8 @@ import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
 import torquehub.torquehub.domain.response.UserDtos.UserResponse;
-import torquehub.torquehub.persistence.repository.RoleRepository;
-import torquehub.torquehub.persistence.repository.UserRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaRoleRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 
 import java.util.Optional;
 
@@ -26,16 +26,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class UserServiceImplTest {
+class UserServiceImplTest {
 
     @InjectMocks
     private UserServiceImpl userService;
 
     @Mock
-    private UserRepository userRepository;
+    private JpaUserRepository userRepository;
 
     @Mock
-    private RoleRepository roleRepository;
+    private JpaRoleRepository roleRepository;
 
     @Mock
     private UserMapper userMapper;
@@ -50,7 +50,7 @@ public class UserServiceImplTest {
     private UserUpdateRequest userUpdateRequest;
     private LoginRequest loginRequest;
     private User testUser;
-    private String testemail = "test@email.com";
+    private final String testemail = "test@email.com";
     private Role userRole;
     private final Long roleId = 1L;
 

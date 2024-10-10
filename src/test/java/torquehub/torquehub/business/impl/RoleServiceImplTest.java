@@ -11,7 +11,7 @@ import torquehub.torquehub.domain.model.Role;
 import torquehub.torquehub.domain.request.RoleDtos.RoleCreateRequest;
 import torquehub.torquehub.domain.request.RoleDtos.RoleUpdateRequest;
 import torquehub.torquehub.domain.response.RoleDtos.RoleResponse;
-import torquehub.torquehub.persistence.repository.RoleRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaRoleRepository;
 
 import java.util.Arrays;
 import java.util.List;
@@ -22,13 +22,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class RoleServiceImplTest {
+class RoleServiceImplTest {
 
     @InjectMocks
     private RoleServiceImpl roleService;
 
     @Mock
-    private RoleRepository roleRepository;
+    private JpaRoleRepository roleRepository;
 
     @Mock
     private RoleMapper roleMapper;
