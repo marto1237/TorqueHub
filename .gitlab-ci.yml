@@ -1,42 +1,43 @@
-# Disable the Gradle daemon for CI servers
-variables:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-  DOCKER_TLS_CERTDIR: ""
-  IMAGE_NAME: "torquehub-api"  # Define your image name
-
-stages:
-  - build
-  - docker_build
+# Disable the Gradle daemon for Continuous Integration servers as correctness
+# is usually a priority over speed in CI environments. Using a fresh
+# runtime for each build is more reliable since the runtime is completely
+# isolated from any previous builds.
+variables: 
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false" 
+  
+stages: 
+  - build 
   - test
+  - docker_build
 
-# Stage for building the Java application using Gradle
-build:
-  stage: build
-  image: gradle:8.0.0-jdk19  # Use a Gradle Docker image
-  script:
-    - ./gradlew assemble
+build: 
+  stage: build 
+  script: 
+  - ./gradlew assemble
+  artifacts:
+    # Store the JAR file as an artifact for later stages
+    paths:
+      - build/libs/TorqueHub-0.0.1-SNAPSHOT.jar
 
-# Stage for building the Docker image
+test: 
+  stage: test 
+  script: 
+    - ./gradlew test
+
+
 docker_build:
   stage: docker_build
-  image: docker:24.0  # Use the Docker-in-Docker service
+  image: docker:latest
   services:
-    - docker:24.0-dind  # Docker-in-Docker service
+    - docker:dind
+  before_script:
+    # Check Docker setup
+    - docker info
   script:
-    - docker build -t $IMAGE_NAME:latest .
-
-# Stage for running tests within a Docker container
-test:
-  stage: test
-  image: docker:24.0
-  services:
-    - docker:24.0-dind
-  script:
-    # Create the Docker network if it doesn't exist
-    - docker network create torquehub_network || true
-    # Run MySQL container for tests
-    - docker run --net torquehub_network --name torquehub-db -e MYSQL_DATABASE=torquehubdb -e MYSQL_ROOT_PASSWORD=marto100 -p 3390:3306 -d mysql:8.0
-    # Run the API container
-    - docker run -d -p 8090:8080 --net torquehub_network --name torquehub-api -e "SPRING_DATASOURCE_URL=jdbc:mysql://torquehub-db:3306/torquehubdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" -e SPRING_DATASOURCE_USERNAME=root -e SPRING_DATASOURCE_PASSWORD=marto100 -e SPRING_JPA_HIBERNATE_DDL_AUTO=update torquehub-api
-    # Verify running containers
-    - docker ps
+    # Build the Docker image using the Dockerfile in your project
+    - docker build -t torquehub-api .
+    # Run the Docker container, exposing the internal port 8080 as 8090 on the host
+    - docker run -d -p 8090:8080 torquehub-api
+  only:
+    # Specify that the docker build stage runs only on the 'main' branch
+    - main
