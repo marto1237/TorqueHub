@@ -31,7 +31,8 @@ docker_build:
   before_script:
     - docker info  # Ensure Docker is running
   script:
-    # Build the Docker image using the Dockerfile
+    # Force Docker to use regular docker build
     - docker build -t $IMAGE_NAME:latest .
-    # Optionally, run the container to test that it works
+
+    # Optionally, run the container to ensure it works
     - docker run -d -p 8090:8080 $IMAGE_NAME:latest
