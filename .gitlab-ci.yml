@@ -1,6 +1,6 @@
 variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-  IMAGE_NAME: my-torquehub-api  # Name for your Docker image
+  IMAGE_NAME: torquehub-api  # Name for your Docker image
 
 stages:
   - build
