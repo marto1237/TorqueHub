@@ -1,35 +1,37 @@
 variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-  IMAGE_NAME: torquehub-api  # Name for your Docker image
+  IMAGE_NAME: torquehub-api  # Docker image name
 
 stages:
   - build
   - test
   - docker_build
 
-# Build Stage: Compile the project
+# Build Stage: Compile the project using Gradle
 build:
   stage: build
   script:
     - ./gradlew assemble
+  artifacts:
+    paths:
+      - build/libs/TorqueHub-0.0.1-SNAPSHOT.jar
 
-# Test Stage: Run tests
+# Test Stage: Run tests using Gradle
 test:
   stage: test
   script:
     - ./gradlew test
 
-# Docker Build Stage: Build and optionally run the Docker image
+# Docker Build Stage: Build the Docker image and run the container
 docker_build:
   stage: docker_build
   image: docker:latest
   services:
-    - docker:dind
+    - docker:dind  # Enable Docker-in-Docker for building images
   before_script:
-    - docker info  # Check Docker service is running
+    - docker info  # Ensure Docker is running
   script:
-    # Force Docker to use the regular docker build command
-    - /usr/bin/docker build -t $IMAGE_NAME:latest .
-
-    # Optionally, run the container to verify it works
+    # Build the Docker image using the Dockerfile
+    - docker build -t $IMAGE_NAME:latest .
+    # Optionally, run the container to test that it works
     - docker run -d -p 8090:8080 $IMAGE_NAME:latest
