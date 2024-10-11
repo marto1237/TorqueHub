@@ -33,6 +33,6 @@ docker_build:
   script:
     # Force Docker to use regular docker build
     - docker build -t $IMAGE_NAME:latest .
-      
+
       # Optionally, run the container to ensure it works
-      - docker run -d -p 8090:8080 --net torquehub_network --name torquehub-api $IMAGE_NAME:latest
+    - docker run -d -p 8090:8080 --net torquehub_network --name torquehub-api $IMAGE_NAME:latest
