@@ -1,5 +1,7 @@
 package torquehub.torquehub.business.interfaces;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import torquehub.torquehub.domain.request.CommentDtos.CommentCreateRequest;
 import torquehub.torquehub.domain.request.CommentDtos.CommentEditRequest;
 import torquehub.torquehub.domain.response.CommentDtos.CommentResponse;
@@ -18,6 +20,7 @@ public interface CommentService {
     Optional<List<CommentResponse>> getCommentsByUser(Long userId);
     ReputationResponse upvoteComment(Long commentId, Long userId);
     ReputationResponse downvoteComment(Long commentId, Long userId);
+    Page<CommentResponse> getPaginatedComments(Long answerId, Pageable pageable);
 
 
 }

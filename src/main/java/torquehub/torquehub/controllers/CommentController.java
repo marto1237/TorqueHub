@@ -1,6 +1,9 @@
 package torquehub.torquehub.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -27,14 +30,25 @@ public class CommentController {
         return ResponseEntity.ok(commentResponse);
     }
     @GetMapping("/answer/{answerId}")
-    public ResponseEntity<List<CommentResponse>> getCommentsByAnswer(@PathVariable Long answerId) {
-        Optional<List<CommentResponse>> comments = commentService.getCommentsByAnswer(answerId);
-        return comments.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<Page<CommentResponse>> getCommentsByAnswer(
+            @PathVariable Long answerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<CommentResponse> comments = commentService.getPaginatedComments(answerId, pageable);
+        return ResponseEntity.ok(comments);
     }
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<CommentResponse>> getCommentsByUser(@PathVariable Long userId) {
         Optional<List<CommentResponse>> comments = commentService.getCommentsByUser(userId);
+        return comments.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/answer/{answerId}/all")
+    public ResponseEntity<List<CommentResponse>> getAllCommentsByAnswer(@PathVariable Long answerId) {
+        Optional<List<CommentResponse>> comments = commentService.getCommentsByAnswer(answerId);
         return comments.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -69,4 +83,5 @@ public class CommentController {
             return ResponseEntity.badRequest().build();
         }
     }
+
 }

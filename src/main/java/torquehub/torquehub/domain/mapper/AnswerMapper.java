@@ -11,8 +11,6 @@ import torquehub.torquehub.domain.response.AnswerDtos.AnswerResponse;
 import torquehub.torquehub.domain.response.CommentDtos.CommentResponse;
 
 import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring", uses = {CommentMapper.class})

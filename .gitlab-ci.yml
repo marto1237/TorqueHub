@@ -1,20 +1,37 @@
-# Disable the Gradle daemon for Continuous Integration servers as correctness
-# is usually a priority over speed in CI environments. Using a fresh
-# runtime for each build is more reliable since the runtime is completely
-# isolated from any previous builds.
-variables: 
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false" 
-  
-stages: 
-  - build 
-  - test 
+variables:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  IMAGE_NAME: my-torquehub-api  # Name for your Docker image
 
-build: 
-  stage: build 
-  script: 
-  - ./gradlew assemble 
+stages:
+  - build
+  - test
+  - docker_build
 
-test: 
-  stage: test 
-  script: 
+# Build Stage
+build:
+  stage: build
+  script:
+    # Assemble the project using Gradle (this generates the JAR file)
+    - ./gradlew assemble
+
+# Test Stage
+test:
+  stage: test
+  script:
+    # Run tests using Gradle
     - ./gradlew test
+
+# Docker Build and Run Stage
+docker_build:
+  stage: docker_build
+  image: docker:latest
+  services:
+    - docker:dind  # Enable Docker in Docker to build the image
+  before_script:
+    - docker info  # Verify Docker service is available
+  script:
+    # Build the Docker image for TorqueHub using the Dockerfile provided
+    - docker build -t $IMAGE_NAME:latest .
+
+    # Optional: Run the Docker container to ensure it works correctly
+    - docker run -d -p 8090:8080 $IMAGE_NAME:latest

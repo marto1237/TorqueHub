@@ -1,5 +1,7 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.CommentService;
@@ -249,6 +251,12 @@ public class CommentServiceImpl implements CommentService {
         }catch (Exception e){
             throw new RuntimeException("Error downvoting comment: " + e.getMessage());
         }
+    }
+
+    @Override
+    public Page<CommentResponse> getPaginatedComments(Long answerId, Pageable pageable) {
+        Page<Comment> comments = commentRepository.findByAnswerId(answerId, pageable);
+        return comments.map(commentMapper::toResponse);
     }
 
 }

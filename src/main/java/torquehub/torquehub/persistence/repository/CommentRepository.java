@@ -1,6 +1,7 @@
 package torquehub.torquehub.persistence.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import torquehub.torquehub.domain.model.Comment;
 
 import java.util.List;
@@ -12,4 +13,6 @@ public interface CommentRepository {
     boolean deleteById(Long commentId);
     List<Comment> findByAnswerId(Long answerId);
     List<Comment> findByUserId(Long userId);
+    Page<Comment> findByAnswerId(Long answerId, Pageable pageable);
+
 }

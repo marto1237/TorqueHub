@@ -1,6 +1,7 @@
 package torquehub.torquehub.controllers;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -20,12 +21,20 @@ import java.util.Optional;
 @Validated
 public class AnswerController {
 
-    @Autowired
-    private AnswerService answerService;
+    private final AnswerService answerService;
+    private final WebSocketAnswerController webSocketAnswerController;
+
+    public AnswerController(AnswerService answerService,WebSocketAnswerController webSocketAnswerController) {
+        this.answerService = answerService;
+        this.webSocketAnswerController = webSocketAnswerController;
+    }
+
 
     @PostMapping
     public ResponseEntity<AnswerResponse> createAnswer(@RequestBody @Validated AnswerCreateRequest answerCreateRequest) {
         AnswerResponse answerResponse = answerService.addAnswer(answerCreateRequest);
+
+        webSocketAnswerController.notifyClients(answerCreateRequest.getQuestionId(), answerResponse);
         return ResponseEntity.ok(answerResponse);
     }
 
@@ -52,9 +61,9 @@ public class AnswerController {
     }
 
     @GetMapping("/questions/{questionId}")
-    public ResponseEntity<List<AnswerResponse>> getAnswersByQuestion(@PathVariable Long questionId) {
-        Optional<List<AnswerResponse>> answerResponses = answerService.getAnswersByQuestion(questionId);
-        return answerResponses.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<Page<AnswerResponse>> getAnswersByQuestion(@PathVariable Long questionId,Pageable pageable ) {
+        Page<AnswerResponse> answerResponses = answerService.getAnswersByQuestion(questionId, pageable);
+        return ResponseEntity.ok(answerResponses);
     }
 
     @GetMapping("/user/{userId}")
@@ -82,5 +91,7 @@ public class AnswerController {
         }
 
     }
+
+
 
 }

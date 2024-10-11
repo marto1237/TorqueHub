@@ -1,5 +1,7 @@
 package torquehub.torquehub.business.interfaces;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import torquehub.torquehub.domain.request.AnswerDtos.AnswerCreateRequest;
 import torquehub.torquehub.domain.request.AnswerDtos.AnswerEditRequest;
@@ -20,6 +22,8 @@ public interface AnswerService {
     ReputationResponse upvoteAnswer(Long answerId, Long userId);
     ReputationResponse downvoteAnswer(Long answerId, Long userId);
     ReputationResponse approveBestAnswer(Long questionId, Long answerId, Long userId);
+    Page<AnswerResponse> getAnswersByQuestion(Long questionId, Pageable pageable);
+    
 
 
 }

@@ -1,5 +1,7 @@
 package torquehub.torquehub.persistence.jpa.impl;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import torquehub.torquehub.domain.model.Comment;
 import torquehub.torquehub.persistence.jpa.interfaces.SpringDataJpaCommentRepository;
@@ -34,6 +36,11 @@ public class JpaCommentRepository implements CommentRepository {
     @Override
     public List<Comment> findByUserId(Long userId) {
         return commentRepository.findByUserId(userId);
+    }
+
+    @Override
+    public Page<Comment> findByAnswerId(Long answerId, Pageable pageable) {
+        return commentRepository.findByAnswerId(answerId, pageable);
     }
 
     @Override
