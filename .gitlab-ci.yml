@@ -7,31 +7,29 @@ stages:
   - test
   - docker_build
 
-# Build Stage
+# Build Stage: Compile the project
 build:
   stage: build
   script:
-    # Assemble the project using Gradle (this generates the JAR file)
     - ./gradlew assemble
 
-# Test Stage
+# Test Stage: Run tests
 test:
   stage: test
   script:
-    # Run tests using Gradle
     - ./gradlew test
 
-# Docker Build and Run Stage
+# Docker Build Stage: Build and optionally run the Docker image
 docker_build:
   stage: docker_build
   image: docker:latest
   services:
-    - docker:dind  # Enable Docker in Docker to build the image
+    - docker:dind
   before_script:
-    - docker info  # Verify Docker service is available
+    - docker info  # Check Docker service is running
   script:
-    # Build the Docker image for TorqueHub using the Dockerfile provided
-    - docker build -t $IMAGE_NAME:latest .
+    # Force Docker to use the regular docker build command
+    - /usr/bin/docker build -t $IMAGE_NAME:latest .
 
-    # Optional: Run the Docker container to ensure it works correctly
+    # Optionally, run the container to verify it works
     - docker run -d -p 8090:8080 $IMAGE_NAME:latest
