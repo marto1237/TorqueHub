@@ -10,6 +10,7 @@ import torquehub.torquehub.persistence.repository.QuestionRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository
 public class JpaQuestionRepository implements QuestionRepository {
@@ -47,11 +48,37 @@ public class JpaQuestionRepository implements QuestionRepository {
 
     @Override
     public Page<Question> findQuestionsByTags(List<Tag> tagEntities, Pageable pageable) {
-        return questionRepository.findQuestionsByTags(tagEntities, pageable);
+        return questionRepository.findQuestionsByTagNames(tagEntities.stream().map(Tag::getName).collect(Collectors.toList()), pageable);
     }
 
     @Override
     public List<Question> findByUserId(Long userId) {
         return questionRepository.findByUserId(userId);
+    }
+
+    @Override
+    public Page<Question> findAllByOrderByAskedTimeDesc(Pageable pageable) {
+        return questionRepository.findAllByOrderByAskedTimeDesc(pageable);
+    }
+
+
+    @Override
+    public Page<Question> findAllByOrderByLastActivityTimeDesc(Pageable pageable) {
+        return questionRepository.findAllByOrderByLastActivityTimeDesc(pageable);
+    }
+
+    @Override
+    public Page<Question> findAllByOrderByVotesDesc(Pageable pageable) {
+        return questionRepository.findAllByOrderByVotesDesc(pageable);
+    }
+
+    @Override
+    public Page<Question> findAllByOrderByViewCountDesc(Pageable pageable) {
+        return questionRepository.findAllByOrderByViewsDesc(pageable);
+    }
+
+    @Override
+    public Page<Question> findQuestionsWithNoAnswers(Pageable pageable) {
+        return questionRepository.findQuestionsWithNoAnswers(pageable);
     }
 }

@@ -27,10 +27,6 @@ public class JpaAnswerRepository implements AnswerRepository {
         return answerRepository.findById(id);
     }
 
-    @Override
-    public List<Answer> findByQuestionId(Long questionId) {
-        return answerRepository.findByQuestionId(questionId);
-    }
 
 
     @Override

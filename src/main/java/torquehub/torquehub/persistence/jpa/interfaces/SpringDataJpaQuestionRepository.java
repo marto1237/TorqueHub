@@ -17,12 +17,21 @@ public interface SpringDataJpaQuestionRepository extends JpaRepository<Question,
     Optional<Question> findByTitle(String title);
     List<Question> findByUserId(Long aLong);
 
-    @Query("SELECT q FROM Question q JOIN q.tags t WHERE t.name IN :tags GROUP BY q")
-    Page<Question> findQuestionsByTags(@Param("tags") List<Tag> tags, Pageable pageable);
+    @Query("SELECT DISTINCT q FROM Question q JOIN q.tags t WHERE t.name IN :tags")
+    Page<Question> findQuestionsByTagNames(@Param("tags") List<String> tags, Pageable pageable);
+
 
     @Query("SELECT q FROM Question q LEFT JOIN FETCH q.answers a LEFT JOIN FETCH a.comments WHERE q.id = :id")
     Optional<Question> findByIdWithAnswersAndComments(@Param("id") Long id);
 
     @Query("SELECT q FROM Question q LEFT JOIN FETCH q.answers WHERE q.id = :id")
     Optional<Question> findByIdWithAnswers(@Param("id") Long id);
+
+    Page<Question> findAllByOrderByAskedTimeDesc(Pageable pageable);
+    Page<Question> findAllByOrderByLastActivityTimeDesc(Pageable pageable);
+    Page<Question> findAllByOrderByVotesDesc(Pageable pageable);
+    Page<Question> findAllByOrderByViewsDesc(Pageable pageable);
+
+    @Query("SELECT q FROM Question q LEFT JOIN FETCH q.answers WHERE SIZE(q.answers) = 0")
+    Page<Question> findQuestionsWithNoAnswers(Pageable pageable);
 }

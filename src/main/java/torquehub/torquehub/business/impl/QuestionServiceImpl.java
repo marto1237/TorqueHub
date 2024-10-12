@@ -17,11 +17,7 @@ import torquehub.torquehub.domain.response.QuestionDtos.QuestionDetailResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionResponse;
 import torquehub.torquehub.domain.response.QuestionDtos.QuestionSummaryResponse;
 import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
-import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaTagRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaVoteRepository;
-import torquehub.torquehub.persistence.repository.*;
+import torquehub.torquehub.persistence.jpa.impl.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,7 +35,6 @@ public class QuestionServiceImpl implements QuestionService {
     private final ReputationService reputationService;
     private final JpaVoteRepository voteRepository;
     private final CommentMapper commentMapper;
-
     public QuestionServiceImpl(JpaQuestionRepository questionRepository,
                                JpaTagRepository tagRepository,
                                JpaUserRepository userRepository,
@@ -72,6 +67,12 @@ public class QuestionServiceImpl implements QuestionService {
                     .tags(tags)
                     .user(user)
                     .askedTime(LocalDateTime.now())
+                    .bestAnswerId(null)
+                    .views(0)
+                    .votes(0)
+                    .totalAnswers(0)
+                    .totalComments(0)
+                    .lastActivityTime(LocalDateTime.now())
                     .build();
 
             Question savedQuestion = questionRepository.save(question);
@@ -133,6 +134,7 @@ public class QuestionServiceImpl implements QuestionService {
                 existingQuestion.setTags(tags);
 
                 questionRepository.save(existingQuestion);
+                existingQuestion.setLastActivityTime(LocalDateTime.now());
                 return true;
             } else {
                 throw new IllegalArgumentException("Question with ID " + questionId + " not found.");
@@ -145,10 +147,14 @@ public class QuestionServiceImpl implements QuestionService {
 
 
     @Override
-    public Optional<QuestionDetailResponse> getQuestionbyId(Long questionId) {
+    public Optional<QuestionDetailResponse> getQuestionbyId(Long questionId, Pageable pageable) {
         return questionRepository.findById(questionId)
-                .map(question -> questionMapper.toDetailResponse(question, commentMapper));
+                .map(question -> {
+                    // Ensure you pass both pageable and commentMapper here
+                    return questionMapper.toDetailResponse(question, pageable, commentMapper);
+                });
     }
+
 
     @Override
     public Page<QuestionSummaryResponse> getAllQuestions(Pageable pageable) {
@@ -167,18 +173,6 @@ public class QuestionServiceImpl implements QuestionService {
                     .map(questionMapper::toSummaryResponse)
                     .collect(Collectors.toList()));
         }
-    }
-
-    @Override
-    public Page<QuestionSummaryResponse> getQuestionsByTags(Set<String> tags, Pageable pageable) {
-        List<Tag> tagEntities = tags.stream()
-                .map(tag -> tagRepository.findByName(tag)
-                        .orElseThrow(() -> new IllegalArgumentException("Tag not found: " + tag)))
-                .collect(Collectors.toList());
-
-        Page<Question> filteredQuestions = questionRepository.findQuestionsByTags(tagEntities, pageable);
-
-        return filteredQuestions.map(questionMapper::toSummaryResponse);
     }
 
     @Override
@@ -277,12 +271,26 @@ public class QuestionServiceImpl implements QuestionService {
         }
     }
 
+    @Override
+    public boolean incrementQuestionView(Long questionId) {
+        try {
+            Question question = questionRepository.findById(questionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Question with ID " + questionId + " not found"));
+            question.setViews(question.getViews() + 1);
+            questionRepository.save(question);
+            return true;
+        } catch (Exception e) {
+            throw new RuntimeException("Error incrementing question view count: " + e.getMessage());
+        }
+    }
+
     private Set<Tag> convertTagNamesToTags(Set<String> tagNames) {
         return tagNames.stream()
                 .map(tagName -> tagRepository.findByName(tagName)
                         .orElseThrow(() -> new IllegalArgumentException("Tag not found: " + tagName)))
                 .collect(Collectors.toSet());
     }
+
 
 
 }

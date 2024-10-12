@@ -84,6 +84,8 @@ public class AnswerServiceImpl implements AnswerService {
                     .build();
 
             Answer savedAnswer = answerRepository.save(answer);
+            question.setTotalAnswers(question.getTotalAnswers() + 1);
+            question.setLastActivityTime(LocalDateTime.now());
             ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(user.getId(), ReputationConstants.POINTS_NEW_ANSWER);
             ReputationResponse reputationResponse = reputationService.updateReputationForNewAnswer(reputationUpdateRequest);
 
@@ -120,18 +122,6 @@ public class AnswerServiceImpl implements AnswerService {
     }
 
     @Override
-    public Optional<List<AnswerResponse>> getAnswersByQuestion(Long questionId) {
-        List<Answer> answers = answerRepository.findByQuestionId(questionId);
-        if (answers.isEmpty()) {
-            return Optional.empty();
-        }else {
-            return Optional.of(answers.stream()
-                    .map(answer -> answerMapper.toResponse(answer, commentMapper))
-                    .toList());
-        }
-    }
-
-    @Override
     @Transactional
     public boolean deleteAnswer(Long answerId) {
         try{
@@ -157,6 +147,8 @@ public class AnswerServiceImpl implements AnswerService {
                 }
 
                 answerRepository.deleteById(answerId);
+                question.setTotalAnswers(question.getTotalAnswers() - 1);
+                question.setLastActivityTime(LocalDateTime.now());
                 return true;
 
             } else {

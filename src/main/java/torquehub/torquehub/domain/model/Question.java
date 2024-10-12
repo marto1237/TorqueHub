@@ -40,6 +40,7 @@ public class Question {
     private int views = 0;
     private int votes = 0;
     private int totalAnswers = 0;
+    private int totalComments = 0;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
@@ -58,4 +59,7 @@ public class Question {
 
     @Column(nullable = false)
     private LocalDateTime askedTime;
+
+    @Column(nullable = false)
+    private LocalDateTime lastActivityTime = LocalDateTime.now();;
 }

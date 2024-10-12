@@ -39,21 +39,16 @@ public class QuestionController {
         Page<QuestionSummaryResponse> questions = questionService.getAllQuestions(pageable);
         return ResponseEntity.ok(questions);
     }
-    @GetMapping("/tags")
-    public ResponseEntity<Page<QuestionSummaryResponse>> getQuestionsByTags(
-            @RequestParam Set<String> tags,
+
+    @GetMapping("/{id}")
+    public ResponseEntity<QuestionDetailResponse> getQuestionById(
+            @PathVariable Long id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+        questionService.incrementQuestionView(id);
         Pageable pageable = PageRequest.of(page, size);
-        Page<QuestionSummaryResponse> questions = questionService.getQuestionsByTags(tags, pageable);
-        return ResponseEntity.ok(questions);
-    }
-
-
-    @GetMapping("/{id}")
-    public ResponseEntity<QuestionDetailResponse> getQuestionById(@PathVariable Long id) {
-        Optional<QuestionDetailResponse> question = questionService.getQuestionbyId(id);
+        Optional<QuestionDetailResponse> question = questionService.getQuestionbyId(id, pageable);
         return question.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 

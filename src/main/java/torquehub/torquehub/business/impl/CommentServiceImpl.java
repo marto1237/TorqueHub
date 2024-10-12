@@ -8,10 +8,7 @@ import torquehub.torquehub.business.interfaces.CommentService;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.CommentMapper;
-import torquehub.torquehub.domain.model.Answer;
-import torquehub.torquehub.domain.model.Comment;
-import torquehub.torquehub.domain.model.User;
-import torquehub.torquehub.domain.model.Vote;
+import torquehub.torquehub.domain.model.*;
 import torquehub.torquehub.domain.request.CommentDtos.CommentCreateRequest;
 import torquehub.torquehub.domain.request.CommentDtos.CommentEditRequest;
 import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
@@ -70,6 +67,9 @@ public class CommentServiceImpl implements CommentService {
                     .build();
 
             Comment savedComment = commentRepository.save(comment);
+            Question question = answer.getQuestion();
+            question.setTotalComments(question.getTotalComments() + 1);
+            question.setLastActivityTime(LocalDateTime.now());
             ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(user.getId(),  ReputationConstants.POINTS_NEW_COMMENT);
             ReputationResponse reputationResponse = reputationService.updateReputationForNewComment(reputationUpdateRequest);
 
@@ -117,6 +117,9 @@ public class CommentServiceImpl implements CommentService {
                     throw new IllegalArgumentException("Error updating reputation for user with ID " + user.getId());
                 }else {
                     commentRepository.deleteById(commentId);
+                    Question question = commentOptional.get().getAnswer().getQuestion();
+                    question.setTotalComments(question.getTotalComments() - 1);
+                    question.setLastActivityTime(LocalDateTime.now());
                     return true;
                 }
             } else {

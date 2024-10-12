@@ -4,10 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.domain.Page;
 import torquehub.torquehub.domain.response.AnswerDtos.AnswerResponse;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
 
 @Data
@@ -24,6 +24,6 @@ public class QuestionDetailResponse {
     private int userPoints;
     private int views;
     private int votes;
-    private List<AnswerResponse> answers;
+    private Page<AnswerResponse> answers;
     private LocalDateTime askedTime;
 }

@@ -8,7 +8,6 @@ import torquehub.torquehub.domain.model.Answer;
 import java.util.List;
 
 public interface SpringDataJpaAnswerRepository extends JpaRepository<Answer, Long> {
-    List<Answer> findByQuestionId(Long questionId);
     List<Answer> findByUserId(Long userId);
     Page<Answer> findByQuestionId(Long questionId, Pageable pageable);
 }

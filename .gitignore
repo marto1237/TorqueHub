@@ -4,6 +4,9 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+# In your .gitignore file
+application-secrets.properties
+
 
 ### STS ###
 .apt_generated

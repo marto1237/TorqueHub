@@ -20,6 +20,11 @@ public interface QuestionRepository  {
     Page<Question> findAll(Pageable pageable);
     Page<Question> findQuestionsByTags(List<Tag> tagEntities, Pageable pageable);
     List<Question> findByUserId(Long userId);
+    Page<Question> findAllByOrderByAskedTimeDesc(Pageable pageable);
+    Page<Question> findAllByOrderByLastActivityTimeDesc(Pageable pageable);
+    Page<Question> findAllByOrderByVotesDesc(Pageable pageable);
+    Page<Question> findAllByOrderByViewCountDesc(Pageable pageable);
+    Page<Question> findQuestionsWithNoAnswers(Pageable pageable);
 
 
 
