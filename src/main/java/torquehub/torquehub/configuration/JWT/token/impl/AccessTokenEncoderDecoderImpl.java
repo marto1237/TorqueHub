@@ -7,7 +7,6 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import torquehub.torquehub.configuration.JWT.token.AccessToken;
 import torquehub.torquehub.configuration.JWT.token.AccessTokenDecoder;
 import torquehub.torquehub.configuration.JWT.token.AccessTokenEncoder;
@@ -51,8 +50,10 @@ public class AccessTokenEncoderDecoderImpl implements AccessTokenEncoder, Access
     @Override
     public AccessToken decode(String accessTokenEncoded) {
         try {
-            Jwt<?, Claims> jwt = Jwts.parserBuilder().setSigningKey(key).build()
-                    .parseClaimsJwt(accessTokenEncoded);
+            Jwt<?, Claims> jwt = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(accessTokenEncoded);
             Claims claims = jwt.getBody();
 
             String roles = claims.get("role", String.class);

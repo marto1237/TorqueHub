@@ -10,6 +10,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import torquehub.torquehub.business.interfaces.TokenService;
+import torquehub.torquehub.configuration.JWT.token.AccessTokenDecoder;
+import torquehub.torquehub.configuration.JWT.token.AccessTokenEncoder;
+import torquehub.torquehub.configuration.JWT.token.impl.AccessTokenEncoderDecoderImpl;
+import torquehub.torquehub.configuration.JWT.token.impl.BlacklistService;
 import torquehub.torquehub.configuration.SecurityConfig;
 import torquehub.torquehub.controllers.AuthController;
 import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
@@ -22,7 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, AccessTokenEncoderDecoderImpl.class, BlacklistService.class})
 public class AuthControllerTest {
 
     @Autowired
@@ -33,6 +38,18 @@ public class AuthControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @MockBean
+    private AccessTokenEncoder accessTokenEncoder;
+
+    @MockBean
+    private AccessTokenDecoder accessTokenDecoder;
+
+    @MockBean
+    private BlacklistService blacklistService;
+
+    @MockBean
+    private TokenService tokenService;
 
     private LoginRequest validLoginRequest;
     private LoginResponse loginResponse;

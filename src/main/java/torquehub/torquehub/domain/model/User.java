@@ -43,6 +43,7 @@ public class User {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
+    @Builder.Default
     private int points = 0;
 
 }
