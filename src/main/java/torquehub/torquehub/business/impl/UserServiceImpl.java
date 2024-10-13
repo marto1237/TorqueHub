@@ -4,7 +4,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import torquehub.torquehub.business.interfaces.TokenService;
 import torquehub.torquehub.business.interfaces.UserService;
+import torquehub.torquehub.configuration.JWT.token.AccessToken;
+import torquehub.torquehub.configuration.JWT.token.AccessTokenEncoder;
+import torquehub.torquehub.configuration.JWT.token.impl.AccessTokenImpl;
 import torquehub.torquehub.domain.mapper.UserMapper;
 import torquehub.torquehub.domain.model.Role;
 import torquehub.torquehub.domain.model.User;
@@ -27,11 +31,19 @@ public class UserServiceImpl implements UserService {
     private final JpaUserRepository userRepository;
     private final JpaRoleRepository roleRepository;
     private final UserMapper userMapper;
+    private final TokenService tokenService;
+    private final AccessTokenEncoder accessTokenEncoder;
 
-    public UserServiceImpl(JpaUserRepository userRepository, JpaRoleRepository roleRepository, UserMapper userMapper) {
+    public UserServiceImpl(JpaUserRepository userRepository,
+                           JpaRoleRepository roleRepository,
+                           UserMapper userMapper,
+                           TokenService tokenService,
+                           AccessTokenEncoder accessTokenEncoder) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.userMapper = userMapper;
+        this.tokenService = tokenService;
+        this.accessTokenEncoder = accessTokenEncoder;
     }
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -161,12 +173,21 @@ public class UserServiceImpl implements UserService {
             // Check the hashed password with the salt
             String saltedPassword = loginRequest.getPassword() + user.getSalt();
             if (passwordEncoder.matches(saltedPassword, user.getPassword())) {
-                return LoginResponse.builder()
+                LoginResponse loginResponse = LoginResponse.builder()
                         .id(user.getId())
                         .username(user.getUsername())
                         .email(user.getEmail())
                         .role(user.getRole().getName())
                         .build();
+
+                // Generate AccessToken using TokenService
+                AccessToken accessToken = tokenService.createAccessToken(loginResponse);
+                String jwtToken = accessTokenEncoder.encode(accessToken);
+
+                // Add the JWT token to the response
+                loginResponse.setJwtToken(jwtToken);
+
+                return loginResponse;
             } else {
                 // Generic error message: Invalid credentials (even though the email is valid)
                 throw new IllegalArgumentException("Invalid credentials");

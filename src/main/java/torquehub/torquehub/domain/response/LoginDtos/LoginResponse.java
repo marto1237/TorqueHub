@@ -14,4 +14,9 @@ public class LoginResponse {
     private String username;
     private String email;
     private String role;
+    private String jwtToken;
+
+    public void setJwtToken(String jwtToken) {
+        this.jwtToken = jwtToken;
+    }
 }

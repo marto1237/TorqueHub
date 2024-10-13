@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.AnswerService;
@@ -29,7 +30,7 @@ public class AnswerController {
         this.webSocketAnswerController = webSocketAnswerController;
     }
 
-
+    @PreAuthorize("isAuthenticated()")
     @PostMapping
     public ResponseEntity<AnswerResponse> createAnswer(@RequestBody @Validated AnswerCreateRequest answerCreateRequest) {
         AnswerResponse answerResponse = answerService.addAnswer(answerCreateRequest);
