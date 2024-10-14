@@ -20,6 +20,8 @@ import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
 import torquehub.torquehub.domain.response.LoginDtos.LoginResponse;
 import torquehub.torquehub.domain.response.MessageResponse;
 import torquehub.torquehub.domain.response.UserDtos.UserResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 
 @RestController
 @RequestMapping("/auth")
@@ -53,14 +55,23 @@ public class AuthController {
             AccessToken accessToken = tokenService.createAccessToken(response);   // Call method to generate AccessToken
             String jwtToken = accessTokenEncoder.encode(accessToken);  // Encode the AccessToken into JWT
 
-            // Add the token to the response object
-            response.setJwtToken(jwtToken);
-            return ResponseEntity.status(HttpStatus.OK).body(response);
+            ResponseCookie jwtCookie = ResponseCookie.from("jwtToken", jwtToken)
+                    .httpOnly(true)
+                    .secure(true) // Use 'true' in production to enable HTTPS
+                    .path("/")
+                    .maxAge(24 * 60 * 60) // 1 day
+                    .sameSite("Strict")  //  CSRF protection
+                    .build();
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                    .body(response);
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
     }
+
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody UserCreateRequest userCreateRequest) {
         UserResponse createdUser = userService.createUser(userCreateRequest);
@@ -68,32 +79,49 @@ public class AuthController {
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<String> refreshAccessToken(@RequestBody String refreshToken) {
+    public ResponseEntity<MessageResponse> refreshAccessToken(@RequestBody String refreshToken) {
+        MessageResponse response = new MessageResponse();
         try {
             AccessToken accessToken = accessTokenDecoder.decode(refreshToken);
             String newAccessToken = accessTokenEncoder.encode(accessToken);
-            return ResponseEntity.ok(newAccessToken);
+
+            response.setMessage("Token refreshed successfully");
+            ResponseCookie newJwtCookie = ResponseCookie.from("jwtToken", newAccessToken)
+                    .httpOnly(true)
+                    .secure(true)
+                    .path("/")
+                    .maxAge(24 * 60 * 60)
+                    .sameSite("Strict")
+                    .build();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, newJwtCookie.toString())
+                    .body(response);
         } catch (InvalidAccessTokenException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Refresh Token");
+            response.setMessage("Invalid Refresh Token");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<MessageResponse> logout(@RequestBody String accessToken) {
+    public ResponseEntity<MessageResponse> logout() {
         MessageResponse response = new MessageResponse();
-        try {
-            // Blacklist the token
-            blacklistService.addTokenToBlacklist(accessToken);
-            response.setMessage("Logout successful");
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            response.setMessage("Logout failed");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
+
+
+        // Invalidate the JWT cookie by setting a past expiration date
+        ResponseCookie logoutCookie = ResponseCookie.from("jwtToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0) // Set expiry to 0 to remove the cookie
+                .sameSite("Strict")
+                .build();
+
+        response.setMessage("Logged out successfully");
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .header(HttpHeaders.SET_COOKIE, logoutCookie.toString())
+                .body(response);
     }
-
-
-
-
 
 }

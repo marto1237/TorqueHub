@@ -65,7 +65,7 @@ public class AuthenticationRequestFilter extends OncePerRequestFilter {
     }
 
     private void setupSpringSecurityContext(AccessToken accessToken) {
-        UserDetails userDetails = new User(accessToken.getSubject(), "",
+        UserDetails userDetails = new User(accessToken.getUsername(), "",
                 List.of(new SimpleGrantedAuthority("ROLE_" + accessToken.getRole())));
 
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(

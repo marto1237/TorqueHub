@@ -2,9 +2,10 @@ package torquehub.torquehub.configuration.JWT.token;
 
 
 public interface AccessToken {
-    String getSubject();
 
     Long getUserID();
+
+    String getUsername();
 
     String getRole();
 
