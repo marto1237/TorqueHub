@@ -2,6 +2,7 @@ package torquehub.torquehub.business.impl;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import torquehub.torquehub.business.exeption.BookmarkAlreadyExistsException;
 import torquehub.torquehub.business.interfaces.BookmarkService;
 import torquehub.torquehub.domain.mapper.BookmarkMapper;
 import torquehub.torquehub.domain.model.*;
@@ -65,7 +66,7 @@ public class BookmarkServiceImpl implements BookmarkService {
             }
 
         } catch (Exception e) {
-            throw new RuntimeException("Bookmark already exists");
+            throw new BookmarkAlreadyExistsException("Bookmark already exists");
         }
 
     }
@@ -97,7 +98,7 @@ public class BookmarkServiceImpl implements BookmarkService {
             }
 
         } catch (Exception e) {
-            throw new RuntimeException("Bookmark already exists");
+            throw new BookmarkAlreadyExistsException("Bookmark already exists");
         }
     }
 

@@ -8,7 +8,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import torquehub.torquehub.domain.model.Answer;
-import torquehub.torquehub.domain.model.Comment;
 import torquehub.torquehub.domain.model.Question;
 import torquehub.torquehub.domain.model.Tag;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionCreateRequest;
@@ -87,11 +86,11 @@ public interface QuestionMapper {
                     response.setComments(
                             answer.getComments().stream()
                                     .map(commentMapper::toResponse)
-                                    .collect(Collectors.toList())
+                                    .toList()
                     );
                     return response;
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         // Convert List<AnswerResponse> to Page<AnswerResponse>
         int start = (int) pageable.getOffset();

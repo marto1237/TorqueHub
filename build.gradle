@@ -2,6 +2,8 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.3'
     id 'io.spring.dependency-management' version '1.1.6'
+    id 'jacoco'
+    id "org.sonarqube" version "5.1.0.4882"
 }
 
 group = 'torquehub'
@@ -50,6 +52,27 @@ dependencies {
 
 }
 
+jacoco {
+    toolVersion = "0.8.10"
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+    }
+}
+
 tasks.named('test') {
     useJUnitPlatform()
+    finalizedBy 'jacocoTestReport'
+}
+
+sonar {
+    properties {
+        property "sonar.projectKey", "I525452_torquehubapi_7c23a2ce-e40d-4c42-9842-abb94eb67666"
+        property "sonar.projectName", "TorqueHubApi"
+        property "sonar.qualitygate.wait", true
+        property "sonar.login", "sqp_cad8f945114898b4f9377a1492729494bad1d8e5"
+    }
 }

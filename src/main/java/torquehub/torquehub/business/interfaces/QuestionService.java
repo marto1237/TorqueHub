@@ -25,8 +25,8 @@ public interface QuestionService {
     Page<QuestionSummaryResponse> getAllQuestions(Pageable pageable);
 
     Optional<List<QuestionSummaryResponse>> getQuestionsByUser(Long userId);
-    ReputationResponse upvoteQuestion(Long commentId, Long userId);
-    ReputationResponse downvoteQuestion(Long commentId, Long userId);
+    ReputationResponse upvoteQuestion(Long questionId, Long userId);
+    ReputationResponse downvoteQuestion(Long questionId, Long userId);
     boolean incrementQuestionView(Long questionId);
 
 }
