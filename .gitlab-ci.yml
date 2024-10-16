@@ -3,11 +3,15 @@
 # runtime for each build is more reliable since the runtime is completely
 # isolated from any previous builds.
 variables: 
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false" 
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+  GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
   
 stages: 
   - build 
   - test
+  - sonarqube-check
+  - sonarqube-vulnerability-report
   - docker_build
 
 build: 
@@ -41,3 +45,30 @@ docker_build:
   only:
     # Specify that the docker build stage runs only on the 'main' branch
     - main
+
+sonarqube-check:
+  stage: sonarqube-check
+
+  script:
+    - ./gradlew sonarqube
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == 'master'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'develop'
+
+sonarqube-vulnerability-report:
+  stage: sonarqube-vulnerability-report
+  script:
+    - 'curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=I525452_torquehubapi_7c23a2ce-e40d-4c42-9842-abb94eb67666&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -o gl-sast-sonar-report.json'
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == 'master'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'develop'
+  artifacts:
+    expire_in: 1 day
+    reports:
+      sast: gl-sast-sonar-report.json
