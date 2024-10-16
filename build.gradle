@@ -8,11 +8,11 @@ plugins {
 
 group = 'torquehub'
 version = '0.0.1-SNAPSHOT'
-sourceCompatibility = '19'
+sourceCompatibility = '17'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(19)
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }
 
@@ -74,5 +74,6 @@ sonar {
         property "sonar.projectName", "TorqueHubApi"
         property "sonar.qualitygate.wait", true
         property "sonar.login", "sqp_cad8f945114898b4f9377a1492729494bad1d8e5"
+        property "sonar.java.binaries", "${buildDir}/classes/java/main"
     }
 }
