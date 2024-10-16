@@ -50,7 +50,8 @@ sonarqube-check:
   stage: sonarqube-check
 
   script:
-    - ./gradlew sonarqube
+    - ./gradlew assemble
+    - ./gradlew sonar
   allow_failure: true
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'

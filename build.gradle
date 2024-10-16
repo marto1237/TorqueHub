@@ -73,7 +73,7 @@ sonar {
         property "sonar.projectKey", "I525452_torquehubapi_7c23a2ce-e40d-4c42-9842-abb94eb67666"
         property "sonar.projectName", "TorqueHubApi"
         property "sonar.qualitygate.wait", true
-        property "sonar.login", "sqp_cad8f945114898b4f9377a1492729494bad1d8e5"
+        property "sonar.token", "sqp_cad8f945114898b4f9377a1492729494bad1d8e5"
         property "sonar.java.binaries", "${buildDir}/classes/java/main"
     }
 }
