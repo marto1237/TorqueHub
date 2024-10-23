@@ -1,7 +1,7 @@
 package torquehub.torquehub.persistence.jpa.impl;
 
 import org.springframework.stereotype.Repository;
-import torquehub.torquehub.domain.model.Tag;
+import torquehub.torquehub.domain.model.jpa_models.JpaTag;
 import torquehub.torquehub.persistence.jpa.interfaces.SpringDataJpaTagRepository;
 import torquehub.torquehub.persistence.repository.TagRepository;
 
@@ -18,24 +18,24 @@ public class JpaTagRepository implements TagRepository {
     }
 
     @Override
-    public Tag save(Tag tag) {
-        return tagRepository.save(tag);
+    public JpaTag save(JpaTag jpaTag) {
+        return tagRepository.save(jpaTag);
     }
 
     @Override
-    public Optional<Tag> findById(Long tagId) {
+    public Optional<JpaTag> findById(Long tagId) {
         return tagRepository.findById(tagId);
     }
 
     @Override
-    public Optional<Tag> findByName(String tagName) {
+    public Optional<JpaTag> findByName(String tagName) {
         return tagRepository.findByName(tagName);
     }
 
     @Override
-    public boolean delete(Tag tag) {
-        if (tagRepository.existsById(tag.getId())) {
-            tagRepository.delete(tag);
+    public boolean delete(JpaTag jpaTag) {
+        if (tagRepository.existsById(jpaTag.getId())) {
+            tagRepository.delete(jpaTag);
             return true;
         } else {
             return false;
@@ -48,7 +48,7 @@ public class JpaTagRepository implements TagRepository {
     }
 
     @Override
-    public List<Tag> findAll() {
+    public List<JpaTag> findAll() {
         return tagRepository.findAll();
     }
 }

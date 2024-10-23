@@ -11,7 +11,10 @@ import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.CommentMapper;
-import torquehub.torquehub.domain.model.*;
+import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
+import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
+import torquehub.torquehub.domain.model.jpa_models.JpaUser;
+import torquehub.torquehub.domain.model.jpa_models.JpaVote;
 import torquehub.torquehub.domain.request.AnswerDtos.AnswerCreateRequest;
 import torquehub.torquehub.domain.request.AnswerDtos.AnswerEditRequest;
 import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
@@ -62,31 +65,31 @@ public class AnswerServiceImpl implements AnswerService {
     @Transactional
     public AnswerResponse addAnswer(AnswerCreateRequest answerCreateRequest) {
         try{
-            User user = userRepository.findById(answerCreateRequest.getUserId())
+            JpaUser jpaUser = userRepository.findById(answerCreateRequest.getUserId())
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            Question question = questionRepository.findById(answerCreateRequest.getQuestionId())
+            JpaQuestion jpaQuestion = questionRepository.findById(answerCreateRequest.getQuestionId())
                     .orElseThrow(() -> new IllegalArgumentException("Question not found"));
 
             // If FetchType.LAZY is required, ensure the objects are fully initialized before using them.
-            Hibernate.initialize(user);
-            Hibernate.initialize(question);
+            Hibernate.initialize(jpaUser);
+            Hibernate.initialize(jpaQuestion);
 
-            Answer answer = Answer.builder()
+            JpaAnswer jpaAnswer = JpaAnswer.builder()
                     .text(answerCreateRequest.getText())
-                    .user(user)
-                    .question(question)
+                    .jpaUser(jpaUser)
+                    .jpaQuestion(jpaQuestion)
                     .isEdited(false)
                     .answeredTime(LocalDateTime.now())
                     .votes(0)
                     .build();
 
-            Answer savedAnswer = answerRepository.save(answer);
-            question.setTotalAnswers(question.getTotalAnswers() + 1);
-            question.setLastActivityTime(LocalDateTime.now());
-            ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(user.getId(), ReputationConstants.POINTS_NEW_ANSWER);
+            JpaAnswer savedJpaAnswer = answerRepository.save(jpaAnswer);
+            jpaQuestion.setTotalAnswers(jpaQuestion.getTotalAnswers() + 1);
+            jpaQuestion.setLastActivityTime(LocalDateTime.now());
+            ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(jpaUser.getId(), ReputationConstants.POINTS_NEW_ANSWER);
             ReputationResponse reputationResponse = reputationService.updateReputationForNewAnswer(reputationUpdateRequest);
 
-            AnswerResponse answerResponse = answerMapper.toResponse(savedAnswer, commentMapper);
+            AnswerResponse answerResponse = answerMapper.toResponse(savedJpaAnswer, commentMapper);
             answerResponse.setReputationUpdate(reputationResponse);
 
             return answerResponse;
@@ -101,14 +104,14 @@ public class AnswerServiceImpl implements AnswerService {
     @Transactional
     public AnswerResponse editAnswer(Long answerId, AnswerEditRequest answerEditRequest) {
         try {
-            Optional<Answer> optionalAnswer = answerRepository.findById(answerId);
+            Optional<JpaAnswer> optionalAnswer = answerRepository.findById(answerId);
             if (optionalAnswer.isPresent()) {
-                Answer answer = optionalAnswer.get();
-                answer.setText(answerEditRequest.getText());
-                answer.setEdited(true);
-                Answer savedAnswer = answerRepository.save(answer);
+                JpaAnswer jpaAnswer = optionalAnswer.get();
+                jpaAnswer.setText(answerEditRequest.getText());
+                jpaAnswer.setEdited(true);
+                JpaAnswer savedJpaAnswer = answerRepository.save(jpaAnswer);
 
-                return answerMapper.toResponse(savedAnswer, commentMapper);
+                return answerMapper.toResponse(savedJpaAnswer, commentMapper);
             } else {
                 throw new IllegalArgumentException("Answer with ID " + answerId + " not found");
             }
@@ -122,30 +125,30 @@ public class AnswerServiceImpl implements AnswerService {
     @Transactional
     public boolean deleteAnswer(Long answerId) {
         try{
-            Optional<Answer> optionalAnswer = answerRepository.findById(answerId);
+            Optional<JpaAnswer> optionalAnswer = answerRepository.findById(answerId);
             if (optionalAnswer.isPresent()) {
 
-                Question question = optionalAnswer.get().getQuestion();
-                User user = optionalAnswer.get().getUser();
-                ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(user.getId(), ReputationConstants.POINTS_ANSWER_WHEN_DELETED);
+                JpaQuestion jpaQuestion = optionalAnswer.get().getJpaQuestion();
+                JpaUser jpaUser = optionalAnswer.get().getJpaUser();
+                ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(jpaUser.getId(), ReputationConstants.POINTS_ANSWER_WHEN_DELETED);
 
                 boolean isReputationUpdated = reputationService.updateReputationForAnswerWhenAnswerIsDeleted(reputationUpdateRequest);
                 if(!isReputationUpdated) {
-                    throw new IllegalArgumentException("Error updating reputation for user with ID " + user.getId());
+                    throw new IllegalArgumentException("Error updating reputation for user with ID " + jpaUser.getId());
                 }
-                if (question.getBestAnswerId() != null && question.getBestAnswerId().equals(answerId)) {
+                if (jpaQuestion.getBestAnswerId() != null && jpaQuestion.getBestAnswerId().equals(answerId)) {
 
-                    ReputationUpdateRequest bestAnswerReputationUpdateRequest = new ReputationUpdateRequest(user.getId(), ReputationConstants.POINTS_BEST_ANSWER_WHEN_DELETED);
+                    ReputationUpdateRequest bestAnswerReputationUpdateRequest = new ReputationUpdateRequest(jpaUser.getId(), ReputationConstants.POINTS_BEST_ANSWER_WHEN_DELETED);
                     reputationService.updateReputationForBestAnswerIsDeleted(bestAnswerReputationUpdateRequest);
 
-                    question.setBestAnswerId(null);
-                    questionRepository.save(question);
+                    jpaQuestion.setBestAnswerId(null);
+                    questionRepository.save(jpaQuestion);
 
                 }
 
                 answerRepository.deleteById(answerId);
-                question.setTotalAnswers(question.getTotalAnswers() - 1);
-                question.setLastActivityTime(LocalDateTime.now());
+                jpaQuestion.setTotalAnswers(jpaQuestion.getTotalAnswers() - 1);
+                jpaQuestion.setLastActivityTime(LocalDateTime.now());
                 return true;
 
             } else {
@@ -158,7 +161,7 @@ public class AnswerServiceImpl implements AnswerService {
 
     @Override
     public AnswerResponse getAnswerById(Long answerId) {
-        Optional<Answer> optionalAnswer = answerRepository.findById(answerId);
+        Optional<JpaAnswer> optionalAnswer = answerRepository.findById(answerId);
         if (optionalAnswer.isEmpty()) {
             throw new IllegalArgumentException("Answer not found");
         }
@@ -168,11 +171,11 @@ public class AnswerServiceImpl implements AnswerService {
 
     @Override
     public Optional<List<AnswerResponse>> getAnswersByUser(Long userId) {
-        List<Answer> answers = answerRepository.findByUserId(userId);
-        if (answers.isEmpty()) {
+        List<JpaAnswer> jpaAnswers = answerRepository.findByUserId(userId);
+        if (jpaAnswers.isEmpty()) {
             return Optional.empty();
         }else {
-            return Optional.of(answers.stream()
+            return Optional.of(jpaAnswers.stream()
                     .map(answer -> answerMapper.toResponse(answer, commentMapper))
                     .toList());
         }
@@ -182,42 +185,42 @@ public class AnswerServiceImpl implements AnswerService {
     @Transactional
     public ReputationResponse upvoteAnswer(Long answerId, Long userId) {
         try {
-            Answer answer = answerRepository.findById(answerId)
+            JpaAnswer jpaAnswer = answerRepository.findById(answerId)
                     .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
-            User user = userRepository.findById(userId)
+            JpaUser jpaUser = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            Optional<Vote> existingVote = voteRepository.findByUserAndAnswer(user, answer);
+            Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaAnswer(jpaUser, jpaAnswer);
 
             if (existingVote.isPresent()) {
-                Vote vote = existingVote.get();
+                JpaVote jpaVote = existingVote.get();
 
-                if (vote.isUpvote()) {
-                    voteRepository.delete(vote);
-                    answer.setVotes(answer.getVotes() - 1);
+                if (jpaVote.isUpvote()) {
+                    voteRepository.delete(jpaVote);
+                    jpaAnswer.setVotes(jpaAnswer.getVotes() - 1);
                 } else {
-                    vote.setUpvote(true);
-                    voteRepository.save(vote);
-                    answer.setVotes(answer.getVotes() + 2);
+                    jpaVote.setUpvote(true);
+                    voteRepository.save(jpaVote);
+                    jpaAnswer.setVotes(jpaAnswer.getVotes() + 2);
                 }
             } else {
-                Vote vote = new Vote();
-                vote.setUser(user);
-                vote.setAnswer(answer);
-                vote.setUpvote(true);
-                vote.setVotedAt(LocalDateTime.now());
-                voteRepository.save(vote);
+                JpaVote jpaVote = new JpaVote();
+                jpaVote.setJpaUser(jpaUser);
+                jpaVote.setJpaAnswer(jpaAnswer);
+                jpaVote.setUpvote(true);
+                jpaVote.setVotedAt(LocalDateTime.now());
+                voteRepository.save(jpaVote);
 
-                answer.setVotes(answer.getVotes() + 1);
+                jpaAnswer.setVotes(jpaAnswer.getVotes() + 1);
             }
 
-            answerRepository.save(answer);
+            answerRepository.save(jpaAnswer);
 
             ReputationResponse authorReputation = reputationService.updateReputationForUpvote(
-                    new ReputationUpdateRequest(answer.getUser().getId(), ReputationConstants.POINTS_UPVOTE_RECEIVED)
+                    new ReputationUpdateRequest(jpaAnswer.getJpaUser().getId(), ReputationConstants.POINTS_UPVOTE_RECEIVED)
             );
 
-            notificationService.notifyAnswerOwner(answer.getUser(), answer, true, authorReputation);
+            notificationService.notifyAnswerOwner(jpaAnswer.getJpaUser(), jpaAnswer, true, authorReputation);
 
             return reputationService.updateReputationForUpvoteGiven(
                     new ReputationUpdateRequest(userId, ReputationConstants.POINTS_UPVOTE_GIVEN)
@@ -232,39 +235,39 @@ public class AnswerServiceImpl implements AnswerService {
     @Transactional
     public ReputationResponse downvoteAnswer(Long answerId, Long userId) {
         try {
-            Answer answer = answerRepository.findById(answerId)
+            JpaAnswer jpaAnswer = answerRepository.findById(answerId)
                     .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
-            User user = userRepository.findById(userId)
+            JpaUser jpaUser = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            Optional<Vote> existingVote = voteRepository.findByUserAndAnswer(user, answer);
+            Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaAnswer(jpaUser, jpaAnswer);
 
             if (existingVote.isPresent()) {
-                Vote vote = existingVote.get();
+                JpaVote jpaVote = existingVote.get();
 
-                if (!vote.isUpvote()) {
-                    voteRepository.delete(vote);
-                    answer.setVotes(answer.getVotes() + 1);
+                if (!jpaVote.isUpvote()) {
+                    voteRepository.delete(jpaVote);
+                    jpaAnswer.setVotes(jpaAnswer.getVotes() + 1);
                 } else {
-                    vote.setUpvote(false);
-                    voteRepository.save(vote);
-                    answer.setVotes(answer.getVotes() - 2);
+                    jpaVote.setUpvote(false);
+                    voteRepository.save(jpaVote);
+                    jpaAnswer.setVotes(jpaAnswer.getVotes() - 2);
                 }
             } else {
-                Vote vote = new Vote();
-                vote.setUser(user);
-                vote.setAnswer(answer);
-                vote.setUpvote(false);
-                vote.setVotedAt(LocalDateTime.now());
-                voteRepository.save(vote);
+                JpaVote jpaVote = new JpaVote();
+                jpaVote.setJpaUser(jpaUser);
+                jpaVote.setJpaAnswer(jpaAnswer);
+                jpaVote.setUpvote(false);
+                jpaVote.setVotedAt(LocalDateTime.now());
+                voteRepository.save(jpaVote);
 
-                answer.setVotes(answer.getVotes() - 1);
+                jpaAnswer.setVotes(jpaAnswer.getVotes() - 1);
             }
 
-            answerRepository.save(answer);
+            answerRepository.save(jpaAnswer);
 
             ReputationResponse authorReputation = reputationService.updateReputationForDownvote(
-                    new ReputationUpdateRequest(answer.getUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED)
+                    new ReputationUpdateRequest(jpaAnswer.getJpaUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED)
             );
 
             return reputationService.updateReputationForDownvoteGiven(
@@ -279,23 +282,23 @@ public class AnswerServiceImpl implements AnswerService {
     @Transactional
     public ReputationResponse approveBestAnswer(Long questionId, Long answerId, Long userId) {
         try {
-            Question question = questionRepository.findById(questionId)
+            JpaQuestion jpaQuestion = questionRepository.findById(questionId)
                     .orElseThrow(() -> new IllegalArgumentException("Question not found"));
 
-            if (!question.getUser().getId().equals(userId)) {
+            if (!jpaQuestion.getJpaUser().getId().equals(userId)) {
                 throw new IllegalArgumentException("Only the question owner can approve the best answer");
             }
 
-            Answer answer = answerRepository.findById(answerId)
+            JpaAnswer jpaAnswer = answerRepository.findById(answerId)
                     .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
 
 
 
-            question.setBestAnswerId(answerId);
-            questionRepository.save(question);
+            jpaQuestion.setBestAnswerId(answerId);
+            questionRepository.save(jpaQuestion);
 
             return reputationService.updateReputationForBestAnswer(
-                    new ReputationUpdateRequest(answer.getUser().getId(), ReputationConstants.POINTS_BEST_ANSWER)
+                    new ReputationUpdateRequest(jpaAnswer.getJpaUser().getId(), ReputationConstants.POINTS_BEST_ANSWER)
             );
         } catch (Exception e) {
             throw new RuntimeException("Error approving best answer: " + e.getMessage());
@@ -304,7 +307,7 @@ public class AnswerServiceImpl implements AnswerService {
 
     @Override
     public Page<AnswerResponse> getAnswersByQuestion(Long questionId, Pageable pageable) {
-        Page<Answer> answers = answerRepository.findByQuestionId(questionId, pageable);
+        Page<JpaAnswer> answers = answerRepository.findByQuestionId(questionId, pageable);
         return answers.map(answer -> answerMapper.toResponse(answer, commentMapper));
     }
 

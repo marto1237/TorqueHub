@@ -6,10 +6,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.QuestionService;
 import torquehub.torquehub.business.interfaces.ReputationService;
+import torquehub.torquehub.business.interfaces.VoteService;
 import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.CommentMapper;
 import torquehub.torquehub.domain.mapper.QuestionMapper;
-import torquehub.torquehub.domain.model.*;
+import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
+import torquehub.torquehub.domain.model.jpa_models.JpaTag;
+import torquehub.torquehub.domain.model.jpa_models.JpaUser;
+import torquehub.torquehub.domain.model.jpa_models.JpaVote;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionCreateRequest;
 import torquehub.torquehub.domain.request.QuestionDtos.QuestionUpdateRequest;
 import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
@@ -35,13 +39,20 @@ public class QuestionServiceImpl implements QuestionService {
     private final ReputationService reputationService;
     private final JpaVoteRepository voteRepository;
     private final CommentMapper commentMapper;
+    private final VoteService voteService;
+    private final JpaFollowRepository followRepository;
+    private final JpaBookmarkRepository bookmarkRepository;
+
     public QuestionServiceImpl(JpaQuestionRepository questionRepository,
                                JpaTagRepository tagRepository,
                                JpaUserRepository userRepository,
                                QuestionMapper questionMapper,
                                ReputationService reputationService,
                                JpaVoteRepository voteRepository,
-                               CommentMapper commentMapper) {
+                               CommentMapper commentMapper,
+                               VoteService voteService,
+                               JpaFollowRepository followRepository,
+                               JpaBookmarkRepository bookmarkRepository) {
         this.questionRepository = questionRepository;
         this.tagRepository = tagRepository;
         this.userRepository = userRepository;
@@ -49,23 +60,26 @@ public class QuestionServiceImpl implements QuestionService {
         this.reputationService = reputationService;
         this.voteRepository = voteRepository;
         this.commentMapper = commentMapper;
+        this.voteService = voteService;
+        this.followRepository = followRepository;
+        this.bookmarkRepository = bookmarkRepository;
     }
 
     @Override
     public QuestionResponse askQuestion(QuestionCreateRequest questionCreateRequest) {
         try {
-            User user = userRepository.findById(questionCreateRequest.getUserId())
+            JpaUser jpaUser = userRepository.findById(questionCreateRequest.getUserId())
                     .orElseThrow(() -> new IllegalArgumentException("User with ID " + questionCreateRequest.getUserId() + " not found"));
 
 
 
-            Set<Tag> tags = convertTagNamesToTags(questionCreateRequest.getTags());
+            Set<JpaTag> jpaTags = convertTagNamesToTags(questionCreateRequest.getTags());
 
-            Question question = Question.builder()
+            JpaQuestion jpaQuestion = JpaQuestion.builder()
                     .title(questionCreateRequest.getTitle())
                     .description(questionCreateRequest.getDescription())
-                    .tags(tags)
-                    .user(user)
+                    .jpaTags(jpaTags)
+                    .jpaUser(jpaUser)
                     .askedTime(LocalDateTime.now())
                     .bestAnswerId(null)
                     .views(0)
@@ -75,12 +89,12 @@ public class QuestionServiceImpl implements QuestionService {
                     .lastActivityTime(LocalDateTime.now())
                     .build();
 
-            Question savedQuestion = questionRepository.save(question);
+            JpaQuestion savedJpaQuestion = questionRepository.save(jpaQuestion);
 
-            ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(user.getId(), ReputationConstants.POINTS_NEW_QUESTION);
+            ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(jpaUser.getId(), ReputationConstants.POINTS_NEW_QUESTION);
             ReputationResponse reputationResponse = reputationService.updateReputationForNewQuestion(reputationUpdateRequest);
 
-            QuestionResponse questionResponse = questionMapper.toResponse(savedQuestion);
+            QuestionResponse questionResponse = questionMapper.toResponse(savedJpaQuestion);
             questionResponse.setReputationUpdate(reputationResponse);
 
             return questionResponse;
@@ -96,15 +110,15 @@ public class QuestionServiceImpl implements QuestionService {
     @Transactional
     public boolean deleteQuestion(Long questionId) {
         try {
-            Optional<Question> optionalQuestion = questionRepository.findById(questionId);
+            Optional<JpaQuestion> optionalQuestion = questionRepository.findById(questionId);
             if (optionalQuestion.isPresent()) {
-                Question questionToDelete = optionalQuestion.get();
+                JpaQuestion jpaQuestionToDelete = optionalQuestion.get();
 
-                User user = questionToDelete.getUser();
-                ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(user.getId(), ReputationConstants.POINTS_QUESTION_WHEN_DELETED);
+                JpaUser jpaUser = jpaQuestionToDelete.getJpaUser();
+                ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(jpaUser.getId(), ReputationConstants.POINTS_QUESTION_WHEN_DELETED);
                 boolean isDeleted = reputationService.updateReputationForQuestionWhenQuestionIsDeleted(reputationUpdateRequest);
                 if(!isDeleted) {
-                    throw new IllegalArgumentException("Error updating reputation for user with ID " + user.getId());
+                    throw new IllegalArgumentException("Error updating reputation for user with ID " + jpaUser.getId());
                 }
                 questionRepository.deleteById(questionId);
 
@@ -122,19 +136,19 @@ public class QuestionServiceImpl implements QuestionService {
     @Transactional
     public boolean updateQuestion(Long questionId, QuestionUpdateRequest questionUpdateRequest) {
         try{
-            Optional<Question> optionalQuestion = questionRepository.findById(questionId);
+            Optional<JpaQuestion> optionalQuestion = questionRepository.findById(questionId);
             if (optionalQuestion.isPresent()) {
-                Question existingQuestion = optionalQuestion.get();
+                JpaQuestion existingJpaQuestion = optionalQuestion.get();
 
                 // Convert Set<String> to Set<Tag>
-                Set<Tag> tags = convertTagNamesToTags(questionUpdateRequest.getTags());
+                Set<JpaTag> jpaTags = convertTagNamesToTags(questionUpdateRequest.getTags());
 
-                existingQuestion.setTitle(questionUpdateRequest.getTitle());
-                existingQuestion.setDescription(questionUpdateRequest.getDescription());
-                existingQuestion.setTags(tags);
+                existingJpaQuestion.setTitle(questionUpdateRequest.getTitle());
+                existingJpaQuestion.setDescription(questionUpdateRequest.getDescription());
+                existingJpaQuestion.setJpaTags(jpaTags);
 
-                questionRepository.save(existingQuestion);
-                existingQuestion.setLastActivityTime(LocalDateTime.now());
+                questionRepository.save(existingJpaQuestion);
+                existingJpaQuestion.setLastActivityTime(LocalDateTime.now());
                 return true;
             } else {
                 throw new IllegalArgumentException("Question with ID " + questionId + " not found.");
@@ -155,21 +169,52 @@ public class QuestionServiceImpl implements QuestionService {
                 });
     }
 
+    @Override
+    public Optional<QuestionDetailResponse> getQuestionbyId(Long questionId, Pageable pageable, Long userId) {
+        return questionRepository.findById(questionId)
+                .map(question -> {
+                    QuestionDetailResponse questionDetailResponse = questionMapper.toDetailResponse(question, pageable, commentMapper);
+
+                    // If userId is provided, check for the vote status
+                    if (userId != null) {
+                        Optional<JpaVote> userVoteOptional = voteRepository.findByUserAndJpaQuestion(
+                                userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found")),
+                                question
+                        );
+
+                        String userVote = null;
+                        if (userVoteOptional.isPresent()) {
+                            userVote = userVoteOptional.get().isUpvote() ? "up" : "down";
+                        }
+                        questionDetailResponse.setUserVote(userVote); // Set the user vote status
+
+                        // Check if the user is following the question
+                        boolean isFollowing = followRepository.findByUserIdAndQuestionId(userId, questionId).isPresent();
+                        questionDetailResponse.setIsFollowing(isFollowing); // Set the follow status
+
+                        boolean isBookmarked = bookmarkRepository.findByUserIdAndJpaQuestionId(userId, questionId).isPresent();
+                        questionDetailResponse.setIsBookmarked(isBookmarked); // Set the bookmark status
+
+                    }
+                    // If userId is null (user is not logged in), userVote will remain null
+                    return questionDetailResponse;
+                });
+    }
 
     @Override
     public Page<QuestionSummaryResponse> getAllQuestions(Pageable pageable) {
-        Page<Question> questionsPage = questionRepository.findAll(pageable);
+        Page<JpaQuestion> questionsPage = questionRepository.findAll(pageable);
         return questionsPage.map(questionMapper::toSummaryResponse);
     }
 
     @Override
     public Optional<List<QuestionSummaryResponse>> getQuestionsByUser(Long userId) {
-        List<Question> questions = questionRepository.findByUserId(userId);
+        List<JpaQuestion> jpaQuestions = questionRepository.findByJpaUserId(userId);
 
-        if (questions.isEmpty()) {
+        if (jpaQuestions.isEmpty()) {
             return Optional.empty();
         } else {
-            return Optional.of(questions.stream()
+            return Optional.of(jpaQuestions.stream()
                     .map(questionMapper::toSummaryResponse)
                     .collect(Collectors.toList()));
         }
@@ -178,120 +223,47 @@ public class QuestionServiceImpl implements QuestionService {
     @Override
     @Transactional
     public ReputationResponse upvoteQuestion(Long questionId, Long userId) {
-        try {
-            Question question = questionRepository.findById(questionId)
-                    .orElseThrow(() -> new IllegalArgumentException("Question with ID " + questionId + " not found"));
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));
-
-            Optional<Vote> existingVote = voteRepository.findByUserAndQuestion(user, question);
-
-            if (existingVote.isPresent()) {
-                Vote vote = existingVote.get();
-                if (vote.isUpvote()) {
-
-                    voteRepository.delete(vote);
-                    question.setVotes(question.getVotes() - 1);
-                } else {
-                    vote.setUpvote(true);
-                    voteRepository.save(vote);
-                    question.setVotes(question.getVotes() + 2);
-                }
-            } else {
-                Vote vote = new Vote();
-                vote.setUser(user);
-                vote.setQuestion(question);
-                vote.setUpvote(true);
-                vote.setVotedAt(LocalDateTime.now());
-                voteRepository.save(vote);
-
-                question.setVotes(question.getVotes() + 1);
-
-            }
-
-            questionRepository.save(question);
-
-            ReputationResponse authorReputation = reputationService.updateReputationForUpvote(
-                    new ReputationUpdateRequest(question.getUser().getId(), ReputationConstants.POINTS_UPVOTE_RECEIVED));
-
-            return reputationService.updateReputationForUpvoteGiven(
-                    new ReputationUpdateRequest(userId, ReputationConstants.POINTS_UPVOTE_GIVEN)
-            );
-
-
-
-        }catch (Exception e) {
-            throw new RuntimeException("Error upvoting question: " + e.getMessage());
-        }
+        JpaQuestion question = findQuestionById(questionId);
+        JpaUser user = findUserById(userId);
+        return voteService.handleUpvote(user, question);
     }
 
     @Override
     public ReputationResponse downvoteQuestion(Long questionId, Long userId) {
-        try {
-            Question question = questionRepository.findById(questionId)
-                    .orElseThrow(() -> new IllegalArgumentException("Question with ID " + questionId + " not found"));
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));
-
-            Optional<Vote> existingVote = voteRepository.findByUserAndQuestion(user, question);
-
-            if (existingVote.isPresent()) {
-                Vote vote = existingVote.get();
-
-                if (!vote.isUpvote()) {
-                    voteRepository.delete(vote);
-                    question.setVotes(question.getVotes() + 1);
-                } else {
-                    vote.setUpvote(false);
-                    voteRepository.save(vote);
-                    question.setVotes(question.getVotes() - 2);
-                }
-            } else {
-                Vote vote = new Vote();
-                vote.setUser(user);
-                vote.setQuestion(question);
-                vote.setUpvote(false);
-                vote.setVotedAt(LocalDateTime.now());
-                voteRepository.save(vote);
-
-                question.setVotes(question.getVotes() - 1);
-            }
-
-            questionRepository.save(question);
-
-            ReputationResponse authorReputation = reputationService.updateReputationForUpvote(
-                    new ReputationUpdateRequest(question.getUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED));
-
-            return reputationService.updateReputationForDownvoteGiven(
-                    new ReputationUpdateRequest(userId, ReputationConstants.POINTS_DOWNVOTE_GIVEN)
-            );
-
-        }catch (Exception e) {
-            throw new RuntimeException("Error downvoting question: " + e.getMessage());
-        }
+        JpaQuestion question = findQuestionById(questionId);
+        JpaUser user = findUserById(userId);
+        return voteService.handleDownvote(user, question);
     }
 
     @Override
     public boolean incrementQuestionView(Long questionId) {
         try {
-            Question question = questionRepository.findById(questionId)
+            JpaQuestion jpaQuestion = questionRepository.findById(questionId)
                     .orElseThrow(() -> new IllegalArgumentException("Question with ID " + questionId + " not found"));
-            question.setViews(question.getViews() + 1);
-            questionRepository.save(question);
+            jpaQuestion.setViews(jpaQuestion.getViews() + 1);
+            questionRepository.save(jpaQuestion);
             return true;
         } catch (Exception e) {
             throw new RuntimeException("Error incrementing question view count: " + e.getMessage());
         }
     }
 
-    private Set<Tag> convertTagNamesToTags(Set<String> tagNames) {
+    private Set<JpaTag> convertTagNamesToTags(Set<String> tagNames) {
         return tagNames.stream()
                 .map(tagName -> tagRepository.findByName(tagName)
                         .orElseThrow(() -> new IllegalArgumentException("Tag not found: " + tagName)))
                 .collect(Collectors.toSet());
     }
 
+    private JpaQuestion findQuestionById(Long questionId) {
+        return questionRepository.findById(questionId)
+                .orElseThrow(() -> new IllegalArgumentException("Question with ID " + questionId + " not found"));
+    }
 
+    private JpaUser findUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));
+    }
 
 }
 

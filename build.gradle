@@ -70,6 +70,8 @@ tasks.named('test') {
 
 sonar {
     properties {
+        property "sonar.java.coveragePlugin", "jacoco"
+        property "sonar.coverage.jacoco.xmlReportPaths", "${buildDir}/reports/jacoco/test/jacocoTestReport.xml"
         property "sonar.projectKey", "I525452_torquehubapi_7c23a2ce-e40d-4c42-9842-abb94eb67666"
         property "sonar.projectName", "TorqueHubApi"
         property "sonar.qualitygate.wait", true

@@ -2,7 +2,7 @@ package torquehub.torquehub.domain.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import torquehub.torquehub.domain.model.User;
+import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
 import torquehub.torquehub.domain.response.UserDtos.UserResponse;
@@ -12,20 +12,20 @@ public interface UserMapper {
 
 
     @Mapping(target = "password", ignore = true)
-    @Mapping(source = "role", target = "role", qualifiedByName = "stringToRole")
+    @Mapping(source = "role", target = "jpaRole", qualifiedByName = "stringToRole")
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "salt", ignore = true)
     @Mapping(target = "points", ignore = true)
-    User toEntity(UserCreateRequest userCreateRequest);
+    JpaUser toEntity(UserCreateRequest userCreateRequest);
 
-    @Mapping(source = "email", target = "role", qualifiedByName = "stringToRole")
+    @Mapping(source = "email", target = "jpaRole", qualifiedByName = "stringToRole")
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "salt", ignore = true)
     @Mapping(target = "points", ignore = true)
-    User toEntity(UserUpdateRequest userUpdateRequest);
+    JpaUser toEntity(UserUpdateRequest userUpdateRequest);
 
-    @Mapping(source = "role.name", target = "role")
+    @Mapping(source = "jpaRole.name", target = "role")
     @Mapping(target = "points", source = "points")
-    UserResponse toResponse(User user);
+    UserResponse toResponse(JpaUser jpaUser);
 }
 

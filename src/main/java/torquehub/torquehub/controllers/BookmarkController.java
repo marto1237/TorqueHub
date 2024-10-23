@@ -2,12 +2,14 @@ package torquehub.torquehub.controllers;
 
 
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.BookmarkService;
+import torquehub.torquehub.configuration.utils.TokenUtil;
+import torquehub.torquehub.domain.request.BookmarkDtos.BookmarkQuestionRequest;
 import torquehub.torquehub.domain.request.BookmarkDtos.BookmarkRequest;
 import torquehub.torquehub.domain.response.BookmarkDtos.BookmarkResponse;
 
@@ -19,13 +21,28 @@ import java.util.Optional;
 @Validated
 public class BookmarkController {
 
-    @Autowired
-    private BookmarkService bookmarkService;
+    private final BookmarkService bookmarkService;
+    private final TokenUtil tokenUtil;
 
-    @PostMapping("/question")
-    public ResponseEntity<BookmarkResponse> bookmarkQuestion(@Valid @RequestBody BookmarkRequest bookmarkRequest) {
-        BookmarkResponse response = bookmarkService.bookmarkQuestion(bookmarkRequest);
-        return ResponseEntity.status(HttpStatus.OK).body(response);
+    public BookmarkController(BookmarkService bookmarkService,
+                              TokenUtil tokenUtil) {
+        this.bookmarkService = bookmarkService;
+        this.tokenUtil = tokenUtil;
+    }
+
+    @PostMapping("/questions/{questionId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<BookmarkResponse> toggleBookmarkQuestion(
+            @PathVariable Long questionId,
+            @RequestHeader("Authorization") String token) {
+        try {
+            Long userId = tokenUtil.getUserIdFromToken(token);
+            BookmarkQuestionRequest bookmarkRequest = new BookmarkQuestionRequest(userId, questionId);
+            BookmarkResponse bookmarkResponse = bookmarkService.bookmarkQuestion(bookmarkRequest);
+            return ResponseEntity.ok(bookmarkResponse);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
     }
 
     @PostMapping("/answer")

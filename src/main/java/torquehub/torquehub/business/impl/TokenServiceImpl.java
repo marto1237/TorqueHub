@@ -2,11 +2,9 @@ package torquehub.torquehub.business.impl;
 
 import org.springframework.stereotype.Service;
 import torquehub.torquehub.business.interfaces.TokenService;
-import torquehub.torquehub.configuration.JWT.token.AccessToken;
-import torquehub.torquehub.configuration.JWT.token.impl.AccessTokenImpl;
+import torquehub.torquehub.configuration.jwt.token.AccessToken;
+import torquehub.torquehub.configuration.jwt.token.impl.AccessTokenImpl;
 import torquehub.torquehub.domain.response.LoginDtos.LoginResponse;
-
-import java.util.Collections;
 
 @Service
 public class TokenServiceImpl implements TokenService {

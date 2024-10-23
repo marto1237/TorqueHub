@@ -5,7 +5,11 @@ import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.exeption.BookmarkAlreadyExistsException;
 import torquehub.torquehub.business.interfaces.BookmarkService;
 import torquehub.torquehub.domain.mapper.BookmarkMapper;
-import torquehub.torquehub.domain.model.*;
+import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
+import torquehub.torquehub.domain.model.jpa_models.JpaBookmark;
+import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
+import torquehub.torquehub.domain.model.jpa_models.JpaUser;
+import torquehub.torquehub.domain.request.BookmarkDtos.BookmarkQuestionRequest;
 import torquehub.torquehub.domain.request.BookmarkDtos.BookmarkRequest;
 import torquehub.torquehub.domain.response.BookmarkDtos.BookmarkResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
@@ -41,33 +45,29 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     @Override
     @Transactional
-    public BookmarkResponse bookmarkQuestion(BookmarkRequest bookmarkRequest) {
-        try {
-            Bookmark bookmark = bookmarkRepository.findByUserIdAndQuestionId(bookmarkRequest.getUserId(), bookmarkRequest.getQuestionId())
-                    .orElse(null);
-            if (bookmark != null) {
-                bookmarkRepository.delete(bookmark);
-                return null;
-            }else {
-                User user = userRepository.findById(bookmarkRequest.getUserId())
-                        .orElseThrow(() -> new RuntimeException("User not found"));
+    public BookmarkResponse bookmarkQuestion(BookmarkQuestionRequest bookmarkRequest) {
+        JpaBookmark jpaBookmark = bookmarkRepository.findByUserIdAndJpaQuestionId(bookmarkRequest.getUserId(), bookmarkRequest.getQuestionId())
+                .orElse(null);
 
-                Question question = questionRepository.findById(bookmarkRequest.getQuestionId())
-                        .orElseThrow(() -> new RuntimeException("Question not found"));
-
-                Bookmark newBookmark = Bookmark.builder()
-                        .user(user)
-                        .question(question)
-                        .createdAt(LocalDateTime.now())
-                        .build();
-
-                Bookmark savedBookmark = bookmarkRepository.save(newBookmark);
-                return bookmarkMapper.toResponse(savedBookmark);
-            }
-
-        } catch (Exception e) {
-            throw new BookmarkAlreadyExistsException("Bookmark already exists");
+        if (jpaBookmark != null) {
+            bookmarkRepository.delete(jpaBookmark);
+            return null;  // If unbookmarking, return null
         }
+
+        JpaUser jpaUser = userRepository.findById(bookmarkRequest.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        JpaQuestion jpaQuestion = questionRepository.findById(bookmarkRequest.getQuestionId())
+                .orElseThrow(() -> new RuntimeException("Question not found"));
+
+        JpaBookmark newJpaBookmark = JpaBookmark.builder()
+                .jpaUser(jpaUser)
+                .jpaQuestion(jpaQuestion)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        JpaBookmark savedJpaBookmark = bookmarkRepository.save(newJpaBookmark);
+        return bookmarkMapper.toResponse(savedJpaBookmark);
 
     }
 
@@ -75,26 +75,26 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Transactional
     public BookmarkResponse bookmarkAnswer(BookmarkRequest bookmarkRequest) {
         try {
-            Bookmark bookmark = bookmarkRepository.findByUserIdAndAnswerId(bookmarkRequest.getUserId(), bookmarkRequest.getAnswerId())
+            JpaBookmark jpaBookmark = bookmarkRepository.findByUserIdAndJpaAnswerId(bookmarkRequest.getUserId(), bookmarkRequest.getAnswerId())
                     .orElse(null);
-            if (bookmark != null) {
-                bookmarkRepository.delete(bookmark);
+            if (jpaBookmark != null) {
+                bookmarkRepository.delete(jpaBookmark);
                 return null;
             }else {
-                User user = userRepository.findById(bookmarkRequest.getUserId())
+                JpaUser jpaUser = userRepository.findById(bookmarkRequest.getUserId())
                         .orElseThrow(() -> new RuntimeException("User not found"));
 
-                Answer answer = answerRepository.findById(bookmarkRequest.getAnswerId())
+                JpaAnswer jpaAnswer = answerRepository.findById(bookmarkRequest.getAnswerId())
                         .orElseThrow(() -> new RuntimeException("Answer not found"));
 
-                Bookmark newBookmark = Bookmark.builder()
-                        .user(user)
-                        .answer(answer)
+                JpaBookmark newJpaBookmark = JpaBookmark.builder()
+                        .jpaUser(jpaUser)
+                        .jpaAnswer(jpaAnswer)
                         .createdAt(LocalDateTime.now())
                         .build();
 
-                Bookmark savedBookmark = bookmarkRepository.save(newBookmark);
-                return bookmarkMapper.toResponse(savedBookmark);
+                JpaBookmark savedJpaBookmark = bookmarkRepository.save(newJpaBookmark);
+                return bookmarkMapper.toResponse(savedJpaBookmark);
             }
 
         } catch (Exception e) {
@@ -106,11 +106,11 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     @Override
     public Optional<List<BookmarkResponse>> getUserBookmarks(Long userId) {
-        List<Bookmark> bookmarks = bookmarkRepository.findByUserId(userId);
-        if (bookmarks.isEmpty()) {
+        List<JpaBookmark> jpaBookmarks = bookmarkRepository.findByUserId(userId);
+        if (jpaBookmarks.isEmpty()) {
             return Optional.empty();
         }else {
-            return Optional.of(bookmarks.stream()
+            return Optional.of(jpaBookmarks.stream()
                     .map(bookmarkMapper::toResponse)
                     .toList());
         }

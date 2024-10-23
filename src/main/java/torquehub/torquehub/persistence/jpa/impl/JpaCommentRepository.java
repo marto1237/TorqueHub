@@ -3,7 +3,7 @@ package torquehub.torquehub.persistence.jpa.impl;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
-import torquehub.torquehub.domain.model.Comment;
+import torquehub.torquehub.domain.model.jpa_models.JpaComment;
 import torquehub.torquehub.persistence.jpa.interfaces.SpringDataJpaCommentRepository;
 import torquehub.torquehub.persistence.repository.CommentRepository;
 
@@ -19,28 +19,28 @@ public class JpaCommentRepository implements CommentRepository {
     }
 
     @Override
-    public Comment save(Comment comment) {
-        return commentRepository.save(comment);
+    public JpaComment save(JpaComment jpaComment) {
+        return commentRepository.save(jpaComment);
     }
 
     @Override
-    public Optional<Comment> findById(Long id) {
+    public Optional<JpaComment> findById(Long id) {
         return commentRepository.findById(id);
     }
 
     @Override
-    public List<Comment> findByAnswerId(Long answerId) {
-        return commentRepository.findByAnswerId(answerId);
+    public List<JpaComment> findByAnswerId(Long answerId) {
+        return commentRepository.findByJpaAnswer_Id(answerId);
     }
 
     @Override
-    public List<Comment> findByUserId(Long userId) {
-        return commentRepository.findByUserId(userId);
+    public List<JpaComment> findByUserId(Long userId) {
+        return commentRepository.findByJpaUser_Id(userId);
     }
 
     @Override
-    public Page<Comment> findByAnswerId(Long answerId, Pageable pageable) {
-        return commentRepository.findByAnswerId(answerId, pageable);
+    public Page<JpaComment> findByAnswerId(Long answerId, Pageable pageable) {
+        return commentRepository.findByJpaAnswer_Id(answerId, pageable);
     }
 
     @Override

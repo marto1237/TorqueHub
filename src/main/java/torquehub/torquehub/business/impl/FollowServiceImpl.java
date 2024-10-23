@@ -4,10 +4,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.FollowService;
 import torquehub.torquehub.domain.mapper.FollowMapper;
-import torquehub.torquehub.domain.model.Answer;
-import torquehub.torquehub.domain.model.Follow;
-import torquehub.torquehub.domain.model.Question;
-import torquehub.torquehub.domain.model.User;
+import torquehub.torquehub.domain.model.jpa_models.JpaUser;
+import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
+import torquehub.torquehub.domain.model.jpa_models.JpaFollow;
+import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.request.FollowDtos.FollowAnswerRequest;
 import torquehub.torquehub.domain.request.FollowDtos.FollowQuestionRequest;
 import torquehub.torquehub.domain.response.FollowRequest.FollowResponse;
@@ -43,28 +43,28 @@ public class FollowServiceImpl implements FollowService {
 
     @Override
     @Transactional
-    public FollowResponse followQuestion(FollowQuestionRequest followQuestionRequest) {
+    public FollowResponse toggleFollowQuestion(FollowQuestionRequest followQuestionRequest) {
         try {
-            Follow follow = followRepository.findByUserIdAndQuestionId(followQuestionRequest.getUserId(), followQuestionRequest.getQuestionId())
+            JpaFollow jpaFollow = followRepository.findByUserIdAndQuestionId(followQuestionRequest.getUserId(), followQuestionRequest.getQuestionId())
                     .orElse(null);
-            if (follow != null) {
-                followRepository.delete(follow);
+            if (jpaFollow != null) {
+                followRepository.delete(jpaFollow);
                 return null;
             }else {
-                User user = userRepository.findById(followQuestionRequest.getUserId())
+                JpaUser jpaUser = userRepository.findById(followQuestionRequest.getUserId())
                         .orElseThrow(() -> new RuntimeException("User not found"));
 
-                Question question = questionRepository.findById(followQuestionRequest.getQuestionId())
+                JpaQuestion jpaQuestion = questionRepository.findById(followQuestionRequest.getQuestionId())
                         .orElseThrow(() -> new RuntimeException("Question not found"));
 
-                Follow newFollow = Follow.builder()
-                        .user(user)
-                        .question(question)
+                JpaFollow newJpaFollow = JpaFollow.builder()
+                        .jpaUser(jpaUser)
+                        .jpaQuestion(jpaQuestion)
                         .followedAt(LocalDateTime.now())
                         .build();
 
-                Follow savedFollow = followRepository.save(newFollow);
-                return followMapper.toResponse(savedFollow);
+                JpaFollow savedJpaFollow = followRepository.save(newJpaFollow);
+                return followMapper.toResponse(savedJpaFollow);
             }
 
 
@@ -73,48 +73,51 @@ public class FollowServiceImpl implements FollowService {
         }
     }
 
-    public FollowResponse followResponse(FollowAnswerRequest followAnswerRequest) {
+    @Override
+    @Transactional
+    public FollowResponse toggleFollowAnswer(FollowAnswerRequest followAnswerRequest) {
         try {
-            Follow follow = followRepository.findByUserIdAndAnswerId(followAnswerRequest.getUserId(), followAnswerRequest.getAnswerId())
+            JpaFollow jpaFollow = followRepository.findByUserIdAndAnswerId(followAnswerRequest.getUserId(), followAnswerRequest.getAnswerId())
                     .orElse(null);
-            if (follow != null) {
-                followRepository.delete(follow);
+            if (jpaFollow != null) {
+                followRepository.delete(jpaFollow);
                 return null;
             }else {
-                User user = userRepository.findById(followAnswerRequest.getUserId())
+                JpaUser jpaUser = userRepository.findById(followAnswerRequest.getUserId())
                         .orElseThrow(() -> new RuntimeException("User not found"));
 
-                Answer answer = answerRepository.findById(followAnswerRequest.getAnswerId())
+                JpaAnswer jpaAnswer = answerRepository.findById(followAnswerRequest.getAnswerId())
                         .orElseThrow(() -> new RuntimeException("Answer not found"));
 
-                Follow newFollow = Follow.builder()
-                        .user(user)
-                        .answer(answer)
+                JpaFollow newJpaFollow = JpaFollow.builder()
+                        .jpaUser(jpaUser)
+                        .jpaAnswer(jpaAnswer)
                         .followedAt(LocalDateTime.now())
                         .build();
 
-                Follow savedFollow = followRepository.save(newFollow);
-                return followMapper.toResponse(savedFollow);
+                JpaFollow savedJpaFollow = followRepository.save(newJpaFollow);
+                return followMapper.toResponse(savedJpaFollow);
             }
         }catch (Exception e) {
             throw new RuntimeException("Error following answer");
         }
     }
 
+    @Transactional
     public boolean muteNotifications(Long followId) {
-        Follow follow = followRepository.findById(followId)
+        JpaFollow jpaFollow = followRepository.findById(followId)
                 .orElseThrow(() -> new IllegalArgumentException("Follow not found"));
-        follow.setMuted(true);
-        followRepository.save(follow);
+        jpaFollow.setMuted(true);
+        followRepository.save(jpaFollow);
         return true;
     }
 
     public List<FollowResponse> getUserFollows(Long userId) {
-        List<Follow> follows = followRepository.findByUserId(userId);
-        if (follows.isEmpty()) {
+        List<JpaFollow> jpaFollows = followRepository.findByUserId(userId);
+        if (jpaFollows.isEmpty()) {
             return null;
         }else {
-            return follows.stream()
+            return jpaFollows.stream()
                     .map(followMapper::toResponse)
                     .toList();
         }

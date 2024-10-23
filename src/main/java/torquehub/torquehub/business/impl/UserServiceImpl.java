@@ -6,12 +6,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.TokenService;
 import torquehub.torquehub.business.interfaces.UserService;
-import torquehub.torquehub.configuration.JWT.token.AccessToken;
-import torquehub.torquehub.configuration.JWT.token.AccessTokenEncoder;
-import torquehub.torquehub.configuration.JWT.token.impl.AccessTokenImpl;
+import torquehub.torquehub.configuration.jwt.token.AccessToken;
+import torquehub.torquehub.configuration.jwt.token.AccessTokenEncoder;
 import torquehub.torquehub.domain.mapper.UserMapper;
-import torquehub.torquehub.domain.model.Role;
-import torquehub.torquehub.domain.model.User;
+import torquehub.torquehub.domain.model.jpa_models.JpaUser;
+import torquehub.torquehub.domain.model.jpa_models.JpaRole;
 import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
 import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
@@ -62,11 +61,11 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse createUser(UserCreateRequest userDto) {
         String roleName = (userDto.getRole() == null || userDto.getRole().isEmpty()) ? "USER" : userDto.getRole();
-        Optional<Role> roleOptional = roleRepository.findByName(roleName);
+        Optional<JpaRole> roleOptional = roleRepository.findByName(roleName);
         if (roleOptional.isEmpty()) {
             throw new IllegalArgumentException("Invalid role: " + roleName);
         }
-        Role role = roleOptional.get();
+        JpaRole jpaRole = roleOptional.get();
 
         try {
             // Hash password and generate salt
@@ -74,17 +73,17 @@ public class UserServiceImpl implements UserService {
             String hashedPassword = passwordEncoder.encode(userDto.getPassword() + salt);
 
             // Create user entity
-            User user = User.builder()
+            JpaUser jpaUser = JpaUser.builder()
                     .username(userDto.getUsername())
                     .email(userDto.getEmail())
                     .password(hashedPassword)
                     .salt(salt)
-                    .role(role)
+                    .jpaRole(jpaRole)
                     .build();
 
             // Save user
-            User savedUser = userRepository.save(user);
-            return userMapper.toResponse(savedUser);
+            JpaUser savedJpaUser = userRepository.save(jpaUser);
+            return userMapper.toResponse(savedJpaUser);
 
         } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("Username or email already exists.");
@@ -103,10 +102,10 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public boolean deleteUser(Long id) {
         try {
-            Optional<User> userOptional = userRepository.findById(id);
+            Optional<JpaUser> userOptional = userRepository.findById(id);
             if(userOptional.isPresent()){
-                User user = userOptional.get();
-                userRepository.delete(user);
+                JpaUser jpaUser = userOptional.get();
+                userRepository.delete(jpaUser);
                 return true;
             }else {
                 throw new IllegalArgumentException("User with ID " + id + " not found.");
@@ -130,13 +129,13 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public boolean updateUserById(Long id, UserUpdateRequest userUpdateRequest) {
         try {
-            Optional<User> userOptional = userRepository.findById(id);
+            Optional<JpaUser> userOptional = userRepository.findById(id);
             if (userOptional.isPresent()) {
-                User existingUser = userOptional.get();
-                existingUser.setUsername(userUpdateRequest.getUsername());
-                existingUser.setEmail(userUpdateRequest.getEmail());
+                JpaUser existingJpaUser = userOptional.get();
+                existingJpaUser.setUsername(userUpdateRequest.getUsername());
+                existingJpaUser.setEmail(userUpdateRequest.getEmail());
 
-                userRepository.save(existingUser);
+                userRepository.save(existingJpaUser);
                 return true;
             } else {
                 throw new IllegalArgumentException("User with ID " + id + " not found.");
@@ -165,19 +164,19 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public LoginResponse login(LoginRequest loginRequest) {
-        Optional<User> userOptional = userRepository.findByEmail(loginRequest.getEmail());
+        Optional<JpaUser> userOptional = userRepository.findByEmail(loginRequest.getEmail());
 
         if (userOptional.isPresent()) {
-            User user = userOptional.get();
+            JpaUser jpaUser = userOptional.get();
 
             // Check the hashed password with the salt
-            String saltedPassword = loginRequest.getPassword() + user.getSalt();
-            if (passwordEncoder.matches(saltedPassword, user.getPassword())) {
+            String saltedPassword = loginRequest.getPassword() + jpaUser.getSalt();
+            if (passwordEncoder.matches(saltedPassword, jpaUser.getPassword())) {
                 LoginResponse loginResponse = LoginResponse.builder()
-                        .id(user.getId())
-                        .username(user.getUsername())
-                        .email(user.getEmail())
-                        .role(user.getRole().getName())
+                        .id(jpaUser.getId())
+                        .username(jpaUser.getUsername())
+                        .email(jpaUser.getEmail())
+                        .role(jpaUser.getJpaRole().getName())
                         .build();
 
                 // Generate AccessToken using TokenService

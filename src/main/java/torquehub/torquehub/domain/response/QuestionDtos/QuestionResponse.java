@@ -4,12 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import torquehub.torquehub.domain.model.Tag;
-import torquehub.torquehub.domain.model.User;
 import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
 
 @Data

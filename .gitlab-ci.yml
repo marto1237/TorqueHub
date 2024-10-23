@@ -51,6 +51,7 @@ sonarqube-check:
 
   script:
     - ./gradlew assemble
+    - ./gradlew test jacocoTestReport
     - ./gradlew sonar
   allow_failure: true
   rules:

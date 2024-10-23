@@ -21,6 +21,7 @@ public interface QuestionService {
     boolean updateQuestion(Long questionId, QuestionUpdateRequest questionUpdateRequest);
 
     Optional<QuestionDetailResponse> getQuestionbyId(Long questionId, Pageable pageable);
+    Optional<QuestionDetailResponse> getQuestionbyId(Long questionId, Pageable pageable, Long userId);
 
     Page<QuestionSummaryResponse> getAllQuestions(Pageable pageable);
 

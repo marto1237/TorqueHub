@@ -11,10 +11,10 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import torquehub.torquehub.business.interfaces.TokenService;
-import torquehub.torquehub.configuration.JWT.token.AccessTokenDecoder;
-import torquehub.torquehub.configuration.JWT.token.AccessTokenEncoder;
-import torquehub.torquehub.configuration.JWT.token.impl.AccessTokenEncoderDecoderImpl;
-import torquehub.torquehub.configuration.JWT.token.impl.BlacklistService;
+import torquehub.torquehub.configuration.jwt.token.AccessTokenDecoder;
+import torquehub.torquehub.configuration.jwt.token.AccessTokenEncoder;
+import torquehub.torquehub.configuration.jwt.token.impl.AccessTokenEncoderDecoderImpl;
+import torquehub.torquehub.configuration.jwt.token.impl.BlacklistService;
 import torquehub.torquehub.configuration.SecurityConfig;
 import torquehub.torquehub.controllers.AuthController;
 import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
@@ -22,13 +22,12 @@ import torquehub.torquehub.domain.response.LoginDtos.LoginResponse;
 import torquehub.torquehub.business.interfaces.UserService;
 
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
 @Import({SecurityConfig.class, AccessTokenEncoderDecoderImpl.class, BlacklistService.class})
-public class AuthControllerTest {
+class AuthControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -83,7 +82,7 @@ public class AuthControllerTest {
     }
 
     @Test
-    public void shouldReturnUnauthorized_whenInvalidCredentials() throws Exception {
+    void shouldReturnUnauthorized_whenInvalidCredentials() throws Exception {
         LoginRequest invalidLoginRequest = LoginRequest.builder()
                 .email("newuser@email.com")
                 .password("wrongpassword")  // Wrong password
@@ -101,7 +100,7 @@ public class AuthControllerTest {
     }
 
     @Test
-    public void shouldReturnBadRequest_whenInvalidEmailFormat() throws Exception {
+    void shouldReturnBadRequest_whenInvalidEmailFormat() throws Exception {
         // Creating an invalid email login request
         LoginRequest invalidEmailRequest = LoginRequest.builder()
                 .email("invalid-email-format")  // Invalid email format
@@ -118,7 +117,7 @@ public class AuthControllerTest {
     }
 
     @Test
-    public void shouldReturnNotFound_whenUserDoesNotExist() throws Exception {
+    void shouldReturnNotFound_whenUserDoesNotExist() throws Exception {
         LoginRequest nonExistingUserLogin = LoginRequest.builder()
                 .email("nonexistent@email.com")
                 .password("somepassword")

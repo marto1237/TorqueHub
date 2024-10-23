@@ -3,8 +3,8 @@ package torquehub.torquehub.persistence.jpa.impl;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
-import torquehub.torquehub.domain.model.Question;
-import torquehub.torquehub.domain.model.Tag;
+import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
+import torquehub.torquehub.domain.model.jpa_models.JpaTag;
 import torquehub.torquehub.persistence.jpa.interfaces.SpringDataJpaQuestionRepository;
 import torquehub.torquehub.persistence.repository.QuestionRepository;
 
@@ -22,12 +22,12 @@ public class JpaQuestionRepository implements QuestionRepository {
     }
 
     @Override
-    public Question save(Question question) {
-        return questionRepository.save(question);
+    public JpaQuestion save(JpaQuestion jpaQuestion) {
+        return questionRepository.save(jpaQuestion);
     }
 
     @Override
-    public Optional<Question> findById(Long questionId) {
+    public Optional<JpaQuestion> findById(Long questionId) {
         return questionRepository.findById(questionId);
     }
 
@@ -42,43 +42,43 @@ public class JpaQuestionRepository implements QuestionRepository {
     }
 
     @Override
-    public Page<Question> findAll(Pageable pageable) {
+    public Page<JpaQuestion> findAll(Pageable pageable) {
         return questionRepository.findAll(pageable);
     }
 
     @Override
-    public Page<Question> findQuestionsByTags(List<Tag> tagEntities, Pageable pageable) {
-        return questionRepository.findQuestionsByTagNames(tagEntities.stream().map(Tag::getName).collect(Collectors.toList()), pageable);
+    public Page<JpaQuestion> findQuestionsByTags(List<JpaTag> jpaTagEntities, Pageable pageable) {
+        return questionRepository.findQuestionsByTagNames(jpaTagEntities.stream().map(JpaTag::getName).collect(Collectors.toList()), pageable);
     }
 
     @Override
-    public List<Question> findByUserId(Long userId) {
-        return questionRepository.findByUserId(userId);
+    public List<JpaQuestion> findByJpaUserId(Long userId) {
+        return questionRepository.findByJpaUserId(userId);
     }
 
     @Override
-    public Page<Question> findAllByOrderByAskedTimeDesc(Pageable pageable) {
+    public Page<JpaQuestion> findAllByOrderByAskedTimeDesc(Pageable pageable) {
         return questionRepository.findAllByOrderByAskedTimeDesc(pageable);
     }
 
 
     @Override
-    public Page<Question> findAllByOrderByLastActivityTimeDesc(Pageable pageable) {
+    public Page<JpaQuestion> findAllByOrderByLastActivityTimeDesc(Pageable pageable) {
         return questionRepository.findAllByOrderByLastActivityTimeDesc(pageable);
     }
 
     @Override
-    public Page<Question> findAllByOrderByVotesDesc(Pageable pageable) {
+    public Page<JpaQuestion> findAllByOrderByVotesDesc(Pageable pageable) {
         return questionRepository.findAllByOrderByVotesDesc(pageable);
     }
 
     @Override
-    public Page<Question> findAllByOrderByViewCountDesc(Pageable pageable) {
+    public Page<JpaQuestion> findAllByOrderByViewCountDesc(Pageable pageable) {
         return questionRepository.findAllByOrderByViewsDesc(pageable);
     }
 
     @Override
-    public Page<Question> findQuestionsWithNoAnswers(Pageable pageable) {
+    public Page<JpaQuestion> findQuestionsWithNoAnswers(Pageable pageable) {
         return questionRepository.findQuestionsWithNoAnswers(pageable);
     }
 }

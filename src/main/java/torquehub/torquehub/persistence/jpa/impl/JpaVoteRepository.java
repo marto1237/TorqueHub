@@ -1,7 +1,7 @@
 package torquehub.torquehub.persistence.jpa.impl;
 
 import org.springframework.stereotype.Repository;
-import torquehub.torquehub.domain.model.*;
+import torquehub.torquehub.domain.model.jpa_models.*;
 import torquehub.torquehub.persistence.jpa.interfaces.SpringDataJpaVoteRepository;
 import torquehub.torquehub.persistence.repository.VoteRepository;
 
@@ -17,14 +17,14 @@ public class JpaVoteRepository implements VoteRepository {
     }
 
     @Override
-    public Optional<Vote> findByUserAndAnswer(User user, Answer answer) {
-        return voteRepository.findByUserAndAnswer(user, answer);
+    public Optional<JpaVote> findByUserAndJpaAnswer(JpaUser jpaUser, JpaAnswer jpaAnswer) {
+        return voteRepository.findByJpaUserAndJpaAnswer(jpaUser, jpaAnswer);
     }
 
     @Override
-    public boolean delete(Vote vote) {
-        if (voteRepository.existsById(vote.getId())) {
-            voteRepository.delete(vote);
+    public boolean delete(JpaVote jpaVote) {
+        if (voteRepository.existsById(jpaVote.getId())) {
+            voteRepository.delete(jpaVote);
             return true;
         } else {
             return false;
@@ -32,18 +32,23 @@ public class JpaVoteRepository implements VoteRepository {
     }
 
     @Override
-    public Vote save(Vote vote) {
-        return voteRepository.save(vote);
+    public JpaVote save(JpaVote jpaVote) {
+        return voteRepository.save(jpaVote);
     }
 
     @Override
-    public Optional<Vote> findByUserAndComment(User user, Comment comment) {
-        return voteRepository.findByUserAndComment(user, comment);
+    public Optional<JpaVote> findTopByJpaUserAndJpaQuestionOrderByVotedAtDesc(JpaUser jpaUser, JpaQuestion jpaQuestion) {
+        return voteRepository.findTopByJpaUserAndJpaQuestionOrderByVotedAtDesc(jpaUser, jpaQuestion);
     }
 
     @Override
-    public Optional<Vote> findByUserAndQuestion(User user, Question question) {
-        return voteRepository.findByUserAndQuestion(user, question);
+    public Optional<JpaVote> findByUserAndJpaComment(JpaUser jpaUser, JpaComment jpaComment) {
+        return voteRepository.findByJpaUserAndJpaComment(jpaUser, jpaComment);
+    }
+
+    @Override
+    public Optional<JpaVote> findByUserAndJpaQuestion(JpaUser jpaUser, JpaQuestion jpaQuestion) {
+        return voteRepository.findByJpaUserAndJpaQuestion(jpaUser, jpaQuestion);
     }
 
 

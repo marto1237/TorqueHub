@@ -1,6 +1,5 @@
 package torquehub.torquehub.controllers;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,8 +20,11 @@ import java.util.Optional;
 @Validated
 public class CommentController {
 
-    @Autowired
-    private CommentService commentService;
+    private final CommentService commentService;
+
+    public CommentController(CommentService commentService) {
+        this.commentService = commentService;
+    }
 
     @GetMapping("/{commentId}")
     public ResponseEntity<CommentResponse> getCommentById(@PathVariable Long commentId) {

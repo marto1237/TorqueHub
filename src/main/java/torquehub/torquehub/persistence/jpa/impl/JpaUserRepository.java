@@ -1,7 +1,7 @@
 package torquehub.torquehub.persistence.jpa.impl;
 
 import org.springframework.stereotype.Repository;
-import torquehub.torquehub.domain.model.User;
+import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.persistence.jpa.interfaces.SpringDataJpaUserRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
 
@@ -17,24 +17,24 @@ public class JpaUserRepository implements UserRepository {
         this.userRepository = userRepository;
     }
     @Override
-    public List<User> findAll() {
+    public List<JpaUser> findAll() {
         return userRepository.findAll();
     }
 
     @Override
-    public User save(User user) {
-        return userRepository.save(user);
+    public JpaUser save(JpaUser jpaUser) {
+        return userRepository.save(jpaUser);
     }
 
     @Override
-    public Optional<User> findById(Long userId) {
+    public Optional<JpaUser> findById(Long userId) {
         return userRepository.findById(userId);
     }
 
     @Override
-    public boolean delete(User user) {
-        if (userRepository.existsById(user.getId())) {
-            userRepository.delete(user);
+    public boolean delete(JpaUser jpaUser) {
+        if (userRepository.existsById(jpaUser.getId())) {
+            userRepository.delete(jpaUser);
             return true;
         } else {
             return false;
@@ -52,12 +52,12 @@ public class JpaUserRepository implements UserRepository {
     }
 
     @Override
-    public Optional<User> findByUsername(String username) {
+    public Optional<JpaUser> findByUsername(String username) {
         return userRepository.findByUsername(username);
     }
 
     @Override
-    public Optional<User> findByEmail(String email) {
+    public Optional<JpaUser> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
 }

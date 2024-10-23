@@ -8,7 +8,7 @@ import torquehub.torquehub.business.interfaces.CommentService;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.CommentMapper;
-import torquehub.torquehub.domain.model.*;
+import torquehub.torquehub.domain.model.jpa_models.*;
 import torquehub.torquehub.domain.request.CommentDtos.CommentCreateRequest;
 import torquehub.torquehub.domain.request.CommentDtos.CommentEditRequest;
 import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
@@ -52,28 +52,28 @@ public class CommentServiceImpl implements CommentService {
     @Transactional
     public CommentResponse addComment(CommentCreateRequest commentCreateRequest) {
         try {
-            User user = userRepository.findById(commentCreateRequest.getUserId())
+            JpaUser jpaUser = userRepository.findById(commentCreateRequest.getUserId())
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            Answer answer = answerRepository.findById(commentCreateRequest.getAnswerId())
+            JpaAnswer jpaAnswer = answerRepository.findById(commentCreateRequest.getAnswerId())
                     .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
 
-            Comment comment = Comment.builder()
+            JpaComment jpaComment = JpaComment.builder()
                     .text(commentCreateRequest.getText())
-                    .user(user)
-                    .answer(answer)
+                    .jpaUser(jpaUser)
+                    .jpaAnswer(jpaAnswer)
                     .isEdited(false)
                     .commentedTime(new Date().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime())
                     .votes(0)
                     .build();
 
-            Comment savedComment = commentRepository.save(comment);
-            Question question = answer.getQuestion();
-            question.setTotalComments(question.getTotalComments() + 1);
-            question.setLastActivityTime(LocalDateTime.now());
-            ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(user.getId(),  ReputationConstants.POINTS_NEW_COMMENT);
+            JpaComment savedJpaComment = commentRepository.save(jpaComment);
+            JpaQuestion jpaQuestion = jpaAnswer.getJpaQuestion();
+            jpaQuestion.setTotalComments(jpaQuestion.getTotalComments() + 1);
+            jpaQuestion.setLastActivityTime(LocalDateTime.now());
+            ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(jpaUser.getId(),  ReputationConstants.POINTS_NEW_COMMENT);
             ReputationResponse reputationResponse = reputationService.updateReputationForNewComment(reputationUpdateRequest);
 
-            CommentResponse commentResponse = commentMapper.toResponse(savedComment);
+            CommentResponse commentResponse = commentMapper.toResponse(savedJpaComment);
             commentResponse.setReputationResponse(reputationResponse);
             return commentResponse;
 
@@ -86,14 +86,14 @@ public class CommentServiceImpl implements CommentService {
     @Transactional
     public CommentResponse editComment(Long commentId, CommentEditRequest commentEditRequest) {
         try {
-            Optional<Comment> commentOptional = commentRepository.findById(commentId);
+            Optional<JpaComment> commentOptional = commentRepository.findById(commentId);
             if (commentOptional.isPresent()){
-                Comment comment = commentOptional.get();
-                comment.setText(commentEditRequest.getText());
-                comment.setEdited(true);
-                Comment savedComment = commentRepository.save(comment);
+                JpaComment jpaComment = commentOptional.get();
+                jpaComment.setText(commentEditRequest.getText());
+                jpaComment.setEdited(true);
+                JpaComment savedJpaComment = commentRepository.save(jpaComment);
 
-                return commentMapper.toResponse(savedComment);
+                return commentMapper.toResponse(savedJpaComment);
             } else {
                 throw new IllegalArgumentException("Comment not found");
             }
@@ -107,19 +107,19 @@ public class CommentServiceImpl implements CommentService {
     @Transactional
     public boolean deleteComment(Long commentId) {
         try {
-            Optional<Comment> commentOptional = commentRepository.findById(commentId);
+            Optional<JpaComment> commentOptional = commentRepository.findById(commentId);
             if (commentOptional.isPresent()) {
 
-                User user = commentOptional.get().getUser();
-                ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(user.getId(), ReputationConstants.POINTS_COMMENT_WHEN_DELETED);
+                JpaUser jpaUser = commentOptional.get().getJpaUser();
+                ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(jpaUser.getId(), ReputationConstants.POINTS_COMMENT_WHEN_DELETED);
                 boolean isReputationUpdated = reputationService.updateReputationForCommentWhenCommentIsDeleted(reputationUpdateRequest);
                 if (!isReputationUpdated) {
-                    throw new IllegalArgumentException("Error updating reputation for user with ID " + user.getId());
+                    throw new IllegalArgumentException("Error updating reputation for user with ID " + jpaUser.getId());
                 }else {
                     commentRepository.deleteById(commentId);
-                    Question question = commentOptional.get().getAnswer().getQuestion();
-                    question.setTotalComments(question.getTotalComments() - 1);
-                    question.setLastActivityTime(LocalDateTime.now());
+                    JpaQuestion jpaQuestion = commentOptional.get().getJpaAnswer().getJpaQuestion();
+                    jpaQuestion.setTotalComments(jpaQuestion.getTotalComments() - 1);
+                    jpaQuestion.setLastActivityTime(LocalDateTime.now());
                     return true;
                 }
             } else {
@@ -139,11 +139,11 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public Optional<List<CommentResponse>> getCommentsByAnswer(Long answerId) {
-        List<Comment> comments = commentRepository.findByAnswerId(answerId);
-        if (comments.isEmpty()) {
+        List<JpaComment> jpaComments = commentRepository.findByAnswerId(answerId);
+        if (jpaComments.isEmpty()) {
             return Optional.empty();
         } else {
-            return Optional.of(comments.stream()
+            return Optional.of(jpaComments.stream()
                     .map(commentMapper::toResponse)
                     .toList());
         }
@@ -151,11 +151,11 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public Optional<List<CommentResponse>> getCommentsByUser(Long userId) {
-        List<Comment> comments = commentRepository.findByUserId(userId);
-        if (comments.isEmpty()) {
+        List<JpaComment> jpaComments = commentRepository.findByUserId(userId);
+        if (jpaComments.isEmpty()) {
             return Optional.empty();
         } else {
-            return Optional.of(comments.stream()
+            return Optional.of(jpaComments.stream()
                     .map(commentMapper::toResponse)
                     .toList());
         }
@@ -164,40 +164,40 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public ReputationResponse upvoteComment(Long commentId, Long userId) {
         try {
-            Comment comment = commentRepository.findById(commentId)
+            JpaComment jpaComment = commentRepository.findById(commentId)
                     .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
-            User user = userRepository.findById(userId)
+            JpaUser jpaUser = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            Optional<Vote> existingVote = voteRepository.findByUserAndComment(user, comment);
+            Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaComment(jpaUser, jpaComment);
 
             if (existingVote.isPresent()) {
-                Vote vote = existingVote.get();
+                JpaVote jpaVote = existingVote.get();
 
-                if (vote.isUpvote()) {
-                    voteRepository.delete(vote);
-                    comment.setVotes(comment.getVotes() - 1);
+                if (jpaVote.isUpvote()) {
+                    voteRepository.delete(jpaVote);
+                    jpaComment.setVotes(jpaComment.getVotes() - 1);
                 } else {
-                    vote.setUpvote(true);
-                    voteRepository.save(vote);
-                    comment.setVotes(comment.getVotes() + 2);
+                    jpaVote.setUpvote(true);
+                    voteRepository.save(jpaVote);
+                    jpaComment.setVotes(jpaComment.getVotes() + 2);
                 }
             } else {
-                Vote vote = new Vote();
-                vote.setUser(user);
-                vote.setComment(comment);
-                vote.setUpvote(true);
-                vote.setVotedAt(LocalDateTime.now());
-                voteRepository.save(vote);
+                JpaVote jpaVote = new JpaVote();
+                jpaVote.setJpaUser(jpaUser);
+                jpaVote.setJpaComment(jpaComment);
+                jpaVote.setUpvote(true);
+                jpaVote.setVotedAt(LocalDateTime.now());
+                voteRepository.save(jpaVote);
 
-                comment.setVotes(comment.getVotes() + 1);
+                jpaComment.setVotes(jpaComment.getVotes() + 1);
             }
 
-            commentRepository.save(comment);
+            commentRepository.save(jpaComment);
 
 
             ReputationResponse authorReputation = reputationService.updateReputationForUpvote(
-                    new ReputationUpdateRequest(comment.getUser().getId(), ReputationConstants.POINTS_UPVOTE_RECEIVED)
+                    new ReputationUpdateRequest(jpaComment.getJpaUser().getId(), ReputationConstants.POINTS_UPVOTE_RECEIVED)
             );
 
             return reputationService.updateReputationForUpvoteComment(
@@ -212,39 +212,39 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public ReputationResponse downvoteComment(Long commentId, Long userId) {
         try {
-            Comment comment = commentRepository.findById(commentId)
+            JpaComment jpaComment = commentRepository.findById(commentId)
                     .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
-            User user = userRepository.findById(userId)
+            JpaUser jpaUser = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            Optional<Vote> existingVote = voteRepository.findByUserAndComment(user, comment);
+            Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaComment(jpaUser, jpaComment);
 
             if(existingVote.isPresent()){
-                Vote vote = existingVote.get();
+                JpaVote jpaVote = existingVote.get();
 
-                if(!vote.isUpvote()){
-                    voteRepository.delete(vote);
-                    comment.setVotes(comment.getVotes() + 1);
+                if(!jpaVote.isUpvote()){
+                    voteRepository.delete(jpaVote);
+                    jpaComment.setVotes(jpaComment.getVotes() + 1);
                 }else{
-                    vote.setUpvote(false);
-                    voteRepository.save(vote);
-                    comment.setVotes(comment.getVotes() - 2);
+                    jpaVote.setUpvote(false);
+                    voteRepository.save(jpaVote);
+                    jpaComment.setVotes(jpaComment.getVotes() - 2);
 
                 }
             }else{
-                Vote vote = new Vote();
-                vote.setUser(user);
-                vote.setComment(comment);
-                vote.setUpvote(false);
-                vote.setVotedAt(LocalDateTime.now());
-                voteRepository.save(vote);
+                JpaVote jpaVote = new JpaVote();
+                jpaVote.setJpaUser(jpaUser);
+                jpaVote.setJpaComment(jpaComment);
+                jpaVote.setUpvote(false);
+                jpaVote.setVotedAt(LocalDateTime.now());
+                voteRepository.save(jpaVote);
 
-                comment.setVotes(comment.getVotes() - 1);
+                jpaComment.setVotes(jpaComment.getVotes() - 1);
             }
-            commentRepository.save(comment);
+            commentRepository.save(jpaComment);
 
             ReputationResponse authorReputation = reputationService.updateReputationForDownvote(
-                    new ReputationUpdateRequest(comment.getUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED)
+                    new ReputationUpdateRequest(jpaComment.getJpaUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED)
             );
 
             return reputationService.updateReputationForDownvoteComment(
@@ -258,7 +258,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public Page<CommentResponse> getPaginatedComments(Long answerId, Pageable pageable) {
-        Page<Comment> comments = commentRepository.findByAnswerId(answerId, pageable);
+        Page<JpaComment> comments = commentRepository.findByAnswerId(answerId, pageable);
         return comments.map(commentMapper::toResponse);
     }
 

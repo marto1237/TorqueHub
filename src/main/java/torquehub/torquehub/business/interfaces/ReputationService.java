@@ -14,6 +14,10 @@ public interface ReputationService {
 
     ReputationResponse updateReputationForUpvote(ReputationUpdateRequest reputationUpdateRequest);
 
+    ReputationResponse updateReputationForUpvoteRemoved(ReputationUpdateRequest reputationUpdateRequest);
+
+    ReputationResponse updateReputationForUpvoteGivenRemoved(ReputationUpdateRequest reputationUpdateRequest);
+
     ReputationResponse updateReputationForDownvote(ReputationUpdateRequest reputationUpdateRequest);
 
     ReputationResponse updateReputationForUpvoteGiven(ReputationUpdateRequest reputationUpdateRequest);
@@ -33,4 +37,6 @@ public interface ReputationService {
     ReputationResponse updateReputationForUpvoteComment(ReputationUpdateRequest reputationUpdateRequest);
 
     ReputationResponse updateReputationForDownvoteComment(ReputationUpdateRequest reputationUpdateRequest);
+
+    ReputationResponse getCurrentReputation(Long userId);
 }

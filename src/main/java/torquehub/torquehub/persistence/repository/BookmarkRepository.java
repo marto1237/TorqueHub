@@ -1,17 +1,16 @@
 package torquehub.torquehub.persistence.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import torquehub.torquehub.domain.model.Bookmark;
+import torquehub.torquehub.domain.model.jpa_models.JpaBookmark;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface BookmarkRepository {
-    Bookmark save(Bookmark bookmark);
-    Optional<Bookmark> findById(Long id);
-    List<Bookmark> findByUserId(Long userId);
-    Optional<Bookmark> findByUserIdAndQuestionId(Long userId, Long questionId);
-    Optional<Bookmark> findByUserIdAndAnswerId(Long userId, Long answerId);
-    boolean delete(Bookmark bookmark);
+    JpaBookmark save(JpaBookmark jpaBookmark);
+    Optional<JpaBookmark> findById(Long id);
+    List<JpaBookmark> findByUserId(Long userId);
+    Optional<JpaBookmark> findByUserIdAndJpaQuestionId(Long userId, Long questionId);
+    Optional<JpaBookmark> findByUserIdAndJpaAnswerId(Long userId, Long answerId);
+    boolean delete(JpaBookmark jpaBookmark);
     void deleteById(Long id);
 }

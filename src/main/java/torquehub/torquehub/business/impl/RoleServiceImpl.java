@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.RoleService;
 import torquehub.torquehub.domain.mapper.RoleMapper;
-import torquehub.torquehub.domain.model.Role;
+import torquehub.torquehub.domain.model.jpa_models.JpaRole;
 import torquehub.torquehub.domain.request.RoleDtos.RoleCreateRequest;
 import torquehub.torquehub.domain.request.RoleDtos.RoleUpdateRequest;
 import torquehub.torquehub.domain.response.RoleDtos.RoleResponse;
@@ -28,15 +28,15 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public RoleResponse createRole(RoleCreateRequest roleCreateRequest) {
         // Check if a role with the same name already exists
-        Optional<Role> existingRole = roleRepository.findByName(roleCreateRequest.getRoleName());
+        Optional<JpaRole> existingRole = roleRepository.findByName(roleCreateRequest.getRoleName());
         if (existingRole.isPresent()) {
             throw new IllegalArgumentException("Role with name '" + roleCreateRequest.getRoleName() + "' already exists.");
         }
 
         // If not, create a new role
-        Role role = Role.builder().name(roleCreateRequest.getRoleName()).build();
-        Role createdRole = roleRepository.save(role);
-        return roleMapper.toResponse(createdRole);
+        JpaRole jpaRole = JpaRole.builder().name(roleCreateRequest.getRoleName()).build();
+        JpaRole createdJpaRole = roleRepository.save(jpaRole);
+        return roleMapper.toResponse(createdJpaRole);
     }
 
     @Override
@@ -55,11 +55,11 @@ public class RoleServiceImpl implements RoleService {
     @Transactional
     public boolean updateRole(long id, RoleUpdateRequest roleUpdateRequest) {
         try {
-            Optional<Role> roleOptional = roleRepository.findById(id);
+            Optional<JpaRole> roleOptional = roleRepository.findById(id);
             if (roleOptional.isPresent()) {
-                Role existingRole = roleOptional.get();
-                existingRole.setName(roleUpdateRequest.getName());
-                roleRepository.save(existingRole);
+                JpaRole existingJpaRole = roleOptional.get();
+                existingJpaRole.setName(roleUpdateRequest.getName());
+                roleRepository.save(existingJpaRole);
 
                 return true;
             } else {
@@ -74,10 +74,10 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public boolean deleteRole(Long id) {
         try {
-            Optional<Role> roleOptional = roleRepository.findById(id);
+            Optional<JpaRole> roleOptional = roleRepository.findById(id);
             if (roleOptional.isPresent()){
-                Role role = roleOptional.get();
-                roleRepository.delete(role);
+                JpaRole jpaRole = roleOptional.get();
+                roleRepository.delete(jpaRole);
                 return true;
             } else {
                 throw new IllegalArgumentException("Role with ID " + id + " not found.");

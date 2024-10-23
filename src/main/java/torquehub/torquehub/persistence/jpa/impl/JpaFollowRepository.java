@@ -1,7 +1,7 @@
 package torquehub.torquehub.persistence.jpa.impl;
 
 import org.springframework.stereotype.Repository;
-import torquehub.torquehub.domain.model.Follow;
+import torquehub.torquehub.domain.model.jpa_models.JpaFollow;
 import torquehub.torquehub.persistence.jpa.interfaces.SpringDataJpaFollowRepository;
 import torquehub.torquehub.persistence.repository.FollowRepository;
 
@@ -17,49 +17,46 @@ public class JpaFollowRepository implements FollowRepository {
     }
 
     @Override
-    public Follow save(Follow follow) {
-        return followRepository.save(follow);
+    public JpaFollow save(JpaFollow jpaFollow) {
+        return followRepository.save(jpaFollow);
     }
 
     @Override
-    public Optional<Follow> findById(Long id) {
+    public Optional<JpaFollow> findById(Long id) {
         return followRepository.findById(id);
     }
 
     @Override
-    public List<Follow> findByUserId(Long userId) {
-        return followRepository.findByUserId(userId);
+    public List<JpaFollow> findByUserId(Long userId) {
+        return followRepository.findByJpaUserId(userId);
     }
 
     @Override
-    public Optional<Follow> findByUserIdAndQuestionId(Long userId, Long questionId) {
-        return followRepository.findByUserIdAndQuestionId(userId, questionId);
+    public Optional<JpaFollow> findByUserIdAndQuestionId(Long userId, Long questionId) {
+        return followRepository.findByJpaUserIdAndJpaQuestionId(userId, questionId);
     }
 
     @Override
-    public Optional<Follow> findByUserIdAndAnswerId(Long userId, Long answerId) {
-        return followRepository.findByUserIdAndAnswerId(userId, answerId);
+    public Optional<JpaFollow> findByUserIdAndAnswerId(Long userId, Long answerId) {
+        return followRepository.findByJpaUserIdAndJpaAnswerId(userId, answerId);
     }
 
     @Override
-    public List<Follow> findByFollowedUserId(Long followedUserId) {
-        return followRepository.findByUserId(followedUserId);
+    public List<JpaFollow> findByFollowedUserId(Long followedUserId) {
+        return followRepository.findByJpaUserId(followedUserId);
     }
 
     @Override
-    public boolean delete(Follow follow) {
-        if (followRepository.existsById(follow.getId())) {
-            followRepository.delete(follow);
+    public boolean delete(JpaFollow jpaFollow) {
+        if (followRepository.existsById(jpaFollow.getId())) {
+            followRepository.delete(jpaFollow);
             return true;
         } else {
             return false;
         }
     }
 
-    @Override
-    public Optional<Follow> findByUserIdAndFollowedUserId(Long userId, Long followedUserId) {
-        return followRepository.findByUserIdAndQuestionId(userId, followedUserId);
-    }
+
 
 
     @Override

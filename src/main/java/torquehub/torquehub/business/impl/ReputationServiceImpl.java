@@ -5,7 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.ReputationMapper;
-import torquehub.torquehub.domain.model.User;
+import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
 import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
@@ -50,6 +50,16 @@ public class ReputationServiceImpl  implements ReputationService {
     @Transactional
     public ReputationResponse updateReputationForUpvote(ReputationUpdateRequest reputationUpdateRequest) {
         return updateReputation(reputationUpdateRequest.getUserId(), ReputationConstants.POINTS_UPVOTE_RECEIVED, "Upvote Received");
+    }
+
+    @Override
+    public ReputationResponse updateReputationForUpvoteRemoved(ReputationUpdateRequest reputationUpdateRequest) {
+        return updateReputation(reputationUpdateRequest.getUserId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED, "Upvote Removed");
+    }
+
+    @Override
+    public ReputationResponse updateReputationForUpvoteGivenRemoved(ReputationUpdateRequest reputationUpdateRequest) {
+        return updateReputation(reputationUpdateRequest.getUserId(), ReputationConstants.POINTS_DOWNVOTE_GIVEN, "Upvote Given Removed");
     }
 
     @Override
@@ -110,20 +120,33 @@ public class ReputationServiceImpl  implements ReputationService {
         return updateReputation(reputationUpdateRequest.getUserId(), ReputationConstants.POINTS_DOWNVOTE_COMMENT, "Comment Downvoted");
     }
 
+    @Override
+    public ReputationResponse getCurrentReputation(Long userId) {
+        try {
+            Optional<JpaUser> userOptional = userRepository.findById(userId);
+            if(userOptional.isPresent()) {
+                JpaUser jpaUser = userOptional.get();
+                return reputationMapper.toResponse(jpaUser, "Current Reputation", jpaUser.getPoints());
+            }else {
+                throw new IllegalArgumentException("User with ID " + userId + " not found.");
+            }
+        }catch (Exception e) {
+            throw new IllegalArgumentException("Error getting reputation for user with ID " + userId + ": " + e.getMessage());
+        }
+    }
+
     private ReputationResponse updateReputation(Long userId, int points, String action) {
         try {
-            Optional<User> userOptional = userRepository.findById(userId);
+            Optional<JpaUser> userOptional = userRepository.findById(userId);
             if(userOptional.isPresent()) {
-                User user = userOptional.get();
+                JpaUser jpaUser = userOptional.get();
 
-                int newPoints = user.getPoints() + points;
-                String pointChange = points > 0 ? "added" : "deducted";
-                String detailedMessage = "You have " + Math.abs(points) + " points " + pointChange + " for " + action + ".";
+                int newPoints = jpaUser.getPoints() + points;
 
-                user.setPoints(newPoints);
-                userRepository.save(user);
+                jpaUser.setPoints(newPoints);
+                userRepository.save(jpaUser);
 
-                return reputationMapper.toResponse(user, detailedMessage, points);
+                return reputationMapper.toResponse(jpaUser, action, points);
             }else {
                 throw new IllegalArgumentException("User with ID " + userId + " not found.");
             }

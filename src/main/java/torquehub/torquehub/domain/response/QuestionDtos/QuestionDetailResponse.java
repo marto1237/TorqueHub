@@ -26,4 +26,7 @@ public class QuestionDetailResponse {
     private int votes;
     private Page<AnswerResponse> answers;
     private LocalDateTime askedTime;
+    private String userVote;
+    private Boolean isFollowing;
+    private Boolean isBookmarked;
 }

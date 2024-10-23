@@ -7,8 +7,8 @@ import torquehub.torquehub.domain.response.FollowRequest.FollowResponse;
 import java.util.List;
 
 public interface FollowService {
-    FollowResponse followQuestion(FollowQuestionRequest followQuestionRequest);
-    FollowResponse followResponse(FollowAnswerRequest followAnswerRequest);
+    FollowResponse toggleFollowQuestion(FollowQuestionRequest followQuestionRequest);
+    FollowResponse toggleFollowAnswer(FollowAnswerRequest followAnswerRequest);
     boolean muteNotifications(Long followId);
     List<FollowResponse> getUserFollows(Long userId);
 

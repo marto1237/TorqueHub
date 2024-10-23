@@ -2,20 +2,20 @@ package torquehub.torquehub.persistence.repository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import torquehub.torquehub.domain.model.Answer;
+import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface AnswerRepository {
-    Answer save(Answer answer);
+    JpaAnswer save(JpaAnswer jpaAnswer);
 
-    Optional<Answer> findById(Long id);
+    Optional<JpaAnswer> findById(Long id);
 
-    List<Answer> findByUserId(Long userId);
+    List<JpaAnswer> findByUserId(Long userId);
 
     boolean deleteById(Long id);
 
-    Page<Answer> findByQuestionId(Long questionId, Pageable pageable);
+    Page<JpaAnswer> findByQuestionId(Long questionId, Pageable pageable);
 
 }

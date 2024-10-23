@@ -1,7 +1,6 @@
 package torquehub.torquehub.controllers;
 
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -9,10 +8,8 @@ import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.RoleService;
 import torquehub.torquehub.domain.request.RoleDtos.RoleCreateRequest;
 import torquehub.torquehub.domain.request.RoleDtos.RoleUpdateRequest;
-import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
 import torquehub.torquehub.domain.response.MessageResponse;
 import torquehub.torquehub.domain.response.RoleDtos.RoleResponse;
-import torquehub.torquehub.domain.response.UserDtos.UserResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,8 +19,11 @@ import java.util.Optional;
 @Validated
 public class RoleController {
 
-    @Autowired
-    private RoleService roleService;
+    private final RoleService roleService;
+
+    public RoleController(RoleService roleService) {
+        this.roleService = roleService;
+    }
 
     @GetMapping
     public List<RoleResponse> getRoles() {

@@ -1,6 +1,6 @@
 package torquehub.torquehub.persistence.jpa.impl;
 import org.springframework.stereotype.Repository;
-import torquehub.torquehub.domain.model.Bookmark;
+import torquehub.torquehub.domain.model.jpa_models.JpaBookmark;
 import torquehub.torquehub.persistence.jpa.interfaces.SpringDataJpaBookmarkRepository;
 import torquehub.torquehub.persistence.repository.BookmarkRepository;
 
@@ -17,34 +17,34 @@ public class JpaBookmarkRepository implements BookmarkRepository {
     }
 
     @Override
-    public Bookmark save(Bookmark bookmark) {
-        return bookmarkRepository.save(bookmark);
+    public JpaBookmark save(JpaBookmark jpaBookmark) {
+        return bookmarkRepository.save(jpaBookmark);
     }
 
     @Override
-    public Optional<Bookmark> findById(Long id) {
+    public Optional<JpaBookmark> findById(Long id) {
         return bookmarkRepository.findById(id);
     }
 
     @Override
-    public List<Bookmark> findByUserId(Long userId) {
-        return bookmarkRepository.findByUserId(userId);
+    public List<JpaBookmark> findByUserId(Long userId) {
+        return bookmarkRepository.findByJpaUserId(userId);
     }
 
     @Override
-    public Optional<Bookmark> findByUserIdAndQuestionId(Long userId, Long questionId) {
-        return bookmarkRepository.findByUserIdAndQuestionId(userId, questionId);
+    public Optional<JpaBookmark> findByUserIdAndJpaQuestionId(Long userId, Long questionId) {
+        return bookmarkRepository.findByJpaUserIdAndJpaQuestionId(userId, questionId);
     }
 
     @Override
-    public Optional<Bookmark> findByUserIdAndAnswerId(Long userId, Long answerId) {
-        return bookmarkRepository.findByUserIdAndAnswerId(userId, answerId);
+    public Optional<JpaBookmark> findByUserIdAndJpaAnswerId(Long userId, Long answerId) {
+        return bookmarkRepository.findByJpaUserIdAndJpaAnswerId(userId, answerId);
     }
 
     @Override
-    public boolean delete(Bookmark bookmark) {
-        if (bookmarkRepository.existsById(bookmark.getId())) {
-            bookmarkRepository.delete(bookmark);
+    public boolean delete(JpaBookmark jpaBookmark) {
+        if (bookmarkRepository.existsById(jpaBookmark.getId())) {
+            bookmarkRepository.delete(jpaBookmark);
             return true;
         } else {
             return false;

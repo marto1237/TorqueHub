@@ -7,7 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.TagService;
-import torquehub.torquehub.domain.mapper.TagMapper;
 import torquehub.torquehub.domain.request.TagDtos.TagCreateRequest;
 import torquehub.torquehub.domain.request.TagDtos.TagUpdateRequest;
 import torquehub.torquehub.domain.response.MessageResponse;
