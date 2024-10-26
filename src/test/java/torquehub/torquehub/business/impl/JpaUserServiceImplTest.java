@@ -12,10 +12,10 @@ import torquehub.torquehub.domain.mapper.RoleMapper;
 import torquehub.torquehub.domain.mapper.UserMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.domain.model.jpa_models.JpaRole;
-import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
-import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
-import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
-import torquehub.torquehub.domain.response.UserDtos.UserResponse;
+import torquehub.torquehub.domain.request.login_dtos.LoginRequest;
+import torquehub.torquehub.domain.request.user_dtos.UserCreateRequest;
+import torquehub.torquehub.domain.request.user_dtos.UserUpdateRequest;
+import torquehub.torquehub.domain.response.user_dtos.UserResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaRoleRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 

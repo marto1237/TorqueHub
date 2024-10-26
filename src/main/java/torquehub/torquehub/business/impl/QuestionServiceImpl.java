@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import torquehub.torquehub.business.exeption.question_exeptions.QuestionCreationException;
 import torquehub.torquehub.business.interfaces.QuestionService;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.business.interfaces.VoteService;
@@ -14,13 +15,13 @@ import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaTag;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.domain.model.jpa_models.JpaVote;
-import torquehub.torquehub.domain.request.QuestionDtos.QuestionCreateRequest;
-import torquehub.torquehub.domain.request.QuestionDtos.QuestionUpdateRequest;
-import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
-import torquehub.torquehub.domain.response.QuestionDtos.QuestionDetailResponse;
-import torquehub.torquehub.domain.response.QuestionDtos.QuestionResponse;
-import torquehub.torquehub.domain.response.QuestionDtos.QuestionSummaryResponse;
-import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
+import torquehub.torquehub.domain.request.question_dtos.QuestionCreateRequest;
+import torquehub.torquehub.domain.request.question_dtos.QuestionUpdateRequest;
+import torquehub.torquehub.domain.request.reputation_dtos.ReputationUpdateRequest;
+import torquehub.torquehub.domain.response.question_dtos.QuestionDetailResponse;
+import torquehub.torquehub.domain.response.question_dtos.QuestionResponse;
+import torquehub.torquehub.domain.response.question_dtos.QuestionSummaryResponse;
+import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 import torquehub.torquehub.persistence.jpa.impl.*;
 
 import java.time.LocalDateTime;
@@ -65,11 +66,15 @@ public class QuestionServiceImpl implements QuestionService {
         this.bookmarkRepository = bookmarkRepository;
     }
 
+    private static final String QUESTION_ID_PREFIX = "Question with ID ";
+    private static final String NOT_FOUND_SUFFIX = " not found";
+
+
     @Override
     public QuestionResponse askQuestion(QuestionCreateRequest questionCreateRequest) {
         try {
             JpaUser jpaUser = userRepository.findById(questionCreateRequest.getUserId())
-                    .orElseThrow(() -> new IllegalArgumentException("User with ID " + questionCreateRequest.getUserId() + " not found"));
+                    .orElseThrow(() -> new IllegalArgumentException("User with ID " + questionCreateRequest.getUserId() + NOT_FOUND_SUFFIX));
 
 
 
@@ -100,7 +105,7 @@ public class QuestionServiceImpl implements QuestionService {
             return questionResponse;
 
         } catch (Exception e) {
-            throw new RuntimeException("Error asking question"+ e.getMessage());
+            throw new QuestionCreationException("Error creating question: " + e.getMessage(), e);
         }
 
 
@@ -124,11 +129,11 @@ public class QuestionServiceImpl implements QuestionService {
 
                 return true;
             } else {
-                throw new IllegalArgumentException("Question with ID " + questionId + " not found");
+                throw new QuestionCreationException(QUESTION_ID_PREFIX + questionId + NOT_FOUND_SUFFIX);
 
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to delete question: " + e.getMessage());
+            throw new QuestionCreationException("Failed to delete question: " + e.getMessage(), e);
         }
     }
 
@@ -151,7 +156,7 @@ public class QuestionServiceImpl implements QuestionService {
                 existingJpaQuestion.setLastActivityTime(LocalDateTime.now());
                 return true;
             } else {
-                throw new IllegalArgumentException("Question with ID " + questionId + " not found.");
+                throw new IllegalArgumentException(QUESTION_ID_PREFIX + questionId + NOT_FOUND_SUFFIX);
             }
         } catch (Exception e) {
             throw new IllegalArgumentException("Error updating question with ID " + questionId);
@@ -163,10 +168,7 @@ public class QuestionServiceImpl implements QuestionService {
     @Override
     public Optional<QuestionDetailResponse> getQuestionbyId(Long questionId, Pageable pageable) {
         return questionRepository.findById(questionId)
-                .map(question -> {
-                    // Ensure you pass both pageable and commentMapper here
-                    return questionMapper.toDetailResponse(question, pageable, commentMapper);
-                });
+                .map(question -> questionMapper.toDetailResponse(question, pageable, commentMapper));
     }
 
     @Override
@@ -216,7 +218,7 @@ public class QuestionServiceImpl implements QuestionService {
         } else {
             return Optional.of(jpaQuestions.stream()
                     .map(questionMapper::toSummaryResponse)
-                    .collect(Collectors.toList()));
+                    .toList());
         }
     }
 
@@ -239,12 +241,12 @@ public class QuestionServiceImpl implements QuestionService {
     public boolean incrementQuestionView(Long questionId) {
         try {
             JpaQuestion jpaQuestion = questionRepository.findById(questionId)
-                    .orElseThrow(() -> new IllegalArgumentException("Question with ID " + questionId + " not found"));
+                    .orElseThrow(() -> new IllegalArgumentException(QUESTION_ID_PREFIX + questionId + NOT_FOUND_SUFFIX));
             jpaQuestion.setViews(jpaQuestion.getViews() + 1);
             questionRepository.save(jpaQuestion);
             return true;
         } catch (Exception e) {
-            throw new RuntimeException("Error incrementing question view count: " + e.getMessage());
+            throw new QuestionCreationException("Error incrementing question view count: " + e.getMessage(),e);
         }
     }
 
@@ -257,12 +259,12 @@ public class QuestionServiceImpl implements QuestionService {
 
     private JpaQuestion findQuestionById(Long questionId) {
         return questionRepository.findById(questionId)
-                .orElseThrow(() -> new IllegalArgumentException("Question with ID " + questionId + " not found"));
+                .orElseThrow(() -> new IllegalArgumentException(QUESTION_ID_PREFIX + questionId + NOT_FOUND_SUFFIX));
     }
 
     private JpaUser findUserById(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));
+                .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + NOT_FOUND_SUFFIX));
     }
 
 }

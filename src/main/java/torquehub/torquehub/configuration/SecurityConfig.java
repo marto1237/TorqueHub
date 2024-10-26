@@ -2,7 +2,7 @@ package torquehub.torquehub.configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -10,7 +10,7 @@ import org.springframework.security.web.header.writers.StaticHeadersWriter;
 
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     @Bean
@@ -23,10 +23,10 @@ public class SecurityConfig {
                         .addHeaderWriter(new StaticHeadersWriter("Strict-Transport-Security", "max-age=31536000; includeSubDomains"))  // Enable HSTS for 1 year
                 )
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/admin/**").hasRole("ADMIN") // Protect specific endpoints by role
-                        .requestMatchers("/moderator/**").hasRole("MODERATOR")
-                        .requestMatchers("/organizer/**").hasRole("ORGANIZER")
-                        .requestMatchers("/user/**").hasRole("USER")
+                        .requestMatchers("/admin/**").hasAuthority("ADMIN") // Protect specific endpoints by role
+                        .requestMatchers("/moderator/**").hasAuthority("MODERATOR")
+                        .requestMatchers("/organizer/**").hasAuthority("ORGANIZER")
+                        .requestMatchers("/user/**").hasAuthority("USER")
                         .anyRequest().permitAll()  // Allow unrestricted access to all endpoints  // Require authentication for any other requests
                 );
         return http.build();

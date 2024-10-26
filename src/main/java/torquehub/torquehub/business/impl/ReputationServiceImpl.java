@@ -6,8 +6,8 @@ import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.ReputationMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
-import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
-import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
+import torquehub.torquehub.domain.request.reputation_dtos.ReputationUpdateRequest;
+import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 
 import java.util.Optional;

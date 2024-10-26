@@ -3,9 +3,9 @@ package torquehub.torquehub.domain.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
-import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
-import torquehub.torquehub.domain.request.UserDtos.UserUpdateRequest;
-import torquehub.torquehub.domain.response.UserDtos.UserResponse;
+import torquehub.torquehub.domain.request.user_dtos.UserCreateRequest;
+import torquehub.torquehub.domain.request.user_dtos.UserUpdateRequest;
+import torquehub.torquehub.domain.response.user_dtos.UserResponse;
 
 @Mapper(componentModel = "spring", uses = {RoleMapperHelper.class})
 public interface UserMapper {

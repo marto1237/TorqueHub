@@ -2,12 +2,12 @@ package torquehub.torquehub.business.interfaces;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import torquehub.torquehub.domain.request.QuestionDtos.QuestionCreateRequest;
-import torquehub.torquehub.domain.request.QuestionDtos.QuestionUpdateRequest;
-import torquehub.torquehub.domain.response.QuestionDtos.QuestionDetailResponse;
-import torquehub.torquehub.domain.response.QuestionDtos.QuestionResponse;
-import torquehub.torquehub.domain.response.QuestionDtos.QuestionSummaryResponse;
-import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
+import torquehub.torquehub.domain.request.question_dtos.QuestionCreateRequest;
+import torquehub.torquehub.domain.request.question_dtos.QuestionUpdateRequest;
+import torquehub.torquehub.domain.response.question_dtos.QuestionDetailResponse;
+import torquehub.torquehub.domain.response.question_dtos.QuestionResponse;
+import torquehub.torquehub.domain.response.question_dtos.QuestionSummaryResponse;
+import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 
 import java.util.List;
 import java.util.Optional;

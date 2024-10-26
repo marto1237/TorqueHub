@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import torquehub.torquehub.business.interfaces.FilterService;
-import torquehub.torquehub.domain.response.QuestionDtos.QuestionSummaryResponse;
+import torquehub.torquehub.domain.response.question_dtos.QuestionSummaryResponse;
 
 import java.util.Set;
 

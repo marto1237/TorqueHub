@@ -3,7 +3,7 @@ package torquehub.torquehub.domain.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
-import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
+import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 
 @Mapper(componentModel = "spring")
 public interface ReputationMapper {

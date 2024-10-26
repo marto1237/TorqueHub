@@ -7,10 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.CommentService;
-import torquehub.torquehub.domain.request.CommentDtos.CommentCreateRequest;
-import torquehub.torquehub.domain.request.CommentDtos.CommentEditRequest;
-import torquehub.torquehub.domain.response.CommentDtos.CommentResponse;
-import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
+import torquehub.torquehub.domain.request.comment_dtos.CommentCreateRequest;
+import torquehub.torquehub.domain.request.comment_dtos.CommentEditRequest;
+import torquehub.torquehub.domain.response.comment_dtos.CommentResponse;
+import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 
 import java.util.List;
 import java.util.Optional;

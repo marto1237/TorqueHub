@@ -12,11 +12,11 @@ import torquehub.torquehub.configuration.jwt.token.AccessToken;
 import torquehub.torquehub.configuration.jwt.token.AccessTokenDecoder;
 import torquehub.torquehub.configuration.jwt.token.exeption.InvalidAccessTokenException;
 import torquehub.torquehub.controllers.websocketcontrollers.WebSocketAnswerController;
-import torquehub.torquehub.domain.request.AnswerDtos.AnswerCreateRequest;
-import torquehub.torquehub.domain.request.AnswerDtos.AnswerEditRequest;
-import torquehub.torquehub.domain.response.AnswerDtos.AnswerResponse;
+import torquehub.torquehub.domain.request.answer_dtos.AnswerCreateRequest;
+import torquehub.torquehub.domain.request.answer_dtos.AnswerEditRequest;
+import torquehub.torquehub.domain.response.answer_dtos.AnswerResponse;
 import torquehub.torquehub.domain.response.MessageResponse;
-import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
+import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 
 import java.util.List;
 import java.util.Optional;

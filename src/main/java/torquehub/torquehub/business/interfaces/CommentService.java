@@ -2,10 +2,10 @@ package torquehub.torquehub.business.interfaces;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import torquehub.torquehub.domain.request.CommentDtos.CommentCreateRequest;
-import torquehub.torquehub.domain.request.CommentDtos.CommentEditRequest;
-import torquehub.torquehub.domain.response.CommentDtos.CommentResponse;
-import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
+import torquehub.torquehub.domain.request.comment_dtos.CommentCreateRequest;
+import torquehub.torquehub.domain.request.comment_dtos.CommentEditRequest;
+import torquehub.torquehub.domain.response.comment_dtos.CommentResponse;
+import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 
 import java.util.List;
 import java.util.Optional;

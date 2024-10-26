@@ -51,6 +51,12 @@ public class AuthenticationRequestFilter extends OncePerRequestFilter {
 
         try {
             AccessToken accessToken = accessTokenDecoder.decode(accessTokenString);
+
+            if (accessToken == null) {
+                logger.warn("Access token is invalid or could not be decoded.");
+                sendAuthenticationError(response);
+                return;
+            }
             setupSpringSecurityContext(accessToken);
             filterChain.doFilter(request, response);
         } catch (InvalidAccessTokenException e) {
@@ -65,8 +71,12 @@ public class AuthenticationRequestFilter extends OncePerRequestFilter {
     }
 
     private void setupSpringSecurityContext(AccessToken accessToken) {
+
+        if (accessToken == null) {
+            throw new IllegalArgumentException("Access token cannot be null when setting up security context");
+        }
         UserDetails userDetails = new User(accessToken.getUsername(), "",
-                List.of(new SimpleGrantedAuthority("ROLE_" + accessToken.getRole())));
+                List.of(new SimpleGrantedAuthority(accessToken.getRole())));
 
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
                 userDetails, null, userDetails.getAuthorities());

@@ -2,9 +2,9 @@ package torquehub.torquehub.domain.mapper;
 
 import org.mapstruct.Mapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaFollow;
-import torquehub.torquehub.domain.request.FollowDtos.FollowAnswerRequest;
-import torquehub.torquehub.domain.request.FollowDtos.FollowQuestionRequest;
-import torquehub.torquehub.domain.response.FollowRequest.FollowResponse;
+import torquehub.torquehub.domain.request.follow_dtos.FollowAnswerRequest;
+import torquehub.torquehub.domain.request.follow_dtos.FollowQuestionRequest;
+import torquehub.torquehub.domain.response.follow_dtos.FollowResponse;
 
 @Mapper(componentModel = "spring")
 public interface FollowMapper {

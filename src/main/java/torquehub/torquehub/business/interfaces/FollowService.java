@@ -1,8 +1,8 @@
 package torquehub.torquehub.business.interfaces;
 
-import torquehub.torquehub.domain.request.FollowDtos.FollowAnswerRequest;
-import torquehub.torquehub.domain.request.FollowDtos.FollowQuestionRequest;
-import torquehub.torquehub.domain.response.FollowRequest.FollowResponse;
+import torquehub.torquehub.domain.request.follow_dtos.FollowAnswerRequest;
+import torquehub.torquehub.domain.request.follow_dtos.FollowQuestionRequest;
+import torquehub.torquehub.domain.response.follow_dtos.FollowResponse;
 
 import java.util.List;
 

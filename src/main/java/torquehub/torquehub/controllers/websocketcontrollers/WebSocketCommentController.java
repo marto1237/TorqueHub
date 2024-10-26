@@ -6,7 +6,7 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
-import torquehub.torquehub.domain.response.CommentDtos.CommentResponse;
+import torquehub.torquehub.domain.response.comment_dtos.CommentResponse;
 
 @Controller
 public class WebSocketCommentController {

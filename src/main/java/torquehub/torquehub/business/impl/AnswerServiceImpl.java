@@ -5,6 +5,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import torquehub.torquehub.business.exeption.ErrorMessages;
+import torquehub.torquehub.business.exeption.answer_exptions.*;
+import torquehub.torquehub.business.exeption.question_exeptions.QuestionNotFoundException;
+import torquehub.torquehub.business.exeption.user_exptions.UserNotFoundException;
 import torquehub.torquehub.business.interfaces.AnswerService;
 import torquehub.torquehub.business.interfaces.NotificationService;
 import torquehub.torquehub.business.interfaces.ReputationService;
@@ -15,11 +19,11 @@ import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.domain.model.jpa_models.JpaVote;
-import torquehub.torquehub.domain.request.AnswerDtos.AnswerCreateRequest;
-import torquehub.torquehub.domain.request.AnswerDtos.AnswerEditRequest;
-import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
-import torquehub.torquehub.domain.response.AnswerDtos.AnswerResponse;
-import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
+import torquehub.torquehub.domain.request.answer_dtos.AnswerCreateRequest;
+import torquehub.torquehub.domain.request.answer_dtos.AnswerEditRequest;
+import torquehub.torquehub.domain.request.reputation_dtos.ReputationUpdateRequest;
+import torquehub.torquehub.domain.response.answer_dtos.AnswerResponse;
+import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
@@ -66,9 +70,9 @@ public class AnswerServiceImpl implements AnswerService {
     public AnswerResponse addAnswer(AnswerCreateRequest answerCreateRequest) {
         try{
             JpaUser jpaUser = userRepository.findById(answerCreateRequest.getUserId())
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                    .orElseThrow(() -> new UserNotFoundException(ErrorMessages.USER_NOT_FOUND));
             JpaQuestion jpaQuestion = questionRepository.findById(answerCreateRequest.getQuestionId())
-                    .orElseThrow(() -> new IllegalArgumentException("Question not found"));
+                    .orElseThrow(() -> new QuestionNotFoundException(ErrorMessages.QUESTION_NOT_FOUND));
 
             // If FetchType.LAZY is required, ensure the objects are fully initialized before using them.
             Hibernate.initialize(jpaUser);
@@ -94,8 +98,8 @@ public class AnswerServiceImpl implements AnswerService {
 
             return answerResponse;
         }
-        catch (Exception e){
-            throw new RuntimeException("Error adding answer " + e.getMessage(), e);
+        catch (Exception e) {
+            throw new AnswerCreationException("Error adding answer: " + e.getMessage(), e);
         }
 
     }
@@ -116,7 +120,7 @@ public class AnswerServiceImpl implements AnswerService {
                 throw new IllegalArgumentException("Answer with ID " + answerId + " not found");
             }
         }catch (Exception e){
-            throw new RuntimeException("Error editing answer " + e.getMessage());
+            throw new AnswerEditException("Error editing answer: " + e.getMessage(), e);
         }
 
     }
@@ -155,7 +159,7 @@ public class AnswerServiceImpl implements AnswerService {
                 throw new IllegalArgumentException("Answer with ID " + answerId + " not found");
             }
         }catch (Exception e){
-            throw new RuntimeException("Error deleting answer: " + e.getMessage());
+            throw new AnswerDeleteException("Error deleting answer: " + e.getMessage(), e);
         }
     }
 
@@ -163,7 +167,7 @@ public class AnswerServiceImpl implements AnswerService {
     public AnswerResponse getAnswerById(Long answerId) {
         Optional<JpaAnswer> optionalAnswer = answerRepository.findById(answerId);
         if (optionalAnswer.isEmpty()) {
-            throw new IllegalArgumentException("Answer not found");
+            throw new IllegalArgumentException(ErrorMessages.ANSWER_NOT_FOUND);
         }
 
         return answerMapper.toResponse(optionalAnswer.get(), commentMapper);
@@ -186,9 +190,9 @@ public class AnswerServiceImpl implements AnswerService {
     public ReputationResponse upvoteAnswer(Long answerId, Long userId) {
         try {
             JpaAnswer jpaAnswer = answerRepository.findById(answerId)
-                    .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
+                    .orElseThrow(() -> new IllegalArgumentException(ErrorMessages.USER_NOT_FOUND));
             JpaUser jpaUser = userRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                    .orElseThrow(() -> new UserNotFoundException(ErrorMessages.USER_NOT_FOUND));
 
             Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaAnswer(jpaUser, jpaAnswer);
 
@@ -227,7 +231,7 @@ public class AnswerServiceImpl implements AnswerService {
             );
 
         } catch (Exception e) {
-            throw new RuntimeException("Error upvoting answer: " + e.getMessage());
+            throw new AnswerUpvoteException("Error upvoting answer: " + e.getMessage(), e);
         }
     }
 
@@ -236,9 +240,9 @@ public class AnswerServiceImpl implements AnswerService {
     public ReputationResponse downvoteAnswer(Long answerId, Long userId) {
         try {
             JpaAnswer jpaAnswer = answerRepository.findById(answerId)
-                    .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
+                    .orElseThrow(() -> new IllegalArgumentException(ErrorMessages.USER_NOT_FOUND));
             JpaUser jpaUser = userRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                    .orElseThrow(() -> new UserNotFoundException(ErrorMessages.USER_NOT_FOUND));
 
             Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaAnswer(jpaUser, jpaAnswer);
 
@@ -270,11 +274,15 @@ public class AnswerServiceImpl implements AnswerService {
                     new ReputationUpdateRequest(jpaAnswer.getJpaUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED)
             );
 
+            if (authorReputation == null) {
+                throw new IllegalArgumentException("Error updating reputation for answer author");
+            }
+
             return reputationService.updateReputationForDownvoteGiven(
                     new ReputationUpdateRequest(userId, ReputationConstants.POINTS_DOWNVOTE_GIVEN)
             );
         } catch (Exception e) {
-            throw new RuntimeException("Error downvoting answer: " + e.getMessage());
+            throw new AnswerDownvoteException("Error downvoting answer: " + e.getMessage(), e);
         }
     }
 
@@ -290,7 +298,7 @@ public class AnswerServiceImpl implements AnswerService {
             }
 
             JpaAnswer jpaAnswer = answerRepository.findById(answerId)
-                    .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
+                    .orElseThrow(() -> new IllegalArgumentException(ErrorMessages.USER_NOT_FOUND));
 
 
 
@@ -301,7 +309,7 @@ public class AnswerServiceImpl implements AnswerService {
                     new ReputationUpdateRequest(jpaAnswer.getJpaUser().getId(), ReputationConstants.POINTS_BEST_ANSWER)
             );
         } catch (Exception e) {
-            throw new RuntimeException("Error approving best answer: " + e.getMessage());
+            throw new AnswerBestAnswerException("Error approving best answer: " + e.getMessage(), e);
         }
     }
 

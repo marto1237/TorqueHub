@@ -6,9 +6,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.FollowService;
 import torquehub.torquehub.configuration.utils.TokenUtil;
-import torquehub.torquehub.domain.request.FollowDtos.FollowAnswerRequest;
-import torquehub.torquehub.domain.request.FollowDtos.FollowQuestionRequest;
-import torquehub.torquehub.domain.response.FollowRequest.FollowResponse;
+import torquehub.torquehub.domain.request.follow_dtos.FollowAnswerRequest;
+import torquehub.torquehub.domain.request.follow_dtos.FollowQuestionRequest;
+import torquehub.torquehub.domain.response.follow_dtos.FollowResponse;
 
 @RestController
 @RequestMapping("/follows")

@@ -6,7 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.NotificationService;
-import torquehub.torquehub.domain.response.NotificationDtos.NotificationResponse;
+import torquehub.torquehub.domain.response.notification_dtos.NotificationResponse;
 
 import java.util.List;
 

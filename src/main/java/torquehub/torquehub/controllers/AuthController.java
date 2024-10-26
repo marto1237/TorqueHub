@@ -11,12 +11,11 @@ import torquehub.torquehub.configuration.jwt.token.AccessToken;
 import torquehub.torquehub.configuration.jwt.token.AccessTokenDecoder;
 import torquehub.torquehub.configuration.jwt.token.AccessTokenEncoder;
 import torquehub.torquehub.configuration.jwt.token.exeption.InvalidAccessTokenException;
-import torquehub.torquehub.configuration.jwt.token.impl.BlacklistService;
-import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
-import torquehub.torquehub.domain.request.UserDtos.UserCreateRequest;
-import torquehub.torquehub.domain.response.LoginDtos.LoginResponse;
+import torquehub.torquehub.domain.request.login_dtos.LoginRequest;
+import torquehub.torquehub.domain.request.user_dtos.UserCreateRequest;
+import torquehub.torquehub.domain.response.login_dtos.LoginResponse;
 import torquehub.torquehub.domain.response.MessageResponse;
-import torquehub.torquehub.domain.response.UserDtos.UserResponse;
+import torquehub.torquehub.domain.response.user_dtos.UserResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 
@@ -25,21 +24,23 @@ import org.springframework.http.ResponseCookie;
 @Validated
 public class AuthController {
 
+    // Define constants for repeated literals
+    private static final String JWT_TOKEN_COOKIE = "jwtToken";
+    private static final String SAME_SITE_STRICT = "Strict";
+    private static final long SECONDS_IN_A_DAY = 24 * 60 * 60L;
+
     private final UserService userService;
     private final TokenService tokenService;
     private final AccessTokenDecoder accessTokenDecoder;
     private final AccessTokenEncoder accessTokenEncoder;
-    private final BlacklistService blacklistService;
 
     public AuthController(UserService userService,
                           AccessTokenDecoder accessTokenDecoder,
                           AccessTokenEncoder accessTokenEncoder,
-                          BlacklistService blacklistService,
                           TokenService tokenService) {
         this.userService = userService;
         this.accessTokenDecoder = accessTokenDecoder;
         this.accessTokenEncoder = accessTokenEncoder;
-        this.blacklistService = blacklistService;
         this.tokenService = tokenService;
     }
 
@@ -53,12 +54,12 @@ public class AuthController {
             String jwtToken = accessTokenEncoder.encode(accessToken);  // Encode the AccessToken into JWT
 
             long cookieMaxAge = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60; // 1 day or 1 week
-            ResponseCookie jwtCookie = ResponseCookie.from("jwtToken", jwtToken)
+            ResponseCookie jwtCookie = ResponseCookie.from(JWT_TOKEN_COOKIE, jwtToken)
                     .httpOnly(true)
                     .secure(true) // Use 'true' in production to enable HTTPS
                     .path("/")
                     .maxAge(cookieMaxAge)
-                    .sameSite("Strict")  //  CSRF protection
+                    .sameSite(SAME_SITE_STRICT)  //  CSRF protection
                     .build();
 
             return ResponseEntity.status(HttpStatus.OK)
@@ -83,12 +84,12 @@ public class AuthController {
             AccessToken accessToken = accessTokenDecoder.decode(refreshToken);
             String newAccessToken = accessTokenEncoder.encode(accessToken);
 
-            ResponseCookie newJwtCookie = ResponseCookie.from("jwtToken", newAccessToken)
+            ResponseCookie newJwtCookie = ResponseCookie.from(JWT_TOKEN_COOKIE, newAccessToken)
                     .httpOnly(true)
                     .secure(true)
                     .path("/")
-                    .maxAge(24 * 60 * 60)
-                    .sameSite("Strict")
+                    .maxAge(SECONDS_IN_A_DAY)
+                    .sameSite(SAME_SITE_STRICT)
                     .build();
 
             response.setMessage("Token refreshed successfully");
@@ -108,12 +109,12 @@ public class AuthController {
 
 
         // Invalidate the JWT cookie by setting a past expiration date
-        ResponseCookie logoutCookie = ResponseCookie.from("jwtToken", "")
+        ResponseCookie logoutCookie = ResponseCookie.from(JWT_TOKEN_COOKIE, "")
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
                 .maxAge(0) // Set expiry to 0 to remove the cookie
-                .sameSite("Strict")
+                .sameSite(SAME_SITE_STRICT)
                 .build();
 
         response.setMessage("Logged out successfully");
@@ -124,7 +125,7 @@ public class AuthController {
     }
 
     @GetMapping("/auth/check-session")
-    public ResponseEntity<UserResponse> checkSession(@CookieValue("jwtToken") String jwtToken) {
+    public ResponseEntity<UserResponse> checkSession(@CookieValue(JWT_TOKEN_COOKIE) String jwtToken) {
         try {
             AccessToken accessToken = accessTokenDecoder.decode(jwtToken); // Decode and validate JWT
             UserResponse userResponse = userService.getUserById(accessToken.getUserID())

@@ -1,8 +1,8 @@
 package torquehub.torquehub.business.interfaces;
 
-import torquehub.torquehub.domain.request.TagDtos.TagCreateRequest;
-import torquehub.torquehub.domain.request.TagDtos.TagUpdateRequest;
-import torquehub.torquehub.domain.response.TagDtos.TagResponse;
+import torquehub.torquehub.domain.request.tag_dtos.TagCreateRequest;
+import torquehub.torquehub.domain.request.tag_dtos.TagUpdateRequest;
+import torquehub.torquehub.domain.response.tag_dtos.TagResponse;
 
 import java.util.List;
 import java.util.Optional;

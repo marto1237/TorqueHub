@@ -2,17 +2,18 @@ package torquehub.torquehub.business.impl;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import torquehub.torquehub.business.exeption.role_exeptions.RoleDeleteExeption;
+import torquehub.torquehub.business.exeption.role_exeptions.RoleUpdateExeption;
 import torquehub.torquehub.business.interfaces.RoleService;
 import torquehub.torquehub.domain.mapper.RoleMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaRole;
-import torquehub.torquehub.domain.request.RoleDtos.RoleCreateRequest;
-import torquehub.torquehub.domain.request.RoleDtos.RoleUpdateRequest;
-import torquehub.torquehub.domain.response.RoleDtos.RoleResponse;
+import torquehub.torquehub.domain.request.role_dtos.RoleCreateRequest;
+import torquehub.torquehub.domain.request.role_dtos.RoleUpdateRequest;
+import torquehub.torquehub.domain.response.role_dtos.RoleResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaRoleRepository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class RoleServiceImpl implements RoleService {
@@ -43,7 +44,7 @@ public class RoleServiceImpl implements RoleService {
     public List<RoleResponse> getAllRoles() {
         return roleRepository.findAll().stream()
                 .map(roleMapper::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -67,7 +68,7 @@ public class RoleServiceImpl implements RoleService {
 
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to update role: " + e.getMessage());
+            throw new RoleUpdateExeption("Failed to update role: " + e.getMessage(), e);
         }
     }
 
@@ -83,7 +84,7 @@ public class RoleServiceImpl implements RoleService {
                 throw new IllegalArgumentException("Role with ID " + id + " not found.");
             }
         }catch (Exception e){
-            throw new RuntimeException("Failed to delete role: " + e.getMessage());
+            throw new RoleDeleteExeption("Failed to delete role: " + e.getMessage(), e);
         }
     }
 

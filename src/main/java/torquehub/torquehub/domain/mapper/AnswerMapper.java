@@ -5,13 +5,12 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
 import torquehub.torquehub.domain.model.jpa_models.JpaComment;
-import torquehub.torquehub.domain.request.AnswerDtos.AnswerCreateRequest;
-import torquehub.torquehub.domain.request.AnswerDtos.AnswerEditRequest;
-import torquehub.torquehub.domain.response.AnswerDtos.AnswerResponse;
-import torquehub.torquehub.domain.response.CommentDtos.CommentResponse;
+import torquehub.torquehub.domain.request.answer_dtos.AnswerCreateRequest;
+import torquehub.torquehub.domain.request.answer_dtos.AnswerEditRequest;
+import torquehub.torquehub.domain.response.answer_dtos.AnswerResponse;
+import torquehub.torquehub.domain.response.comment_dtos.CommentResponse;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring", uses = {CommentMapper.class})
 public interface AnswerMapper {
@@ -36,7 +35,7 @@ public interface AnswerMapper {
                 .skip(startIndex) // Skip comments if we want to paginate
                 .limit(5)         // Limit to 5 comments
                 .map(commentMapper::toResponse)  // Map Comment to CommentResponse
-                .collect(Collectors.toList());
+                .toList();
     }
 
 }

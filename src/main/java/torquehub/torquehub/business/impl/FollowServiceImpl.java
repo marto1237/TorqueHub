@@ -2,15 +2,17 @@ package torquehub.torquehub.business.impl;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import torquehub.torquehub.business.exeption.filter_exeption.FilterFollowAnswerExeption;
+import torquehub.torquehub.business.exeption.filter_exeption.FilterFollowQuestionExeption;
 import torquehub.torquehub.business.interfaces.FollowService;
 import torquehub.torquehub.domain.mapper.FollowMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
 import torquehub.torquehub.domain.model.jpa_models.JpaFollow;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
-import torquehub.torquehub.domain.request.FollowDtos.FollowAnswerRequest;
-import torquehub.torquehub.domain.request.FollowDtos.FollowQuestionRequest;
-import torquehub.torquehub.domain.response.FollowRequest.FollowResponse;
+import torquehub.torquehub.domain.request.follow_dtos.FollowAnswerRequest;
+import torquehub.torquehub.domain.request.follow_dtos.FollowQuestionRequest;
+import torquehub.torquehub.domain.response.follow_dtos.FollowResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaFollowRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
@@ -69,7 +71,7 @@ public class FollowServiceImpl implements FollowService {
 
 
         }catch (Exception e) {
-            throw new RuntimeException("Error following question");
+            throw new FilterFollowQuestionExeption("Error following question", e);
         }
     }
 
@@ -99,7 +101,7 @@ public class FollowServiceImpl implements FollowService {
                 return followMapper.toResponse(savedJpaFollow);
             }
         }catch (Exception e) {
-            throw new RuntimeException("Error following answer");
+            throw new FilterFollowAnswerExeption("Error following answer",e);
         }
     }
 
@@ -115,7 +117,7 @@ public class FollowServiceImpl implements FollowService {
     public List<FollowResponse> getUserFollows(Long userId) {
         List<JpaFollow> jpaFollows = followRepository.findByUserId(userId);
         if (jpaFollows.isEmpty()) {
-            return null;
+            return List.of();
         }else {
             return jpaFollows.stream()
                     .map(followMapper::toResponse)

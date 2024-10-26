@@ -7,13 +7,12 @@ import torquehub.torquehub.business.interfaces.FilterService;
 import torquehub.torquehub.domain.mapper.QuestionMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaTag;
-import torquehub.torquehub.domain.response.QuestionDtos.QuestionSummaryResponse;
+import torquehub.torquehub.domain.response.question_dtos.QuestionSummaryResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaTagRepository;
 
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class FilterServiceImpl implements FilterService {
@@ -34,7 +33,7 @@ public class FilterServiceImpl implements FilterService {
         List<JpaTag> jpaTagEntities = tags.stream()
                 .map(tagName -> tagRepository.findByName(tagName)
                         .orElseThrow(() -> new IllegalArgumentException("Tag not found: " + tagName)))
-                .collect(Collectors.toList());
+                .toList();
 
         // Query the questions and map them to QuestionSummaryResponse
         Page<JpaQuestion> filteredQuestions = questionRepository.findQuestionsByTags(jpaTagEntities, pageable);

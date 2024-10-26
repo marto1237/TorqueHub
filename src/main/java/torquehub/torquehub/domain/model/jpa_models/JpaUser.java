@@ -42,7 +42,6 @@ public class JpaUser extends BaseUser {
     @JoinColumn(name = "role_id", nullable = false)
     private JpaRole jpaRole;
 
-    @Builder.Default
     private int points = 0;
 
 }

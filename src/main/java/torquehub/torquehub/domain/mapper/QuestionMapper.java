@@ -10,12 +10,12 @@ import org.springframework.data.domain.Pageable;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
 import torquehub.torquehub.domain.model.jpa_models.JpaTag;
-import torquehub.torquehub.domain.request.QuestionDtos.QuestionCreateRequest;
-import torquehub.torquehub.domain.request.QuestionDtos.QuestionUpdateRequest;
-import torquehub.torquehub.domain.response.AnswerDtos.AnswerResponse;
-import torquehub.torquehub.domain.response.QuestionDtos.QuestionDetailResponse;
-import torquehub.torquehub.domain.response.QuestionDtos.QuestionResponse;
-import torquehub.torquehub.domain.response.QuestionDtos.QuestionSummaryResponse;
+import torquehub.torquehub.domain.request.question_dtos.QuestionCreateRequest;
+import torquehub.torquehub.domain.request.question_dtos.QuestionUpdateRequest;
+import torquehub.torquehub.domain.response.answer_dtos.AnswerResponse;
+import torquehub.torquehub.domain.response.question_dtos.QuestionDetailResponse;
+import torquehub.torquehub.domain.response.question_dtos.QuestionResponse;
+import torquehub.torquehub.domain.response.question_dtos.QuestionSummaryResponse;
 
 import java.util.Collections;
 import java.util.List;
@@ -79,6 +79,7 @@ public interface QuestionMapper {
                     response.setId(answer.getId());
                     response.setText(answer.getText());
                     response.setUsername(answer.getJpaUser().getUsername());
+                    response.setUserPoints(answer.getJpaUser().getPoints());
                     response.setVotes(answer.getVotes());
                     response.setPostedTime(java.util.Date.from(answer.getAnsweredTime().atZone(java.time.ZoneId.systemDefault()).toInstant()));
 

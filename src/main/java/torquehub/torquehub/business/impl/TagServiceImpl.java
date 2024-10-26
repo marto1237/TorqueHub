@@ -2,17 +2,20 @@ package torquehub.torquehub.business.impl;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import torquehub.torquehub.business.exeption.tag_exeptions.DuplicateTagException;
+import torquehub.torquehub.business.exeption.tag_exeptions.TagDeleteExeption;
+import torquehub.torquehub.business.exeption.tag_exeptions.TagNotFoundException;
+import torquehub.torquehub.business.exeption.tag_exeptions.TageCreationExeption;
 import torquehub.torquehub.business.interfaces.TagService;
 import torquehub.torquehub.domain.mapper.TagMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaTag;
-import torquehub.torquehub.domain.request.TagDtos.TagCreateRequest;
-import torquehub.torquehub.domain.request.TagDtos.TagUpdateRequest;
-import torquehub.torquehub.domain.response.TagDtos.TagResponse;
+import torquehub.torquehub.domain.request.tag_dtos.TagCreateRequest;
+import torquehub.torquehub.domain.request.tag_dtos.TagUpdateRequest;
+import torquehub.torquehub.domain.response.tag_dtos.TagResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaTagRepository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class TagServiceImpl implements TagService {
@@ -30,19 +33,27 @@ public class TagServiceImpl implements TagService {
     public List<TagResponse> getAllTags() {
         return  tagRepository.findAll().stream()
                 .map(tagMapper::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
+
+    private static final String TAG_ID_PREFIX = "Tag with ID ";
+    private static final String NOT_FOUND_SUFFIX = " not found";
 
     @Override
     @Transactional
     public TagResponse createTag(TagCreateRequest tagCreateRequest) {
-        Optional<JpaTag> existingTag = tagRepository.findByName(tagCreateRequest.getName());
-        if (existingTag.isPresent()) {
-            throw new IllegalArgumentException("Tag with name '" + tagCreateRequest.getName() + "' already exists.");
-        }else {
-            JpaTag jpaTag = JpaTag.builder().name(tagCreateRequest.getName()).build();
-            JpaTag createdJpaTag = tagRepository.save(jpaTag);
-            return tagMapper.toResponse(createdJpaTag);
+        try{
+            Optional<JpaTag> existingTag = tagRepository.findByName(tagCreateRequest.getName());
+            if (existingTag.isPresent()) {
+                throw new DuplicateTagException("Tag with name '" + tagCreateRequest.getName() + "' already exists.");
+            }else {
+                JpaTag jpaTag = JpaTag.builder().name(tagCreateRequest.getName()).build();
+                JpaTag createdJpaTag = tagRepository.save(jpaTag);
+                return tagMapper.toResponse(createdJpaTag);
+            }
+        }
+        catch (Exception e){
+            throw new TageCreationExeption("Failed to create tag: " + e.getMessage(),e);
         }
 
     }
@@ -61,11 +72,11 @@ public class TagServiceImpl implements TagService {
                 tagRepository.delete(jpaTag);
                 return true;
             }else {
-                throw new IllegalArgumentException("Tag with ID " + id + " not found.");
+                throw new IllegalArgumentException(TAG_ID_PREFIX + id + NOT_FOUND_SUFFIX);
             }
 
         }catch (Exception e){
-            throw new RuntimeException("Failed to delete tag: " + e.getMessage());
+            throw new TagDeleteExeption("Failed to delete tag: " + e.getMessage(),e);
         }
     }
 
@@ -85,10 +96,10 @@ public class TagServiceImpl implements TagService {
                 tagRepository.save(existingJpaTag);
                 return true;
             } else {
-                throw new IllegalArgumentException("Tag with ID " + id + " not found.");
+                throw new IllegalArgumentException(TAG_ID_PREFIX + id + NOT_FOUND_SUFFIX);
             }
         } catch (Exception e) {
-            throw new IllegalArgumentException("Tag with ID " + id + " not found.");
+            throw new TagNotFoundException(TAG_ID_PREFIX + id + NOT_FOUND_SUFFIX, e);
         }
 
     }

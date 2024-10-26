@@ -1,6 +1,11 @@
 package torquehub.torquehub.domain;
 
 public class ReputationConstants {
+
+    private ReputationConstants() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+
     public static final int POINTS_NEW_QUESTION = 5;
     public static final int POINTS_QUESTION_WHEN_DELETED = -5;
     public static final int POINTS_NEW_ANSWER = 5;

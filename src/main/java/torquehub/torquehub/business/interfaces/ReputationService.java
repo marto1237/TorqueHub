@@ -1,7 +1,7 @@
 package torquehub.torquehub.business.interfaces;
 
-import torquehub.torquehub.domain.request.ReputationDtos.ReputationUpdateRequest;
-import torquehub.torquehub.domain.response.ReputationDtos.ReputationResponse;
+import torquehub.torquehub.domain.request.reputation_dtos.ReputationUpdateRequest;
+import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 
 public interface ReputationService {
     ReputationResponse updateReputationForNewQuestion(ReputationUpdateRequest reputationUpdateRequest);

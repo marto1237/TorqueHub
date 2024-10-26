@@ -12,7 +12,7 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentIntent createPaymentIntent(Long amount, String currency) throws StripeException {
         PaymentIntentCreateParams createParams = new PaymentIntentCreateParams.Builder()
                 .setCurrency(currency)// Amount in cents (e.g., 5000 = 50 Euros)
-                .setAmount(amount)
+                .setAmount(amount) // Amount in cents
                 .build();
         return PaymentIntent.create(createParams);
     }

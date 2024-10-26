@@ -10,7 +10,6 @@ import torquehub.torquehub.persistence.repository.QuestionRepository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Repository
 public class JpaQuestionRepository implements QuestionRepository {
@@ -48,7 +47,7 @@ public class JpaQuestionRepository implements QuestionRepository {
 
     @Override
     public Page<JpaQuestion> findQuestionsByTags(List<JpaTag> jpaTagEntities, Pageable pageable) {
-        return questionRepository.findQuestionsByTagNames(jpaTagEntities.stream().map(JpaTag::getName).collect(Collectors.toList()), pageable);
+        return questionRepository.findQuestionsByTagNames(jpaTagEntities.stream().map(JpaTag::getName).toList(), pageable);
     }
 
     @Override

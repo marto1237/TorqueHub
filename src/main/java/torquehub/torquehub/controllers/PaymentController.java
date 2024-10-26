@@ -1,5 +1,8 @@
 package torquehub.torquehub.controllers;
 
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import torquehub.torquehub.business.interfaces.PaymentService;
@@ -7,12 +10,14 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import torquehub.torquehub.domain.request.payment_dtos.PaymentRequest;
+import torquehub.torquehub.domain.response.payment_dtos.PaymentResponse;
 
-import java.util.HashMap;
-import java.util.Map;
+
 
 @RestController
-@RequestMapping("/api/payment")
+@Validated
+@RequestMapping("/payment")
 public class PaymentController {
 
     private final PaymentService paymentService;
@@ -22,19 +27,21 @@ public class PaymentController {
     }
 
     @PostMapping("/create-payment-intent")
-    public ResponseEntity<?> createPaymentIntent(@RequestBody Map<String, Object> data) {
+    public ResponseEntity<PaymentResponse> createPaymentIntent(@RequestBody @Valid PaymentRequest paymentRequest) {
         try {
-            Long amount = Long.parseLong(data.get("amount").toString());  // Amount in cents
-            String currency = data.get("currency").toString();
-            PaymentIntent paymentIntent = paymentService.createPaymentIntent(amount, currency);
+            PaymentIntent paymentIntent = paymentService.createPaymentIntent(
+                    paymentRequest.getAmount(),
+                    paymentRequest.getCurrency()
+            );
 
-            Map<String, String> responseData = new HashMap<>();
-            responseData.put("clientSecret", paymentIntent.getClientSecret());  // Send client secret to frontend
+            // Create response
+            PaymentResponse paymentResponse = new PaymentResponse(paymentIntent.getClientSecret());
 
-            return ResponseEntity.ok(responseData);
+            return ResponseEntity.ok(paymentResponse);
 
         } catch (StripeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new PaymentResponse("Payment failed: " + e.getMessage()));
         }
     }
 }

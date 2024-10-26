@@ -3,8 +3,8 @@ package torquehub.torquehub.domain.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import torquehub.torquehub.domain.model.jpa_models.JpaNotification;
-import torquehub.torquehub.domain.request.NotificationDtos.CreateNotificationRequest;
-import torquehub.torquehub.domain.response.NotificationDtos.NotificationResponse;
+import torquehub.torquehub.domain.request.notification_dtos.CreateNotificationRequest;
+import torquehub.torquehub.domain.response.notification_dtos.NotificationResponse;
 
 @Mapper(componentModel = "spring")
 public interface NotificationMapper {

@@ -3,6 +3,9 @@ package torquehub.torquehub.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -11,20 +14,23 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import torquehub.torquehub.business.interfaces.TokenService;
+import torquehub.torquehub.configuration.jwt.token.AccessToken;
 import torquehub.torquehub.configuration.jwt.token.AccessTokenDecoder;
 import torquehub.torquehub.configuration.jwt.token.AccessTokenEncoder;
 import torquehub.torquehub.configuration.jwt.token.impl.AccessTokenEncoderDecoderImpl;
 import torquehub.torquehub.configuration.jwt.token.impl.BlacklistService;
 import torquehub.torquehub.configuration.SecurityConfig;
 import torquehub.torquehub.controllers.AuthController;
-import torquehub.torquehub.domain.request.LoginDtos.LoginRequest;
-import torquehub.torquehub.domain.response.LoginDtos.LoginResponse;
+import torquehub.torquehub.domain.request.login_dtos.LoginRequest;
+import torquehub.torquehub.domain.response.login_dtos.LoginResponse;
 import torquehub.torquehub.business.interfaces.UserService;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@ExtendWith(MockitoExtension.class)
 @WebMvcTest(AuthController.class)
 @Import({SecurityConfig.class, AccessTokenEncoderDecoderImpl.class, BlacklistService.class})
 class AuthControllerTest {
@@ -50,6 +56,9 @@ class AuthControllerTest {
     @MockBean
     private TokenService tokenService;
 
+    @Mock
+    private AccessToken accessToken;
+
     private LoginRequest validLoginRequest;
     private LoginResponse loginResponse;
 
@@ -65,6 +74,11 @@ class AuthControllerTest {
                 .username("newuser")
                 .email("newuser@email.com")
                 .build();
+
+        when(accessToken.getUserID()).thenReturn(1L);
+        when(accessToken.getUsername()).thenReturn("newuser");
+        when(accessToken.getRole()).thenReturn("ROLE_USER");
+        when(accessToken.hasRole("ROLE_USER")).thenReturn(true);
     }
 
     @Test
@@ -85,13 +99,12 @@ class AuthControllerTest {
     void shouldReturnUnauthorized_whenInvalidCredentials() throws Exception {
         LoginRequest invalidLoginRequest = LoginRequest.builder()
                 .email("newuser@email.com")
-                .password("wrongpassword")  // Wrong password
+                .password("wrongpassword")
                 .build();
 
-        // Mock: findByEmail returns a user, but password is incorrect
         given(userService.login(invalidLoginRequest)).willThrow(new IllegalArgumentException("Invalid credentials"));
 
-        // Perform the request and check the response
+
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidLoginRequest)))
@@ -101,9 +114,8 @@ class AuthControllerTest {
 
     @Test
     void shouldReturnBadRequest_whenInvalidEmailFormat() throws Exception {
-        // Creating an invalid email login request
         LoginRequest invalidEmailRequest = LoginRequest.builder()
-                .email("invalid-email-format")  // Invalid email format
+                .email("invalid-email-format")
                 .password("123456")
                 .build();
 
