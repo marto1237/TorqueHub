@@ -5,7 +5,4 @@ public class DuplicateTagException extends RuntimeException {
         super(message);
     }
 
-    public DuplicateTagException(String message, Throwable cause) {
-        super(message, cause);
-    }
 }

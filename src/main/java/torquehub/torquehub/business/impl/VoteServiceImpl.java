@@ -6,11 +6,9 @@ import torquehub.torquehub.business.interfaces.NotificationService;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.business.interfaces.VoteService;
 import torquehub.torquehub.domain.ReputationConstants;
-import torquehub.torquehub.domain.model.jpa_models.JpaComment;
-import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
-import torquehub.torquehub.domain.model.jpa_models.JpaUser;
-import torquehub.torquehub.domain.model.jpa_models.JpaVote;
+import torquehub.torquehub.domain.model.jpa_models.*;
 import torquehub.torquehub.domain.request.reputation_dtos.ReputationUpdateRequest;
+import torquehub.torquehub.domain.request.vote_dtos.VoteAnswerNotificationRequest;
 import torquehub.torquehub.domain.request.vote_dtos.VoteCommentNotificationRequest;
 import torquehub.torquehub.domain.request.vote_dtos.VoteQuestionNotificationRequest;
 import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
@@ -139,6 +137,107 @@ public class VoteServiceImpl implements VoteService {
     }
 
     @Override
+    public ReputationResponse handleUpvoteForAnswer(JpaUser user, JpaAnswer answer) {
+        return handleVoteForAnswer(user, answer, true);
+    }
+
+    @Override
+    public ReputationResponse handleDownvoteForAnswer(JpaUser user, JpaAnswer answer) {
+        return handleVoteForAnswer(user, answer, false);
+    }
+
+    @Override
+    public ReputationResponse handleVoteForAnswer(JpaUser user, JpaAnswer answer, boolean isUpvote) {
+        Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaAnswer(user, answer);
+
+        if (existingVote.isPresent()) {
+            JpaVote vote = existingVote.get();
+            if (vote.isUpvote() == isUpvote) {
+                // Return the current reputation state without saving anything or sending notifications.
+                return reputationService.getCurrentReputation(user.getId());
+            }
+            return processExistingVoteForAnswer(vote, answer, user, isUpvote);
+        } else {
+            return processNewVoteForAnswer(user, answer, isUpvote);
+        }
+    }
+
+    @Override
+    public ReputationResponse processExistingVoteForAnswer(JpaVote vote, JpaAnswer answer, JpaUser user, boolean isUpvote) {
+        ReputationResponse response;
+
+        // Handle changing the vote (from upvote to downvote or vice versa)
+        boolean wasUpvoted = vote.isUpvote();  // Store previous vote type
+        vote.setUpvote(isUpvote);              // Update the vote type to new value
+        voteRepository.save(vote);             // Save the updated vote
+
+        // Adjust vote count on the answer
+        answer.setVotes(answer.getVotes() + (isUpvote ? 2 : -2)); // +2 if switching to upvote, -2 if switching to downvote
+
+        if (isUpvote) {
+            response = reputationService.updateReputationForUpvote(new ReputationUpdateRequest(
+                    answer.getJpaUser().getId(), ReputationConstants.POINTS_UPVOTE_RECEIVED));
+            reputationService.updateReputationForUpvoteGiven(new ReputationUpdateRequest(
+                    user.getId(), ReputationConstants.POINTS_UPVOTE_GIVEN));
+
+            // Notify only if the previous vote was not an upvote
+            if (!wasUpvoted) {
+                VoteAnswerNotificationRequest request = new VoteAnswerNotificationRequest(
+                        answer.getJpaUser().getId(),
+                        USER_PREFIX + user.getUsername() + " has upvoted your answer",
+                        user.getId(),
+                        answer.getId()
+                );
+
+                notificationService.notifyUserAboutAnswerVote(request);
+            }
+        } else {
+            response = reputationService.updateReputationForDownvote(new ReputationUpdateRequest(
+                    answer.getJpaUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED));
+            reputationService.updateReputationForDownvoteGiven(new ReputationUpdateRequest(
+                    user.getId(), ReputationConstants.POINTS_DOWNVOTE_GIVEN));
+        }
+
+        return response;
+    }
+
+    @Override
+    public ReputationResponse processNewVoteForAnswer(JpaUser user, JpaAnswer answer, boolean isUpvote) {
+        JpaVote newVote = JpaVote.builder()
+                .jpaUser(user)
+                .jpaAnswer(answer)
+                .upvote(isUpvote)
+                .votedAt(LocalDateTime.now())
+                .build();
+        voteRepository.save(newVote);
+        answer.setVotes(answer.getVotes() + (isUpvote ? 1 : -1));
+
+        // Adjust reputation points
+        ReputationResponse response;
+        if (isUpvote) {
+            response = reputationService.updateReputationForUpvote(new ReputationUpdateRequest(
+                    answer.getJpaUser().getId(), ReputationConstants.POINTS_UPVOTE_RECEIVED));
+            reputationService.updateReputationForUpvoteGiven(new ReputationUpdateRequest(
+                    user.getId(), ReputationConstants.POINTS_UPVOTE_GIVEN));
+
+            // Notify user only through notificationService
+            VoteAnswerNotificationRequest request = new VoteAnswerNotificationRequest(
+                    answer.getJpaUser().getId(),
+                    USER_PREFIX + user.getUsername() + " has upvoted your answer",
+                    user.getId(),
+                    answer.getId()
+            );
+            notificationService.notifyUserAboutAnswerVote(request);
+        } else {
+            response = reputationService.updateReputationForDownvote(new ReputationUpdateRequest(
+                    answer.getJpaUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED));
+            reputationService.updateReputationForDownvoteGiven(new ReputationUpdateRequest(
+                    user.getId(), ReputationConstants.POINTS_DOWNVOTE_GIVEN));
+        }
+        return response;
+    }
+
+    @Override
     @Transactional
     public ReputationResponse handleUpvoteForComment(JpaUser user, JpaComment comment) {
         return handleVoteForComment(user, comment, true);
@@ -150,7 +249,7 @@ public class VoteServiceImpl implements VoteService {
         return handleVoteForComment(user, comment, false);
     }
 
-    private ReputationResponse handleVoteForComment(JpaUser user, JpaComment comment, boolean isUpvote) {
+    public ReputationResponse handleVoteForComment(JpaUser user, JpaComment comment, boolean isUpvote) {
         Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaComment(user, comment);
 
         if (existingVote.isPresent()) {
@@ -165,7 +264,7 @@ public class VoteServiceImpl implements VoteService {
         }
     }
 
-    private ReputationResponse processExistingVoteForComment(JpaVote vote, JpaComment comment, JpaUser user, boolean isUpvote) {
+    public ReputationResponse processExistingVoteForComment(JpaVote vote, JpaComment comment, JpaUser user, boolean isUpvote) {
         ReputationResponse response;
 
         // Handle changing the vote (from upvote to downvote or vice versa)
@@ -186,7 +285,7 @@ public class VoteServiceImpl implements VoteService {
             if (!wasUpvoted) {
                 VoteCommentNotificationRequest request = new VoteCommentNotificationRequest(
                         comment.getJpaUser().getId(),
-                        USER_PREFIX + user.getUsername() + " has upvoted your comment: " + comment.getText(),
+                        USER_PREFIX + user.getUsername() + " has upvoted your comment",
                         user.getId(),
                         comment.getId()
                 );
@@ -202,7 +301,7 @@ public class VoteServiceImpl implements VoteService {
         return response;
     }
 
-    private ReputationResponse processNewVoteForComment(JpaUser user, JpaComment comment, boolean isUpvote) {
+    public ReputationResponse processNewVoteForComment(JpaUser user, JpaComment comment, boolean isUpvote) {
         JpaVote newVote = JpaVote.builder()
                 .jpaUser(user)
                 .jpaComment(comment)

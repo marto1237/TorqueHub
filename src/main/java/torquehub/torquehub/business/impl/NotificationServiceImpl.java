@@ -16,6 +16,7 @@ import torquehub.torquehub.domain.model.jpa_models.JpaNotification;
 import torquehub.torquehub.domain.request.notification_dtos.CreateCommentAnswerRequest;
 import torquehub.torquehub.domain.request.notification_dtos.CreateNotificationRequest;
 import torquehub.torquehub.domain.request.notification_dtos.PointsNotificationRequest;
+import torquehub.torquehub.domain.request.vote_dtos.VoteAnswerNotificationRequest;
 import torquehub.torquehub.domain.request.vote_dtos.VoteCommentNotificationRequest;
 import torquehub.torquehub.domain.request.vote_dtos.VoteQuestionNotificationRequest;
 import torquehub.torquehub.domain.response.notification_dtos.NotificationResponse;
@@ -67,6 +68,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    @Transactional
     public void notifyAnswerOwner(JpaUser owner, JpaAnswer jpaAnswer, boolean isUpvote, ReputationResponse authorReputation) {
         String voteType = isUpvote ? "upvoted" : "downvoted";
         String message = "Your answer to the question \"" + jpaAnswer.getJpaQuestion().getTitle() + "\" was " + voteType +
@@ -85,6 +87,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    @Transactional
     public Optional<NotificationResponse> createNotification(CreateNotificationRequest request) {
         JpaUser user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException(USER_NOT_FOUND));
@@ -136,13 +139,43 @@ public class NotificationServiceImpl implements NotificationService {
             @Override
             public void afterCommit() {
                 NotificationResponse notificationResponse = notificationMapper.toResponse(savedNotification);
-                webSocketNotificationController.notifyClients(questionCreator.getId(), notificationResponse);
+                notifyClients(questionCreator.getId(), notificationResponse);
             }
         });
 
         return Optional.ofNullable(notificationMapper.toResponse(savedNotification));
 
     }
+
+    @Override
+    public Optional<NotificationResponse> notifyUserAboutAnswerVote(VoteAnswerNotificationRequest request) {
+        JpaUser answerCreator = userRepository.findById(request.getAnswerCreatorId())
+                .orElseThrow(() -> new IllegalArgumentException("Answer creator not found"));
+        JpaUser voter = userRepository.findById(request.getVoterId())
+                .orElseThrow(() -> new IllegalArgumentException(VOTER_NOT_FOUND));
+        JpaQuestion question = questionRepository.findById(request.getAnswerId())
+                .orElseThrow(() -> new IllegalArgumentException(QUESTION_NOT_FOUND));
+
+        // Avoid sending notification to the same person
+        if (answerCreator.equals(voter)|| question.getJpaUser().equals(voter)) {
+            return Optional.empty();
+        }
+
+
+        JpaNotification jpaNotification = createJpaNotification(answerCreator, voter, request.getMessage(), voter.getPoints());
+        JpaNotification savedNotification = notificationRepository.save(jpaNotification);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                NotificationResponse notificationResponse = notificationMapper.toResponse(savedNotification);
+                notifyClients(answerCreator.getId(), notificationResponse);
+            }
+        });
+
+        return Optional.ofNullable(notificationMapper.toResponse(savedNotification));
+    }
+
 
     @Override
     public Optional<NotificationResponse> notifyAnswerOwnerForNewComment(CreateCommentAnswerRequest createCommentAnswerRequest) {
@@ -168,7 +201,7 @@ public class NotificationServiceImpl implements NotificationService {
             @Override
             public void afterCommit() {
                 NotificationResponse notificationResponse = notificationMapper.toResponse(savedNotification);
-                webSocketNotificationController.notifyClients(answerOwner.getId(), notificationResponse);
+                notifyClients(answerOwner.getId(), notificationResponse);
             }
         });
 
@@ -192,6 +225,14 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
 
         JpaNotification savedNotification = notificationRepository.save(jpaNotification);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                NotificationResponse notificationResponse = notificationMapper.toResponse(savedNotification);
+                notifyClients(commentOwner.getId(), notificationResponse);
+            }
+        });
 
         return Optional.ofNullable(notificationMapper.toResponse(savedNotification));
     }

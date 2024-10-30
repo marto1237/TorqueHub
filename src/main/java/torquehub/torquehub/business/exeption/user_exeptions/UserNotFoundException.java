@@ -1,4 +1,4 @@
-package torquehub.torquehub.business.exeption.user_exptions;
+package torquehub.torquehub.business.exeption.user_exeptions;
 
 public class UserNotFoundException extends RuntimeException {
     public UserNotFoundException(String message) {

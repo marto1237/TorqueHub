@@ -8,6 +8,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import torquehub.torquehub.business.exeption.user_exeptions.UserCreateUserExeption;
+import torquehub.torquehub.business.exeption.user_exeptions.UserDeleteExpetion;
+import torquehub.torquehub.business.exeption.user_exeptions.UserUpdateExeption;
+import torquehub.torquehub.business.interfaces.TokenService;
+import torquehub.torquehub.configuration.jwt.token.AccessTokenEncoder;
 import torquehub.torquehub.domain.mapper.RoleMapper;
 import torquehub.torquehub.domain.mapper.UserMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
@@ -17,8 +22,11 @@ import torquehub.torquehub.domain.request.user_dtos.UserCreateRequest;
 import torquehub.torquehub.domain.request.user_dtos.UserUpdateRequest;
 import torquehub.torquehub.domain.response.user_dtos.UserResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaRoleRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaUserPromotionLogRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,7 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class JpaUserServiceImplTest {
+class UserServiceImplTest {
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -41,47 +49,59 @@ class JpaUserServiceImplTest {
     private UserMapper userMapper;
 
     @Mock
+    private AccessTokenEncoder accessTokenEncoder;
+
+    @Mock
+    private TokenService tokenService;
+
+    @Mock
     private RoleMapper roleMapper;
 
     @Mock
     private BCryptPasswordEncoder passwordEncoder;
 
+    @Mock
+    private JpaUserPromotionLogRepository userPromotionLogRepository;
+
     private UserCreateRequest userCreateRequest;
     private UserUpdateRequest userUpdateRequest;
     private LoginRequest loginRequest;
     private JpaUser testJpaUser;
-    private final String testemail = "test@email.com";
+    private final String testEmail = "test@email.com";
     private JpaRole userJpaRole;
     private final Long roleId = 1L;
+    private final Long userId = 1L;
 
     @BeforeEach
     void setUp() {
         userJpaRole = JpaRole.builder().name("USER").build();
+        String salt = "testSalt";
+        String encodedPassword = new BCryptPasswordEncoder().encode("testpassword");
 
         testJpaUser = JpaUser.builder()
-                .id(roleId)
+                .id(userId)
                 .email("test@email.com")
                 .username("testUser")
-                .password("hashedPassword")
-                .salt("testSalt")
+                .password(encodedPassword)
+                .salt(salt)
                 .jpaRole(userJpaRole)
                 .build();
 
         userCreateRequest = UserCreateRequest.builder()
                 .username("testUser")
-                .email("test@email.com")
+                .email(testEmail)
                 .password("testpassword")
                 .role("USER")
                 .build();
 
         userUpdateRequest = UserUpdateRequest.builder()
                 .username("testUser")
-                .email("test@email.com")
+                .email(testEmail)
                 .password("testpassword")
                 .build();
 
         loginRequest = LoginRequest.builder()
-                .email("test@email.com")
+                .email(testEmail)
                 .password("testpassword")
                 .build();
     }
@@ -89,7 +109,7 @@ class JpaUserServiceImplTest {
 
 
     @Test
-    void shouldReturnUserById_whenUserExists() {
+    void shouldReturnUserResponse_WhenUserExistsById() {
         when(userRepository.findById(roleId)).thenReturn(Optional.of(testJpaUser));
 
         UserResponse mappedResponse = UserResponse.builder()
@@ -109,7 +129,7 @@ class JpaUserServiceImplTest {
     }
 
     @Test
-    void shouldReturnEmpty_whenUserDoesNotExist() {
+    void shouldReturnEmptyOptional_WhenUserDoesNotExistById() {
         when(userRepository.findById(roleId)).thenReturn(Optional.empty());
 
         Optional<UserResponse> response = userService.getUserById(roleId);
@@ -118,7 +138,7 @@ class JpaUserServiceImplTest {
     }
 
     @Test
-    void shouldCreateUserSuccessfully_whenValidUserDetailsProvided() {
+    void shouldCreateUser_WhenValidUserDetailsProvided() {
         when(roleRepository.findByName("USER")).thenReturn(Optional.of(userJpaRole));
         when(userRepository.save(any(JpaUser.class))).thenReturn(testJpaUser);
 
@@ -138,7 +158,7 @@ class JpaUserServiceImplTest {
 
 
     @Test
-    void shouldThrowException_whenRoleNotFoundWhileCreatingUser() {
+    void shouldThrowException_WhenRoleNotFoundDuringUserCreation() {
         when(roleRepository.findByName("USER")).thenReturn(Optional.empty());
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
@@ -149,7 +169,7 @@ class JpaUserServiceImplTest {
     }
 
     @Test
-    void shouldThrowException_whenUsernameOrEmailAlreadyExists() {
+    void shouldThrowException_WhenUsernameOrEmailAlreadyExistsDuringUserCreation() {
         when(roleRepository.findByName("USER")).thenReturn(Optional.of(userJpaRole));
         when(userRepository.save(any(JpaUser.class))).thenThrow(new DataIntegrityViolationException("Duplicate entry"));
 
@@ -160,7 +180,7 @@ class JpaUserServiceImplTest {
     }
 
     @Test
-    void shouldReturnEmptyOptional_whenUserNotFoundById() {
+    void shouldReturnEmptyOptional_WhenUserNotFound() {
         when(userRepository.findById(roleId)).thenReturn(Optional.empty());
 
 
@@ -170,7 +190,7 @@ class JpaUserServiceImplTest {
     }
 
     @Test
-    void shouldDeleteUserSuccessfully_whenUserExists() {
+    void shouldDeleteUser_WhenUserExists() {
         when(userRepository.findById(roleId)).thenReturn(Optional.of(testJpaUser));
 
         boolean deleted = userService.deleteUser(roleId);
@@ -179,14 +199,14 @@ class JpaUserServiceImplTest {
     }
 
     @Test
-    void shouldReturnTrue_whenUserExistsById() {
+    void shouldReturnTrue_WhenUserExistsById() {
         when(userRepository.existsById(roleId)).thenReturn(true);
 
         assertTrue(userService.userExistsById(roleId));
     }
 
     @Test
-    void shouldReturnFalse_whenUserDoesNotExistById() {
+    void shouldReturnFalse_WhenUserDoesNotExistById() {
         when(userRepository.existsById(roleId)).thenReturn(false);
 
         boolean result = userService.userExistsById(roleId);
@@ -195,7 +215,7 @@ class JpaUserServiceImplTest {
     }
 
     @Test
-    void shouldReturnTrue_whenUserExistsByUsername() {
+    void shouldReturnTrue_WhenUserExistsByUsername() {
         when(userRepository.existsByUsername("testUser")).thenReturn(true);
 
         boolean exists = userService.userExistsByUsername("testUser");
@@ -204,7 +224,7 @@ class JpaUserServiceImplTest {
     }
 
     @Test
-    void shouldReturnFalse_whenUserDoesNotExistByUsername() {
+    void shouldReturnFalse_WhenUserDoesNotExistByUsername() {
         when(userRepository.existsByUsername("testUser")).thenReturn(false);
 
         boolean exists = userService.userExistsByUsername("testUser");
@@ -213,7 +233,7 @@ class JpaUserServiceImplTest {
     }
 
     @Test
-    void shouldUpdateUserSuccessfully_whenUserExists() {
+    void shouldUpdateUser_WhenUserExists() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(testJpaUser));
         when(userRepository.save(any(JpaUser.class))).thenReturn(testJpaUser);
 
@@ -223,7 +243,7 @@ class JpaUserServiceImplTest {
     }
 
     @Test
-    void shouldNotUpdateUser_whenUserDoesNotExist() {
+    void shouldThrowException_WhenUserNotFoundDuringUpdate() {
         when(userRepository.findById(roleId)).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
@@ -236,7 +256,7 @@ class JpaUserServiceImplTest {
     }
 
     @Test
-    void shouldReturnUser_whenUsernameExists() {
+    void shouldReturnUserResponse_WhenUsernameExists() {
         when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(testJpaUser));
 
         UserResponse mappedResponse = UserResponse.builder()
@@ -258,7 +278,7 @@ class JpaUserServiceImplTest {
 
 
     @Test
-    void shouldReturnEmpty_whenUsernameDoesNotExist() {
+    void shouldReturnEmptyOptional_WhenUsernameDoesNotExist() {
         when(userRepository.findByUsername("testUser")).thenReturn(Optional.empty());
 
         Optional<UserResponse> response = userService.findByUsername("testUser");
@@ -267,8 +287,8 @@ class JpaUserServiceImplTest {
     }
 
     @Test
-    void shouldReturnUser_whenEmailExists() {
-        when(userRepository.findByEmail(testemail)).thenReturn(Optional.of(testJpaUser));
+    void shouldReturnUserResponse_WhenEmailExists() {
+        when(userRepository.findByEmail(testEmail)).thenReturn(Optional.of(testJpaUser));
 
         UserResponse mappedResponse = UserResponse.builder()
                 .id(testJpaUser.getId())
@@ -278,7 +298,7 @@ class JpaUserServiceImplTest {
                 .build();
 
         when(userMapper.toResponse(testJpaUser)).thenReturn(mappedResponse);
-        Optional<UserResponse> response = userService.findByEmail(testemail);
+        Optional<UserResponse> response = userService.findByEmail(testEmail);
 
         assertTrue(response.isPresent());
     }
@@ -286,8 +306,8 @@ class JpaUserServiceImplTest {
 
 
     @Test
-    void shouldThrowException_whenEmailDoesNotExist() {
-        when(userRepository.findByEmail(testemail)).thenReturn(Optional.empty());
+    void shouldThrowException_WhenEmailDoesNotExistDuringLogin() {
+        when(userRepository.findByEmail(testEmail)).thenReturn(Optional.empty());
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
                 userService.login(loginRequest));
@@ -295,7 +315,65 @@ class JpaUserServiceImplTest {
         assertEquals("Invalid credentials", exception.getMessage());
     }
 
+    @Test
+    void shouldReturnAllUsers_WhenGetAllUsersCalled() {
+        List<JpaUser> userList = Arrays.asList(testJpaUser,
+                JpaUser.builder().id(2L).username("user2").build());
+        when(userRepository.findAll()).thenReturn(userList);
+        when(userMapper.toResponse(any(JpaUser.class)))
+                .thenReturn(new UserResponse(1L, "testUser", testEmail, "USER",10));
+        List<UserResponse> result = userService.getAllUsers();
 
+        assertEquals(2, result.size());
+        verify(userRepository).findAll();
+        verify(userMapper, times(2)).toResponse(any(JpaUser.class));
+    }
+
+    @Test
+    void shouldThrowUserCreateException_WhenUnexpectedErrorOccursDuringUserCreation() {
+        when(roleRepository.findByName("USER")).thenReturn(Optional.of(userJpaRole));
+        when(userRepository.save(any())).thenThrow(new RuntimeException("Unexpected error"));
+
+        assertThrows(UserCreateUserExeption.class, () ->
+                userService.createUser(userCreateRequest));
+    }
+
+    @Test
+    void shouldThrowUserDeleteException_WhenErrorOccursDuringUserDeletion() {
+        when(userRepository.findById(userId)).thenThrow(new RuntimeException("Database error"));
+
+        assertThrows(UserDeleteExpetion.class, () ->
+                userService.deleteUser(userId));
+    }
+
+
+    @Test
+    void shouldThrowUserUpdateException_WhenUnexpectedErrorOccursDuringUserUpdate() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(testJpaUser));
+        when(userRepository.save(any())).thenThrow(new RuntimeException("Database error"));
+
+        assertThrows(UserUpdateExeption.class, () ->
+                userService.updateUserById(userId, userUpdateRequest));
+    }
+
+    @Test
+    void shouldUseDefaultRole_WhenRoleIsNullDuringUserCreation() {
+        UserCreateRequest requestWithoutRole = UserCreateRequest.builder()
+                .username("testUser")
+                .email(testEmail)
+                .password("testpassword")
+                .build();
+
+        when(roleRepository.findByName("USER")).thenReturn(Optional.of(userJpaRole));
+        when(userRepository.save(any(JpaUser.class))).thenReturn(testJpaUser);
+        when(userMapper.toResponse(any(JpaUser.class)))
+                .thenReturn(new UserResponse(1L, "testUser", testEmail, "USER", 10));
+
+        UserResponse response = userService.createUser(requestWithoutRole);
+
+        assertNotNull(response);
+        assertEquals("USER", response.getRole());
+    }
 
 
 }

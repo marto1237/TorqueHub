@@ -127,7 +127,7 @@ public class QuestionController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MODERATOR')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('MODERATOR')")
     public ResponseEntity<MessageResponse> deleteQuestion(@PathVariable Long id) {
         MessageResponse response = new MessageResponse();
         boolean deleted = questionService.deleteQuestion(id);

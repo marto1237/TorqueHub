@@ -21,6 +21,7 @@ public interface CommentService {
     ReputationResponse upvoteComment(Long commentId, Long userId);
     ReputationResponse downvoteComment(Long commentId, Long userId);
     Page<CommentResponse> getPaginatedComments(Long answerId, Pageable pageable);
+    boolean isCommentOwner(Long commentId, String username);
 
 
 }

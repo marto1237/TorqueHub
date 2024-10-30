@@ -5,7 +5,4 @@ public class AnswerBestAnswerException extends RuntimeException {
         super(message, cause);
     }
 
-    public AnswerBestAnswerException(String message) {
-        super(message);
-    }
 }

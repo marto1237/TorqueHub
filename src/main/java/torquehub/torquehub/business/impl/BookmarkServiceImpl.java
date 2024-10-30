@@ -1,5 +1,7 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.exeption.BookmarkAlreadyExistsException;
@@ -18,8 +20,6 @@ import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
 
 @Service
 public class BookmarkServiceImpl implements BookmarkService {
@@ -102,18 +102,16 @@ public class BookmarkServiceImpl implements BookmarkService {
         }
     }
 
-
+    @Override
+    public Page<BookmarkResponse> getUserBookmarkedQuestions(Long userId, Pageable pageable) {
+        Page<JpaBookmark> jpaBookmarks = bookmarkRepository.findByUserIdAndJpaQuestionIsNotNull(userId, pageable);
+        return jpaBookmarks.map(bookmarkMapper::toResponse);
+    }
 
     @Override
-    public Optional<List<BookmarkResponse>> getUserBookmarks(Long userId) {
-        List<JpaBookmark> jpaBookmarks = bookmarkRepository.findByUserId(userId);
-        if (jpaBookmarks.isEmpty()) {
-            return Optional.empty();
-        }else {
-            return Optional.of(jpaBookmarks.stream()
-                    .map(bookmarkMapper::toResponse)
-                    .toList());
-        }
+    public Page<BookmarkResponse> getUserBookmarkedAnswers(Long userId, Pageable pageable) {
+        Page<JpaBookmark> jpaBookmarks = bookmarkRepository.findByUserIdAndJpaAnswerIsNotNull(userId, pageable);
+        return jpaBookmarks.map(bookmarkMapper::toResponse);
     }
 
 }

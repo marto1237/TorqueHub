@@ -5,7 +5,4 @@ public class AnswerDeleteException extends RuntimeException {
         super(message, cause);
     }
 
-    public AnswerDeleteException(String message) {
-        super(message);
-    }
 }

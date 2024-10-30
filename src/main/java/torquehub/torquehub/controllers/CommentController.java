@@ -3,10 +3,14 @@ package torquehub.torquehub.controllers;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.CommentService;
+import torquehub.torquehub.configuration.jwt.token.exeption.InvalidAccessTokenException;
+import torquehub.torquehub.configuration.utils.TokenUtil;
 import torquehub.torquehub.domain.request.comment_dtos.CommentCreateRequest;
 import torquehub.torquehub.domain.request.comment_dtos.CommentEditRequest;
 import torquehub.torquehub.domain.response.comment_dtos.CommentResponse;
@@ -21,9 +25,12 @@ import java.util.Optional;
 public class CommentController {
 
     private final CommentService commentService;
+    private final TokenUtil tokenUtil;
 
-    public CommentController(CommentService commentService) {
+    public CommentController(CommentService commentService,
+                             TokenUtil tokenUtil) {
         this.commentService = commentService;
+        this.tokenUtil = tokenUtil;
     }
 
     @GetMapping("/{commentId}")
@@ -55,29 +62,68 @@ public class CommentController {
     }
 
     @PostMapping
-    public ResponseEntity<CommentResponse> addComment(@RequestBody @Validated CommentCreateRequest commentCreateRequest) {
-        CommentResponse commentResponse = commentService.addComment(commentCreateRequest);
-        return ResponseEntity.ok(commentResponse);
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CommentResponse> addComment(@RequestBody @Validated CommentCreateRequest commentCreateRequest,
+                                                      @RequestHeader("Authorization") String token) {
+        try {
+            Long userId = tokenUtil.getUserIdFromToken(token);
+            commentCreateRequest.setUserId(userId);
+            CommentResponse commentResponse = commentService.addComment(commentCreateRequest);
+            return ResponseEntity.ok(commentResponse);
+        } catch (InvalidAccessTokenException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+
     }
 
+
     @PostMapping("/{commentId}/upvote")
-    public ResponseEntity<ReputationResponse> upvoteAnswer(@PathVariable Long commentId, @RequestParam Long userId) {
-        return ResponseEntity.ok(commentService.upvoteComment(commentId, userId));
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ReputationResponse> upvoteAnswer(@PathVariable Long commentId, @RequestHeader("Authorization") String token) {
+        try {
+            Long userId = tokenUtil.getUserIdFromToken(token);
+            ReputationResponse reputationResponse = commentService.upvoteComment(commentId, userId);
+            return ResponseEntity.ok(reputationResponse);
+        }  catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+
     }
 
     @PostMapping("/{commentId}/downvote")
-    public ResponseEntity<ReputationResponse> downvoteAnswer(@PathVariable Long commentId, @RequestParam Long userId) {
-        return ResponseEntity.ok(commentService.downvoteComment(commentId, userId));
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ReputationResponse> downvoteAnswer(@PathVariable Long commentId, @RequestHeader("Authorization") String token) {
+        try {
+            Long userId = tokenUtil.getUserIdFromToken(token);
+            ReputationResponse reputationResponse = commentService.downvoteComment(commentId, userId);
+            return ResponseEntity.ok(reputationResponse);
+        }  catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
     @PutMapping("/{commentId}")
-    public ResponseEntity<CommentResponse> editComment(@PathVariable Long commentId, @RequestBody @Validated CommentEditRequest commentEditRequest) {
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('MODERATOR') or @commentService.isCommentOwner(#commentId, authentication.name)")
+    public ResponseEntity<CommentResponse> editComment(@PathVariable Long commentId,
+                                                       @RequestBody @Validated CommentEditRequest commentEditRequest,
+                                                       @RequestHeader("Authorization") String token) {
+        try {
+            Long userId = tokenUtil.getUserIdFromToken(token);
+            commentEditRequest.setUserId(userId);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
         CommentResponse commentResponse = commentService.editComment(commentId, commentEditRequest);
         return ResponseEntity.ok(commentResponse);
     }
 
+
     @DeleteMapping("/{commentId}")
-    public ResponseEntity<ReputationResponse> deleteComment(@PathVariable Long commentId) {
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('MODERATOR') or @commentService.isCommentOwner(#commentId, authentication.name)")
+    public ResponseEntity<Void> deleteComment(@PathVariable Long commentId, @RequestHeader("Authorization") String token) {
+
         boolean isDeleted = commentService.deleteComment(commentId);
         if (isDeleted) {
             return ResponseEntity.noContent().build();
@@ -85,5 +131,6 @@ public class CommentController {
             return ResponseEntity.badRequest().build();
         }
     }
+
 
 }

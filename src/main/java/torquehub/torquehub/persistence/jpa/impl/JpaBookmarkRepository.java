@@ -1,4 +1,6 @@
 package torquehub.torquehub.persistence.jpa.impl;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import torquehub.torquehub.domain.model.jpa_models.JpaBookmark;
 import torquehub.torquehub.persistence.jpa.interfaces.SpringDataJpaBookmarkRepository;
@@ -55,6 +57,16 @@ public class JpaBookmarkRepository implements BookmarkRepository {
     @Override
     public void deleteById(Long id) {
         bookmarkRepository.deleteById(id);
+    }
+
+    @Override
+    public Page<JpaBookmark> findByUserIdAndJpaQuestionIsNotNull(Long userId, Pageable pageable) {
+        return bookmarkRepository.findByJpaUserIdAndJpaQuestionIsNotNull(userId, pageable);
+    }
+
+    @Override
+    public Page<JpaBookmark> findByUserIdAndJpaAnswerIsNotNull(Long userId, Pageable pageable) {
+        return bookmarkRepository.findByJpaUserIdAndJpaAnswerIsNotNull(userId, pageable);
     }
 }
 

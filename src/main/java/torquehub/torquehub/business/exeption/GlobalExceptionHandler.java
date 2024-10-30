@@ -2,11 +2,14 @@ package torquehub.torquehub.business.exeption;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import torquehub.torquehub.business.exeption.comment_exeptions.CommentNotFoundException;
+import torquehub.torquehub.configuration.jwt.token.exeption.InvalidAccessTokenException;
 import torquehub.torquehub.domain.response.MessageResponse;
 
 import java.util.HashMap;
@@ -44,4 +47,27 @@ public class GlobalExceptionHandler {
         response.setMessage("An unexpected error occurred: " + ex.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);  // 500 Internal Server Error
     }
+
+    @ExceptionHandler(InvalidAccessTokenException.class)
+    public ResponseEntity<String> handleInvalidAccessToken(InvalidAccessTokenException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ex.getMessage());
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<String> handleGeneralException(Exception ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
+    }
+
+    @ExceptionHandler(CommentNotFoundException.class)
+    public ResponseEntity<MessageResponse> handleCommentNotFoundException(CommentNotFoundException ex) {
+        MessageResponse response = new MessageResponse();
+        response.setMessage(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<String> handleAuthorizationDeniedException(AuthorizationDeniedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access Denied");
+    }
+
 }

@@ -5,7 +5,4 @@ public class AnswerUpvoteException extends RuntimeException {
         super(message, cause);
     }
 
-    public AnswerUpvoteException(String message) {
-        super(message);
-    }
 }

@@ -8,17 +8,16 @@ import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.exeption.ErrorMessages;
 import torquehub.torquehub.business.exeption.answer_exptions.*;
 import torquehub.torquehub.business.exeption.question_exeptions.QuestionNotFoundException;
-import torquehub.torquehub.business.exeption.user_exptions.UserNotFoundException;
+import torquehub.torquehub.business.exeption.user_exeptions.UserNotFoundException;
 import torquehub.torquehub.business.interfaces.AnswerService;
-import torquehub.torquehub.business.interfaces.NotificationService;
 import torquehub.torquehub.business.interfaces.ReputationService;
+import torquehub.torquehub.business.interfaces.VoteService;
 import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.CommentMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
-import torquehub.torquehub.domain.model.jpa_models.JpaVote;
 import torquehub.torquehub.domain.request.answer_dtos.AnswerCreateRequest;
 import torquehub.torquehub.domain.request.answer_dtos.AnswerEditRequest;
 import torquehub.torquehub.domain.request.reputation_dtos.ReputationUpdateRequest;
@@ -27,7 +26,6 @@ import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaVoteRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,9 +39,8 @@ public class AnswerServiceImpl implements AnswerService {
     private final JpaUserRepository userRepository;
     private final JpaQuestionRepository questionRepository;
     private final ReputationService reputationService;
-    private final JpaVoteRepository voteRepository;
-    private final NotificationService notificationService;
     private final JpaAnswerRepository answerRepository;
+    private final VoteService voteService;
 
 
     public AnswerServiceImpl(
@@ -52,18 +49,20 @@ public class AnswerServiceImpl implements AnswerService {
             JpaUserRepository userRepository,
             JpaQuestionRepository questionRepository,
             ReputationService reputationService,
-            JpaVoteRepository voteRepository,
-            NotificationService notificationService,
-            JpaAnswerRepository answerRepository) {
+            JpaAnswerRepository answerRepository,
+            VoteService voteService) {
         this.answerMapper = answerMapper;
         this.commentMapper = commentMapper;
         this.userRepository = userRepository;
         this.questionRepository = questionRepository;
         this.reputationService = reputationService;
-        this.voteRepository = voteRepository;
-        this.notificationService = notificationService;
         this.answerRepository = answerRepository;
+        this.voteService = voteService;
+
     }
+
+    private static final String ANSWER_ID_PREFIX = "Answer with ID ";
+    private static final String NOT_FOUND_SUFFIX = " not found";
 
     @Override
     @Transactional
@@ -117,7 +116,7 @@ public class AnswerServiceImpl implements AnswerService {
 
                 return answerMapper.toResponse(savedJpaAnswer, commentMapper);
             } else {
-                throw new IllegalArgumentException("Answer with ID " + answerId + " not found");
+                throw new IllegalArgumentException(ANSWER_ID_PREFIX + answerId + NOT_FOUND_SUFFIX);
             }
         }catch (Exception e){
             throw new AnswerEditException("Error editing answer: " + e.getMessage(), e);
@@ -156,7 +155,7 @@ public class AnswerServiceImpl implements AnswerService {
                 return true;
 
             } else {
-                throw new IllegalArgumentException("Answer with ID " + answerId + " not found");
+                throw new IllegalArgumentException(ANSWER_ID_PREFIX + answerId + NOT_FOUND_SUFFIX);
             }
         }catch (Exception e){
             throw new AnswerDeleteException("Error deleting answer: " + e.getMessage(), e);
@@ -189,48 +188,11 @@ public class AnswerServiceImpl implements AnswerService {
     @Transactional
     public ReputationResponse upvoteAnswer(Long answerId, Long userId) {
         try {
-            JpaAnswer jpaAnswer = answerRepository.findById(answerId)
-                    .orElseThrow(() -> new IllegalArgumentException(ErrorMessages.USER_NOT_FOUND));
-            JpaUser jpaUser = userRepository.findById(userId)
-                    .orElseThrow(() -> new UserNotFoundException(ErrorMessages.USER_NOT_FOUND));
-
-            Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaAnswer(jpaUser, jpaAnswer);
-
-            if (existingVote.isPresent()) {
-                JpaVote jpaVote = existingVote.get();
-
-                if (jpaVote.isUpvote()) {
-                    voteRepository.delete(jpaVote);
-                    jpaAnswer.setVotes(jpaAnswer.getVotes() - 1);
-                } else {
-                    jpaVote.setUpvote(true);
-                    voteRepository.save(jpaVote);
-                    jpaAnswer.setVotes(jpaAnswer.getVotes() + 2);
-                }
-            } else {
-                JpaVote jpaVote = new JpaVote();
-                jpaVote.setJpaUser(jpaUser);
-                jpaVote.setJpaAnswer(jpaAnswer);
-                jpaVote.setUpvote(true);
-                jpaVote.setVotedAt(LocalDateTime.now());
-                voteRepository.save(jpaVote);
-
-                jpaAnswer.setVotes(jpaAnswer.getVotes() + 1);
-            }
-
-            answerRepository.save(jpaAnswer);
-
-            ReputationResponse authorReputation = reputationService.updateReputationForUpvote(
-                    new ReputationUpdateRequest(jpaAnswer.getJpaUser().getId(), ReputationConstants.POINTS_UPVOTE_RECEIVED)
-            );
-
-            notificationService.notifyAnswerOwner(jpaAnswer.getJpaUser(), jpaAnswer, true, authorReputation);
-
-            return reputationService.updateReputationForUpvoteGiven(
-                    new ReputationUpdateRequest(userId, ReputationConstants.POINTS_UPVOTE_GIVEN)
-            );
-
-        } catch (Exception e) {
+            JpaAnswer jpaAnswer = findAnswerById(answerId);
+            JpaUser jpaUser = findUserById(userId);
+            return voteService.handleUpvoteForAnswer(jpaUser, jpaAnswer);
+        }
+        catch (Exception e) {
             throw new AnswerUpvoteException("Error upvoting answer: " + e.getMessage(), e);
         }
     }
@@ -239,51 +201,14 @@ public class AnswerServiceImpl implements AnswerService {
     @Transactional
     public ReputationResponse downvoteAnswer(Long answerId, Long userId) {
         try {
-            JpaAnswer jpaAnswer = answerRepository.findById(answerId)
-                    .orElseThrow(() -> new IllegalArgumentException(ErrorMessages.USER_NOT_FOUND));
-            JpaUser jpaUser = userRepository.findById(userId)
-                    .orElseThrow(() -> new UserNotFoundException(ErrorMessages.USER_NOT_FOUND));
-
-            Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaAnswer(jpaUser, jpaAnswer);
-
-            if (existingVote.isPresent()) {
-                JpaVote jpaVote = existingVote.get();
-
-                if (!jpaVote.isUpvote()) {
-                    voteRepository.delete(jpaVote);
-                    jpaAnswer.setVotes(jpaAnswer.getVotes() + 1);
-                } else {
-                    jpaVote.setUpvote(false);
-                    voteRepository.save(jpaVote);
-                    jpaAnswer.setVotes(jpaAnswer.getVotes() - 2);
-                }
-            } else {
-                JpaVote jpaVote = new JpaVote();
-                jpaVote.setJpaUser(jpaUser);
-                jpaVote.setJpaAnswer(jpaAnswer);
-                jpaVote.setUpvote(false);
-                jpaVote.setVotedAt(LocalDateTime.now());
-                voteRepository.save(jpaVote);
-
-                jpaAnswer.setVotes(jpaAnswer.getVotes() - 1);
-            }
-
-            answerRepository.save(jpaAnswer);
-
-            ReputationResponse authorReputation = reputationService.updateReputationForDownvote(
-                    new ReputationUpdateRequest(jpaAnswer.getJpaUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED)
-            );
-
-            if (authorReputation == null) {
-                throw new IllegalArgumentException("Error updating reputation for answer author");
-            }
-
-            return reputationService.updateReputationForDownvoteGiven(
-                    new ReputationUpdateRequest(userId, ReputationConstants.POINTS_DOWNVOTE_GIVEN)
-            );
-        } catch (Exception e) {
+            JpaAnswer jpaAnswer = findAnswerById(answerId);
+            JpaUser jpaUser = findUserById(userId);
+            return voteService.handleDownvoteForAnswer(jpaUser, jpaAnswer);
+        }
+        catch (Exception e) {
             throw new AnswerDownvoteException("Error downvoting answer: " + e.getMessage(), e);
         }
+
     }
 
     @Override
@@ -319,5 +244,22 @@ public class AnswerServiceImpl implements AnswerService {
         return answers.map(answer -> answerMapper.toResponse(answer, commentMapper));
     }
 
+    @Override
+    public boolean isAnswerOwner(Long answerId, String username) {
+        JpaAnswer jpaAnswer = answerRepository.findById(answerId)
+                .orElseThrow(() -> new AnswerNotFoundException("Answer not found with ID: " + answerId));
+
+        return jpaAnswer.getJpaUser().getUsername().equals(username);
+    }
+
+    private JpaAnswer findAnswerById(Long answerId) {
+        return answerRepository.findById(answerId)
+                .orElseThrow(() -> new IllegalArgumentException(ANSWER_ID_PREFIX + answerId + NOT_FOUND_SUFFIX));
+    }
+
+    private JpaUser findUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + NOT_FOUND_SUFFIX));
+    }
 
 }

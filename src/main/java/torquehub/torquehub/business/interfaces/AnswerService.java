@@ -21,6 +21,8 @@ public interface AnswerService {
     ReputationResponse downvoteAnswer(Long answerId, Long userId);
     ReputationResponse approveBestAnswer(Long questionId, Long answerId, Long userId);
     Page<AnswerResponse> getAnswersByQuestion(Long questionId, Pageable pageable);
+    boolean isAnswerOwner(Long answerId, String username);
+
 
 
 

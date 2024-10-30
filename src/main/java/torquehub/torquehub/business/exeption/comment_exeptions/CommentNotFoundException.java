@@ -5,7 +5,4 @@ public class CommentNotFoundException extends RuntimeException {
     super(message);
   }
 
-  public CommentNotFoundException(String message, Throwable cause) {
-    super(message, cause);
-  }
 }

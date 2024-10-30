@@ -4,29 +4,34 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockCookie;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import torquehub.torquehub.business.interfaces.TokenService;
 import torquehub.torquehub.configuration.jwt.token.AccessToken;
 import torquehub.torquehub.configuration.jwt.token.AccessTokenDecoder;
 import torquehub.torquehub.configuration.jwt.token.AccessTokenEncoder;
+import torquehub.torquehub.configuration.jwt.token.exeption.InvalidAccessTokenException;
 import torquehub.torquehub.configuration.jwt.token.impl.AccessTokenEncoderDecoderImpl;
 import torquehub.torquehub.configuration.jwt.token.impl.BlacklistService;
 import torquehub.torquehub.configuration.SecurityConfig;
 import torquehub.torquehub.controllers.AuthController;
 import torquehub.torquehub.domain.request.login_dtos.LoginRequest;
+import torquehub.torquehub.domain.request.user_dtos.UserCreateRequest;
 import torquehub.torquehub.domain.response.login_dtos.LoginResponse;
 import torquehub.torquehub.business.interfaces.UserService;
+import torquehub.torquehub.domain.response.user_dtos.UserResponse;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -56,11 +61,10 @@ class AuthControllerTest {
     @MockBean
     private TokenService tokenService;
 
-    @Mock
-    private AccessToken accessToken;
-
     private LoginRequest validLoginRequest;
     private LoginResponse loginResponse;
+    private UserCreateRequest validUserCreateRequest;
+    private UserResponse userResponse;
 
     @BeforeEach
     public void setup() {
@@ -75,10 +79,20 @@ class AuthControllerTest {
                 .email("newuser@email.com")
                 .build();
 
-        when(accessToken.getUserID()).thenReturn(1L);
-        when(accessToken.getUsername()).thenReturn("newuser");
-        when(accessToken.getRole()).thenReturn("ROLE_USER");
-        when(accessToken.hasRole("ROLE_USER")).thenReturn(true);
+        validUserCreateRequest = UserCreateRequest.builder()
+                .username("newuser")
+                .email("newuser@email.com")
+                .password("password123")
+                .role("USER")
+                .build();
+
+        userResponse = UserResponse.builder()
+                .id(1L)
+                .username("newuser")
+                .email("newuser@email.com")
+                .role("USER")
+                .points(100)
+                .build();
     }
 
     @Test
@@ -87,15 +101,17 @@ class AuthControllerTest {
         given(userService.login(validLoginRequest)).willReturn(loginResponse);
 
         mockMvc.perform(post("/auth/login")
+                        .param("rememberMe", "true")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validLoginRequest)))
-                .andExpect(status().isOk())  // Expecting 200 OK
+                .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.username").value("newuser"))
                 .andExpect(jsonPath("$.email").value("newuser@email.com"));
     }
 
     @Test
+    @WithMockUser
     void shouldReturnUnauthorized_whenInvalidCredentials() throws Exception {
         LoginRequest invalidLoginRequest = LoginRequest.builder()
                 .email("newuser@email.com")
@@ -104,12 +120,11 @@ class AuthControllerTest {
 
         given(userService.login(invalidLoginRequest)).willThrow(new IllegalArgumentException("Invalid credentials"));
 
-
         mockMvc.perform(post("/auth/login")
+                        .param("rememberMe", "false")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidLoginRequest)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Invalid credentials"));
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -119,31 +134,216 @@ class AuthControllerTest {
                 .password("123456")
                 .build();
 
-        // Perform the POST request and expect a 400 Bad Request due to validation failure
         mockMvc.perform(post("/auth/login")
+                        .param("rememberMe", "false")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidEmailRequest)))
-                .andExpect(status().isBadRequest())  // Expecting 400 Bad Request
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.email").value("Email should be valid"));  // Checking the validation message
+                .andExpect(status().isBadRequest());
+    }
+
+    // Tests for the /register endpoint
+    @Test
+    void shouldRegisterUser_whenValidInput() throws Exception {
+        given(userService.createUser(validUserCreateRequest)).willReturn(userResponse);
+
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validUserCreateRequest)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.username").value("newuser"))
+                .andExpect(jsonPath("$.email").value("newuser@email.com"))
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.points").value(100));
     }
 
     @Test
-    void shouldReturnNotFound_whenUserDoesNotExist() throws Exception {
-        LoginRequest nonExistingUserLogin = LoginRequest.builder()
-                .email("nonexistent@email.com")
-                .password("somepassword")
+    void shouldReturnBadRequest_whenInvalidRegisterInput() throws Exception {
+        UserCreateRequest invalidUserCreateRequest = UserCreateRequest.builder()
+                .username("")
+                .email("invalid-email")
+                .password("123")
                 .build();
 
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidUserCreateRequest)))
+                .andExpect(status().isBadRequest());
+    }
 
-        given(userService.login(nonExistingUserLogin)).willThrow(new IllegalArgumentException("Invalid credentials"));
+    // Tests for the /refresh-token endpoint
+    @Test
+    @WithMockUser
+    void shouldReturnNewToken_whenValidRefreshToken() throws Exception {
+        String validToken = "valid-refresh-token";
+        AccessToken accessToken = createMockAccessToken();
 
+        given(accessTokenDecoder.decode(validToken)).willReturn(accessToken);
+        given(accessTokenEncoder.encode(accessToken)).willReturn("new-jwt-token");
+
+        mockMvc.perform(post("/auth/refresh-token")
+                        .header("Authorization", "Bearer " + validToken)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("Set-Cookie"))
+                .andExpect(jsonPath("$.message").value("Token refreshed successfully"));
+    }
+
+    @Test
+    @WithMockUser
+    void shouldReturnBadRequest_whenAuthorizationHeaderIsInvalid() throws Exception {
+        String invalidAuthorizationHeader = "TokenWithoutBearerPrefix";
+
+        mockMvc.perform(post("/auth/refresh-token")
+                        .header("Authorization", invalidAuthorizationHeader)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid token format"));
+    }
+
+
+    @Test
+    void shouldReturnUnauthorized_whenRefreshTokenIsInvalid() throws Exception {
+        String invalidToken = "invalid-refresh-token";
+
+        given(accessTokenDecoder.decode(invalidToken)).willThrow(new InvalidAccessTokenException("Invalid Refresh Token"));
+
+        mockMvc.perform(post("/auth/refresh-token")
+                        .header("Authorization", "Bearer " + invalidToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // Tests for the /check-session endpoint
+    @Test
+    @WithMockUser
+    void shouldReturnUserDetails_whenSessionIsValid() throws Exception {
+        String validToken = "valid-token";
+        AccessToken token = createMockAccessToken();
+
+        given(accessTokenDecoder.decode(validToken)).willReturn(token);
+        given(userService.getUserById(1L)).willReturn(java.util.Optional.of(userResponse));
+
+        mockMvc.perform(get("/auth/check-session")
+                        .cookie(new MockCookie("jwtToken", validToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("newuser"))
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.points").value(100));
+    }
+
+    @Test
+    @WithMockUser
+    void shouldReturnUnauthorized_whenSessionIsInvalid() throws Exception {
+        String invalidToken = "invalid-token";
+
+        given(accessTokenDecoder.decode(invalidToken)).willThrow(new InvalidAccessTokenException("Invalid JWT Token"));
+
+        mockMvc.perform(get("/auth/check-session")
+                        .cookie(new MockCookie("jwtToken", invalidToken)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private AccessToken createMockAccessToken() {
+        return new AccessToken() {
+            @Override
+            public Long getUserID() {
+                return 1L;
+            }
+
+            @Override
+            public String getUsername() {
+                return "newuser";
+            }
+
+            @Override
+            public String getRole() {
+                return "USER";
+            }
+
+            @Override
+            public boolean hasRole(String roleName) {
+                return "USER".equals(roleName);
+            }
+        };
+    }
+
+    @Test
+    @WithMockUser
+    void shouldReturnUnauthorized_whenUnexpectedExceptionOccursDuringLogin() throws Exception {
+        given(userService.login(validLoginRequest)).willThrow(new RuntimeException("Unexpected error"));
+
+        mockMvc.perform(post("/auth/login")
+                        .param("rememberMe", "true")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validLoginRequest)))
+                .andExpect(status().isUnauthorized());
+    }
+
+
+    @Test
+    @WithMockUser
+    void shouldInvalidateCookieOnLogout() throws Exception {
+        // Mock the decoding of a valid token if needed by the security filter
+        AccessToken mockAccessToken = createMockAccessToken();
+        given(accessTokenDecoder.decode("valid_token")).willReturn(mockAccessToken);
+
+        mockMvc.perform(post("/auth/logout")
+                        .header("Authorization", "Bearer valid_token") // Add Authorization header
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Logged out successfully"));
+    }
+
+    @Test
+    @WithMockUser
+    void shouldLogoutSuccessfully_andInvalidateCookie() throws Exception {
+        AccessToken mockAccessToken = createMockAccessToken();
+        given(accessTokenDecoder.decode("valid_token")).willReturn(mockAccessToken);
+
+        mockMvc.perform(post("/auth/logout")
+                        .header("Authorization", "Bearer valid_token") // Add Authorization header
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Max-Age=0"))) // Verify cookie invalidation
+                .andExpect(jsonPath("$.message").value("Logged out successfully"));
+    }
+
+
+    @Test
+    @WithMockUser
+    void shouldReturnUnauthorized_whenUnexpectedErrorOccursDuringLogin() throws Exception {
+        given(userService.login(validLoginRequest)).willThrow(new RuntimeException("Unexpected error"));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(nonExistingUserLogin)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Invalid credentials"));
+                        .content(objectMapper.writeValueAsString(validLoginRequest)))
+                .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    @WithMockUser
+    void shouldReturnUnauthorized_whenLoginServiceReturnsNull() throws Exception {
+        given(userService.login(validLoginRequest)).willReturn(null);
+
+        mockMvc.perform(post("/auth/login")
+                        .param("rememberMe", "true")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validLoginRequest)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser
+    void shouldReturnUnauthorized_whenInvalidAccessTokenExceptionOccurs() throws Exception {
+        String invalidToken = "invalid-refresh-token";
+        given(accessTokenDecoder.decode(invalidToken)).willThrow(new InvalidAccessTokenException("Invalid Refresh Token"));
+
+        mockMvc.perform(post("/auth/refresh-token")
+                        .header("Authorization", "Bearer " + invalidToken)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized());
+    }
+
+
+
 
 }

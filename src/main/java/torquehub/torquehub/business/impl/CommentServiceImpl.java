@@ -6,10 +6,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.exeption.answer_exptions.AnswerNotFoundExeption;
 import torquehub.torquehub.business.exeption.comment_exeptions.*;
-import torquehub.torquehub.business.exeption.user_exptions.UserNotFoundException;
+import torquehub.torquehub.business.exeption.user_exeptions.UserNotFoundException;
 import torquehub.torquehub.business.interfaces.CommentService;
 import torquehub.torquehub.business.interfaces.NotificationService;
 import torquehub.torquehub.business.interfaces.ReputationService;
+import torquehub.torquehub.business.interfaces.VoteService;
 import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.CommentMapper;
 import torquehub.torquehub.domain.model.jpa_models.*;
@@ -17,13 +18,11 @@ import torquehub.torquehub.domain.request.comment_dtos.CommentCreateRequest;
 import torquehub.torquehub.domain.request.comment_dtos.CommentEditRequest;
 import torquehub.torquehub.domain.request.notification_dtos.CreateCommentAnswerRequest;
 import torquehub.torquehub.domain.request.reputation_dtos.ReputationUpdateRequest;
-import torquehub.torquehub.domain.request.vote_dtos.VoteCommentNotificationRequest;
 import torquehub.torquehub.domain.response.comment_dtos.CommentResponse;
 import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaCommentRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaVoteRepository;
 
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -38,28 +37,30 @@ public class CommentServiceImpl implements CommentService {
     private final JpaUserRepository userRepository;
     private final JpaAnswerRepository answerRepository;
     private final ReputationService reputationService;
-    private final JpaVoteRepository voteRepository;
     private final NotificationService notificationService;
+    private final VoteService voteService;
 
     public CommentServiceImpl(CommentMapper commentMapper,
                               JpaCommentRepository commentRepository,
                               JpaUserRepository userRepository,
                               JpaAnswerRepository answerRepository,
                               ReputationService reputationService,
-                              JpaVoteRepository voteRepository,
-                              NotificationService notificationService) {
+                              NotificationService notificationService,
+                              VoteService voteService) {
         this.commentMapper = commentMapper;
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
         this.answerRepository = answerRepository;
         this.reputationService = reputationService;
-        this.voteRepository = voteRepository;
         this.notificationService = notificationService;
+        this.voteService = voteService;
     }
 
     private static final String USER_NOT_FOUND = "User not found";
     private static final String ANSWER_NOT_FOUND = "Answer not found";
     private static final String COMMENT_NOT_FOUND = "Comment not found";
+    private static final String COMMENT_ID_PREFIX = "Comment with ID ";
+    private static final String NOT_FOUND_SUFFIX = " not found";
 
     @Override
     @Transactional
@@ -145,7 +146,7 @@ public class CommentServiceImpl implements CommentService {
                     return true;
                 }
             } else {
-                throw new IllegalArgumentException("Comment with ID " + commentId + " not found.");
+                throw new IllegalArgumentException(COMMENT_ID_PREFIX + commentId + " not found.");
             }
         } catch (Exception e) {
             throw new CommentDeleteExeption("Failed to delete comment: " + e.getMessage(), e);
@@ -187,107 +188,24 @@ public class CommentServiceImpl implements CommentService {
     @Transactional
     public ReputationResponse upvoteComment(Long commentId, Long userId) {
         try {
-            JpaComment jpaComment = commentRepository.findById(commentId)
-                    .orElseThrow(() -> new AnswerNotFoundExeption(ANSWER_NOT_FOUND));
-            JpaUser jpaUser = userRepository.findById(userId)
-                    .orElseThrow(() -> new UserNotFoundException(USER_NOT_FOUND));
-
-            Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaComment(jpaUser, jpaComment);
-
-            if (existingVote.isPresent()) {
-                JpaVote jpaVote = existingVote.get();
-
-                if (jpaVote.isUpvote()) {
-                    voteRepository.delete(jpaVote);
-                    jpaComment.setVotes(jpaComment.getVotes() - 1);
-                } else {
-                    jpaVote.setUpvote(true);
-                    voteRepository.save(jpaVote);
-                    jpaComment.setVotes(jpaComment.getVotes() + 2);
-                }
-            } else {
-                JpaVote jpaVote = new JpaVote();
-                jpaVote.setJpaUser(jpaUser);
-                jpaVote.setJpaComment(jpaComment);
-                jpaVote.setUpvote(true);
-                jpaVote.setVotedAt(LocalDateTime.now());
-                voteRepository.save(jpaVote);
-
-                jpaComment.setVotes(jpaComment.getVotes() + 1);
-            }
-
-            commentRepository.save(jpaComment);
-
-
-            ReputationResponse authorReputation = reputationService.updateReputationForUpvote(
-                    new ReputationUpdateRequest(jpaComment.getJpaUser().getId(), ReputationConstants.POINTS_UPVOTE_RECEIVED)
-            );
-
-            reputationService.updateReputationForUpvoteComment(
-                    new ReputationUpdateRequest(userId, ReputationConstants.POINTS_UPVOTE_COMMENT)
-            );
-
-            VoteCommentNotificationRequest notificationRequest = new VoteCommentNotificationRequest(
-                    jpaComment.getJpaUser().getId(),
-                    "User " + jpaUser.getUsername() + " has upvoted your comment: " + jpaComment.getText(),
-                    userId,
-                    jpaComment.getId()
-            );
-            notificationService.notifyUserAboutCommentVote(notificationRequest);
-
-            return authorReputation;
-
-        }catch (Exception e){
-            throw new CommentUpvoteException("Error upvoting comment: " + e.getMessage(), e);
+            JpaComment jpaComment = findCommentById(commentId);
+            JpaUser jpaUser = findUserById(userId);
+            return voteService.handleUpvoteForComment(jpaUser, jpaComment);
+        }
+        catch (Exception e) {
+            throw new CommentUpvoteException("Error upvoting answer: " + e.getMessage(), e);
         }
     }
 
     @Override
     public ReputationResponse downvoteComment(Long commentId, Long userId) {
         try {
-            JpaComment jpaComment = commentRepository.findById(commentId)
-                    .orElseThrow(() -> new AnswerNotFoundExeption(ANSWER_NOT_FOUND));
-            JpaUser jpaUser = userRepository.findById(userId)
-                    .orElseThrow(() -> new UserNotFoundException(USER_NOT_FOUND));
-
-            Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaComment(jpaUser, jpaComment);
-
-            if(existingVote.isPresent()){
-                JpaVote jpaVote = existingVote.get();
-
-                if(!jpaVote.isUpvote()){
-                    voteRepository.delete(jpaVote);
-                    jpaComment.setVotes(jpaComment.getVotes() + 1);
-                }else{
-                    jpaVote.setUpvote(false);
-                    voteRepository.save(jpaVote);
-                    jpaComment.setVotes(jpaComment.getVotes() - 2);
-
-                }
-            }else{
-                JpaVote jpaVote = new JpaVote();
-                jpaVote.setJpaUser(jpaUser);
-                jpaVote.setJpaComment(jpaComment);
-                jpaVote.setUpvote(false);
-                jpaVote.setVotedAt(LocalDateTime.now());
-                voteRepository.save(jpaVote);
-
-                jpaComment.setVotes(jpaComment.getVotes() - 1);
-            }
-            commentRepository.save(jpaComment);
-
-            ReputationResponse authorReputation = reputationService.updateReputationForDownvote(
-                    new ReputationUpdateRequest(jpaComment.getJpaUser().getId(), ReputationConstants.POINTS_DOWNVOTE_RECEIVED)
-            );
-
-            reputationService.updateReputationForDownvoteComment(
-                    new ReputationUpdateRequest(userId, ReputationConstants.POINTS_DOWNVOTE_COMMENT)
-            );
-
-            return authorReputation;
-
-        }catch (Exception e){
-            throw new CommentDownvoteException("Error downvoting comment: " + e.getMessage(), e);
+            JpaComment jpaComment = findCommentById(commentId);
+            JpaUser jpaUser = findUserById(userId);
+            return voteService.handleDownvoteForComment(jpaUser, jpaComment);
+        }
+        catch (Exception e) {
+            throw new CommentDownvoteException("Error downvote answer: " + e.getMessage(), e);
         }
     }
 
@@ -297,4 +215,19 @@ public class CommentServiceImpl implements CommentService {
         return comments.map(commentMapper::toResponse);
     }
 
+    private JpaComment findCommentById(Long answerId) {
+        return commentRepository.findById(answerId)
+                .orElseThrow(() -> new IllegalArgumentException(COMMENT_ID_PREFIX + answerId + NOT_FOUND_SUFFIX));
+    }
+
+    private JpaUser findUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + NOT_FOUND_SUFFIX));
+    }
+
+    public boolean isCommentOwner(Long commentId, String username) {
+        JpaComment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new CommentNotFoundException(COMMENT_NOT_FOUND));
+        return comment.getJpaUser().getUsername().equals(username);
+    }
 }

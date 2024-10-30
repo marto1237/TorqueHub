@@ -11,6 +11,7 @@ import torquehub.torquehub.configuration.jwt.token.AccessToken;
 import torquehub.torquehub.configuration.jwt.token.AccessTokenDecoder;
 import torquehub.torquehub.configuration.jwt.token.AccessTokenEncoder;
 import torquehub.torquehub.configuration.jwt.token.exeption.InvalidAccessTokenException;
+import torquehub.torquehub.configuration.jwt.token.impl.BlacklistService;
 import torquehub.torquehub.domain.request.login_dtos.LoginRequest;
 import torquehub.torquehub.domain.request.user_dtos.UserCreateRequest;
 import torquehub.torquehub.domain.response.login_dtos.LoginResponse;
@@ -33,41 +34,52 @@ public class AuthController {
     private final TokenService tokenService;
     private final AccessTokenDecoder accessTokenDecoder;
     private final AccessTokenEncoder accessTokenEncoder;
+    private final BlacklistService blacklistService;
 
     public AuthController(UserService userService,
                           AccessTokenDecoder accessTokenDecoder,
                           AccessTokenEncoder accessTokenEncoder,
-                          TokenService tokenService) {
+                          TokenService tokenService,
+                          BlacklistService blacklistService) {
         this.userService = userService;
         this.accessTokenDecoder = accessTokenDecoder;
         this.accessTokenEncoder = accessTokenEncoder;
         this.tokenService = tokenService;
+        this.blacklistService = blacklistService;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginDto,boolean rememberMe) {
-        LoginResponse response = userService.login(loginDto);
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginDto,
+                                               @RequestParam(defaultValue = "false") boolean rememberMe) {
+        try{
+            LoginResponse response = userService.login(loginDto);
+            if (response != null && response.getId() != null) {
+                // If login is successful, generate JWT token
+                AccessToken accessToken = tokenService.createAccessToken(response);   // Call method to generate AccessToken
+                String jwtToken = accessTokenEncoder.encode(accessToken);  // Encode the AccessToken into JWT
 
-        if (response != null && response.getId() != null) {
-            // If login is successful, generate JWT token
-            AccessToken accessToken = tokenService.createAccessToken(response);   // Call method to generate AccessToken
-            String jwtToken = accessTokenEncoder.encode(accessToken);  // Encode the AccessToken into JWT
+                long cookieMaxAge = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60; // 1 day or 1 week
+                ResponseCookie jwtCookie = ResponseCookie.from(JWT_TOKEN_COOKIE, jwtToken)
+                        .httpOnly(true)
+                        .secure(true) // Use 'true' in production to enable HTTPS
+                        .path("/")
+                        .maxAge(cookieMaxAge)
+                        .sameSite(SAME_SITE_STRICT)  //  CSRF protection
+                        .build();
 
-            long cookieMaxAge = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60; // 1 day or 1 week
-            ResponseCookie jwtCookie = ResponseCookie.from(JWT_TOKEN_COOKIE, jwtToken)
-                    .httpOnly(true)
-                    .secure(true) // Use 'true' in production to enable HTTPS
-                    .path("/")
-                    .maxAge(cookieMaxAge)
-                    .sameSite(SAME_SITE_STRICT)  //  CSRF protection
-                    .build();
-
-            return ResponseEntity.status(HttpStatus.OK)
-                    .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                    .body(response);
-        } else {
+                return ResponseEntity.status(HttpStatus.OK)
+                        .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                        .body(response);
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+        }catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
+        catch (Exception e){
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+
 
     }
 
@@ -78,9 +90,16 @@ public class AuthController {
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<MessageResponse> refreshAccessToken(@RequestBody String refreshToken) {
+    public ResponseEntity<MessageResponse> refreshAccessToken(@RequestHeader("Authorization") String authorizationHeader) {
         MessageResponse response = new MessageResponse();
         try {
+            // Extract the token from the Authorization header
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                response.setMessage("Invalid token format");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            String refreshToken = authorizationHeader.substring(7); // Remove "Bearer " prefix
+
             AccessToken accessToken = accessTokenDecoder.decode(refreshToken);
             String newAccessToken = accessTokenEncoder.encode(accessToken);
 
@@ -93,18 +112,21 @@ public class AuthController {
                     .build();
 
             response.setMessage("Token refreshed successfully");
-
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, newJwtCookie.toString())
                     .body(response);
         } catch (InvalidAccessTokenException e) {
             response.setMessage("Invalid Refresh Token");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        } catch (RuntimeException e) {
+            response.setMessage("An unexpected error occurred");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
     }
 
+
     @PostMapping("/logout")
-    public ResponseEntity<MessageResponse> logout() {
+    public ResponseEntity<MessageResponse> logout(@RequestHeader("Authorization") String token) {
         MessageResponse response = new MessageResponse();
 
 
@@ -117,6 +139,10 @@ public class AuthController {
                 .sameSite(SAME_SITE_STRICT)
                 .build();
 
+        if (token != null && token.startsWith("Bearer ")) {
+            String jwt = token.substring(7);
+            blacklistService.addTokenToBlacklist(jwt);  // Blacklist the token on logout
+        }
         response.setMessage("Logged out successfully");
 
         return ResponseEntity.status(HttpStatus.OK)
@@ -124,7 +150,7 @@ public class AuthController {
                 .body(response);
     }
 
-    @GetMapping("/auth/check-session")
+    @GetMapping("/check-session")
     public ResponseEntity<UserResponse> checkSession(@CookieValue(JWT_TOKEN_COOKIE) String jwtToken) {
         try {
             AccessToken accessToken = accessTokenDecoder.decode(jwtToken); // Decode and validate JWT
@@ -133,7 +159,7 @@ public class AuthController {
 
             return ResponseEntity.ok(userResponse);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // Return 401 if the token is invalid
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
     }
 

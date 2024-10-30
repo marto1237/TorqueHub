@@ -5,7 +5,4 @@ public class AnswerCreationException extends RuntimeException {
     super(message, cause);
   }
 
-  public AnswerCreationException(String message) {
-    super(message);
-  }
 }

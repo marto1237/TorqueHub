@@ -24,7 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class JpaTagServiceImplTest {
+class TagServiceImplTest {
 
     @InjectMocks
     private TagServiceImpl tagService;

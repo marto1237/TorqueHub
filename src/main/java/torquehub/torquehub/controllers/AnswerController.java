@@ -1,6 +1,8 @@
 package torquehub.torquehub.controllers;
 
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,9 +10,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.AnswerService;
-import torquehub.torquehub.configuration.jwt.token.AccessToken;
-import torquehub.torquehub.configuration.jwt.token.AccessTokenDecoder;
 import torquehub.torquehub.configuration.jwt.token.exeption.InvalidAccessTokenException;
+import torquehub.torquehub.configuration.utils.TokenUtil;
 import torquehub.torquehub.controllers.websocketcontrollers.WebSocketAnswerController;
 import torquehub.torquehub.domain.request.answer_dtos.AnswerCreateRequest;
 import torquehub.torquehub.domain.request.answer_dtos.AnswerEditRequest;
@@ -28,14 +29,14 @@ public class AnswerController {
 
     private final AnswerService answerService;
     private final WebSocketAnswerController webSocketAnswerController;
-    private final AccessTokenDecoder accessTokenDecoder;
+    private final TokenUtil tokenUtil;
 
     public AnswerController(AnswerService answerService,
                             WebSocketAnswerController webSocketAnswerController,
-                            AccessTokenDecoder accessTokenDecoder) {
+                            TokenUtil tokenUtil) {
         this.answerService = answerService;
         this.webSocketAnswerController = webSocketAnswerController;
-        this.accessTokenDecoder = accessTokenDecoder;
+        this.tokenUtil = tokenUtil;
 
     }
 
@@ -45,32 +46,13 @@ public class AnswerController {
             @RequestBody @Validated AnswerCreateRequest answerCreateRequest,
             @RequestHeader("Authorization") String token) {
 
-        // Validate the token
-        if (token == null || !token.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-        }
-
         try {
-            // Decode the JWT token
-            AccessToken accessToken = accessTokenDecoder.decode(token.replace("Bearer ", ""));
-            Long userId = accessToken.getUserID();
-
-            // Ensure that the user ID in the request matches the user ID from the token
-            if (!userId.equals(answerCreateRequest.getUserId())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
-            }
-
-            // Proceed with adding the answer
-            AnswerResponse answerResponse = answerService.addAnswer(answerCreateRequest);
-
-            // Notify clients via WebSocket
-            webSocketAnswerController.notifyClients(answerCreateRequest.getQuestionId(), answerResponse);
-
-            // Return the response
-            return ResponseEntity.ok(answerResponse);
-
+            Long userId = tokenUtil.getUserIdFromToken(token);
+            answerCreateRequest.setUserId(userId);
+            AnswerResponse createdAnswer = answerService.addAnswer(answerCreateRequest);
+            webSocketAnswerController.notifyClients(answerCreateRequest.getQuestionId(), createdAnswer);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdAnswer);
         } catch (InvalidAccessTokenException e) {
-            // Handle invalid or expired token
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
     }
@@ -78,34 +60,69 @@ public class AnswerController {
 
     @PostMapping("/{answerId}/upvote")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ReputationResponse> upvoteAnswer(@PathVariable Long answerId, @RequestParam Long userId ) {
-        return ResponseEntity.ok(answerService.upvoteAnswer(answerId, userId));
+    public ResponseEntity<ReputationResponse> upvoteAnswer(@PathVariable Long answerId,
+                                                           @RequestHeader("Authorization") String token) {
+        try {
+            Long userId = tokenUtil.getUserIdFromToken(token);
+            ReputationResponse reputationResponse = answerService.upvoteAnswer(answerId, userId);
+            return ResponseEntity.ok(reputationResponse);
+        } catch (InvalidAccessTokenException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
     }
 
     @PostMapping("/{answerId}/downvote")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ReputationResponse> downvoteAnswer(@PathVariable Long answerId, @RequestParam Long userId) {
-        return ResponseEntity.ok(answerService.downvoteAnswer(answerId, userId));
+    public ResponseEntity<ReputationResponse> downvoteAnswer(@PathVariable Long answerId,
+                                                             @RequestHeader("Authorization") String token) {
+        try {
+            Long userId = tokenUtil.getUserIdFromToken(token);
+            ReputationResponse reputationResponse = answerService.downvoteAnswer(answerId, userId);
+            return ResponseEntity.ok(reputationResponse);
+        } catch (InvalidAccessTokenException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
     }
 
-    @PostMapping("/{answerId}/bestAnswer")
+    @PostMapping("/{questionId}/{answerId}/approve")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ReputationResponse> approveBestAnswer(@PathVariable Long answerId, @RequestParam Long questionId, @RequestParam Long userId) {
-        answerService.approveBestAnswer(questionId, answerId, userId);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<ReputationResponse> approveBestAnswer(@PathVariable Long questionId,
+                                                                @PathVariable Long answerId,
+                                                                @RequestHeader("Authorization") String token) {
+        try {
+            Long userId = tokenUtil.getUserIdFromToken(token);
+            ReputationResponse reputationResponse = answerService.approveBestAnswer(questionId, answerId, userId);
+            return ResponseEntity.ok(reputationResponse);
+        } catch (InvalidAccessTokenException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
     }
 
     @PutMapping("/{answerId}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<AnswerResponse> editAnswer(@PathVariable Long answerId, @RequestBody @Validated AnswerEditRequest answerEditRequest) {
-        AnswerResponse answerResponse = answerService.editAnswer(answerId, answerEditRequest);
-        return ResponseEntity.ok(answerResponse);
+    @PreAuthorize("@answerService.isAnswerOwner(#answerId, authentication.name) or hasAuthority('ADMIN')")
+    public ResponseEntity<AnswerResponse> editAnswer(@PathVariable Long answerId,
+                                                     @Valid @RequestBody AnswerEditRequest answerEditRequest,
+                                                     @RequestHeader("Authorization") String token) {
+        try {
+            Long userId = tokenUtil.getUserIdFromToken(token);
+            answerEditRequest.setUserId(userId);
+            AnswerResponse updatedAnswer = answerService.editAnswer(answerId, answerEditRequest);
+            return ResponseEntity.ok(updatedAnswer);
+        } catch (InvalidAccessTokenException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
     }
 
-    @GetMapping("/questions/{questionId}")
-    public ResponseEntity<Page<AnswerResponse>> getAnswersByQuestion(@PathVariable Long questionId,Pageable pageable ) {
-        Page<AnswerResponse> answerResponses = answerService.getAnswersByQuestion(questionId, pageable);
-        return ResponseEntity.ok(answerResponses);
+
+    @GetMapping("/question/{questionId}")
+    public ResponseEntity<Page<AnswerResponse>> getAnswersByQuestion(
+            @PathVariable Long questionId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<AnswerResponse> answers = answerService.getAnswersByQuestion(questionId, pageable);
+        return ResponseEntity.ok(answers);
     }
 
     @GetMapping("/user/{userId}")
@@ -121,18 +138,17 @@ public class AnswerController {
     }
 
     @DeleteMapping("/{answerId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MODERATOR')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('MODERATOR')")
     public ResponseEntity<MessageResponse> deleteAnswer(@PathVariable Long answerId) {
         MessageResponse response = new MessageResponse();
         boolean deleted = answerService.deleteAnswer(answerId);
-        if(deleted) {
+        if (deleted) {
             response.setMessage("Answer deleted successfully.");
             return ResponseEntity.ok(response);
         } else {
             response.setMessage("Answer with ID " + answerId + " not found.");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
-
     }
 
 

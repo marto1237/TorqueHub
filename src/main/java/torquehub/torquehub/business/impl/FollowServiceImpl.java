@@ -1,5 +1,7 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.exeption.filter_exeption.FilterFollowAnswerExeption;
@@ -12,6 +14,8 @@ import torquehub.torquehub.domain.model.jpa_models.JpaFollow;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.request.follow_dtos.FollowAnswerRequest;
 import torquehub.torquehub.domain.request.follow_dtos.FollowQuestionRequest;
+import torquehub.torquehub.domain.request.follow_dtos.FollowedAnswerRequest;
+import torquehub.torquehub.domain.request.follow_dtos.FollowedQuestionRequest;
 import torquehub.torquehub.domain.response.follow_dtos.FollowResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaFollowRepository;
@@ -123,5 +127,36 @@ public class FollowServiceImpl implements FollowService {
                     .map(followMapper::toResponse)
                     .toList();
         }
+    }
+
+    @Override
+    public Page<FollowResponse> getFollowedQuestions(FollowedQuestionRequest request) {
+        Page<JpaFollow> followedQuestions = followRepository.findByUserIdAndJpaQuestionIsNotNull(request.getUserId(), request.getPageable());
+        return followedQuestions.map(followMapper::toResponse);
+    }
+
+    @Override
+    public Page<FollowResponse> getFollowedAnswers(FollowedAnswerRequest request) {
+        Page<JpaFollow> followedAnswers = followRepository.findByUserIdAndJpaAnswerIsNotNull(request.getUserId(), request.getPageable());
+        return followedAnswers.map(followMapper::toResponse);
+    }
+
+    @Transactional
+    @Override
+    public boolean batchMuteFollows(List<Long> followIds) {
+        List<JpaFollow> follows = followRepository.findAllById(followIds);
+        for (JpaFollow follow : follows) {
+            follow.setMuted(true);
+        }
+        followRepository.saveAll(follows);
+        return true;
+    }
+
+    @Transactional
+    @Override
+    public boolean batchUnfollow(List<Long> followIds) {
+        List<JpaFollow> follows = followRepository.findAllById(followIds);
+        followRepository.deleteAll(follows);
+        return true;
     }
 }

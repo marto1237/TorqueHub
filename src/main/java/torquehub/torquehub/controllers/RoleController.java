@@ -3,6 +3,7 @@ package torquehub.torquehub.controllers;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.RoleService;
@@ -26,23 +27,27 @@ public class RoleController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('MODERATOR') or hasAuthority('ADMIN')")
     public List<RoleResponse> getRoles() {
         return roleService.getAllRoles();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<RoleResponse> getRoleById(@PathVariable Long id) {
+    @PreAuthorize("hasAuthority('MODERATOR') or hasAuthority('ADMIN')")
+    public ResponseEntity<RoleResponse> getRoleById(@PathVariable Long id,@RequestHeader("Authorization") String token) {
         Optional<RoleResponse> role = roleService.getRoleById(id);
         return role.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('MODERATOR') or hasAuthority('ADMIN')")
     public ResponseEntity<RoleResponse> createRole(@Valid @RequestBody RoleCreateRequest roleDto) {
         RoleResponse createdRole = roleService.createRole(roleDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdRole);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('MODERATOR') or hasAuthority('ADMIN')")
     public ResponseEntity<MessageResponse> updateRole(@PathVariable Long id, @Valid @RequestBody RoleUpdateRequest roleDto) {
         MessageResponse response = new MessageResponse();
         if (roleService.updateRole(id, roleDto)) {
@@ -54,6 +59,7 @@ public class RoleController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('MODERATOR') or hasAuthority('ADMIN')")
     public ResponseEntity<MessageResponse>deleteRole(@PathVariable Long id) {
         MessageResponse response = new MessageResponse();
         Optional<RoleResponse> role = roleService.getRoleById(id);

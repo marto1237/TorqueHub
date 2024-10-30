@@ -1,5 +1,7 @@
 package torquehub.torquehub.persistence.jpa.interfaces;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import torquehub.torquehub.domain.model.jpa_models.JpaFollow;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
@@ -16,5 +18,7 @@ public interface SpringDataJpaFollowRepository extends JpaRepository<JpaFollow, 
     Optional<JpaFollow> findByJpaUserIdAndJpaAnswerId(Long userId, Long answerId);
     Optional<JpaFollow> findByJpaUserAndJpaQuestion(JpaUser jpaUser, JpaQuestion jpaQuestion);
     boolean existsByJpaUserAndJpaQuestion(JpaUser jpaUser, JpaQuestion jpaQuestion);
+    Page<JpaFollow> findByJpaUserIdAndJpaQuestionIsNotNull(Long userId, Pageable pageable);
+    Page<JpaFollow> findByJpaUserIdAndJpaAnswerIsNotNull(Long userId, Pageable pageable);
 
 }

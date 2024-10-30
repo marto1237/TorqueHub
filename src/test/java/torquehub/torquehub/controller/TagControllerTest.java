@@ -34,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(TagController.class)
 @Import({SecurityConfig.class, AccessTokenEncoderDecoderImpl.class, BlacklistService.class})
-class JpaTagControllerTest {
+class TagControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
