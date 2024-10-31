@@ -11,7 +11,6 @@ stages:
   - build 
   - test
   - sonarqube-check
-  - sonarqube-vulnerability-report
   - docker_build
 
 build: 
@@ -59,22 +58,3 @@ sonarqube-check:
     - if: $CI_COMMIT_BRANCH == 'master'
     - if: $CI_COMMIT_BRANCH == 'main'
     - if: $CI_COMMIT_BRANCH == 'develop'
-
-sonarqube-vulnerability-report:
-  stage: sonarqube-vulnerability-report
-  script:
-    - |
-      $headers = @{
-          Authorization = "Basic $([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${SONAR_TOKEN}:")))"
-      }
-      Invoke-RestMethod -Uri "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=I525452_torquehubapi_7c23a2ce-e40d-4c42-9842-abb94eb67666&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -Headers $headers -OutFile gl-sast-sonar-report.json
-  allow_failure: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == 'master'
-    - if: $CI_COMMIT_BRANCH == 'main'
-    - if: $CI_COMMIT_BRANCH == 'develop'
-  artifacts:
-    expire_in: 1 day
-    reports:
-      sast: gl-sast-sonar-report.json
