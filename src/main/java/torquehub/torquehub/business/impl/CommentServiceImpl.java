@@ -4,7 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import torquehub.torquehub.business.exeption.answer_exptions.AnswerNotFoundExeption;
+import torquehub.torquehub.business.exeption.answer_exptions.AnswerNotFoundException;
 import torquehub.torquehub.business.exeption.comment_exeptions.*;
 import torquehub.torquehub.business.exeption.user_exeptions.UserNotFoundException;
 import torquehub.torquehub.business.interfaces.CommentService;
@@ -69,7 +69,7 @@ public class CommentServiceImpl implements CommentService {
             JpaUser jpaUser = userRepository.findById(commentCreateRequest.getUserId())
                     .orElseThrow(() -> new UserNotFoundException(USER_NOT_FOUND));
             JpaAnswer jpaAnswer = answerRepository.findById(commentCreateRequest.getAnswerId())
-                    .orElseThrow(() -> new AnswerNotFoundExeption(ANSWER_NOT_FOUND));
+                    .orElseThrow(() -> new AnswerNotFoundException(ANSWER_NOT_FOUND));
 
             JpaComment jpaComment = JpaComment.builder()
                     .text(commentCreateRequest.getText())

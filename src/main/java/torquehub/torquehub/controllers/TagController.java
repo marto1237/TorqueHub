@@ -46,9 +46,13 @@ public class TagController {
     @PreAuthorize("hasAuthority('MODERATOR') or hasAuthority('ADMIN')")
     public ResponseEntity<TagResponse> createTag(
             @Valid @RequestBody TagCreateRequest tagCreateRequest,
-            @RequestHeader("Authorization") String token) {
+            @RequestHeader(value = "Authorization", required = false) String token) {
 
-        try{
+        try {
+            if (token == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
             Long userId = tokenUtil.getUserIdFromToken(token);
             if (userId == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

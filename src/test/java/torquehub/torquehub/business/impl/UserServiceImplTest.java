@@ -17,14 +17,18 @@ import torquehub.torquehub.domain.mapper.RoleMapper;
 import torquehub.torquehub.domain.mapper.UserMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.domain.model.jpa_models.JpaRole;
+import torquehub.torquehub.domain.model.jpa_models.JpaUserPromotionLog;
 import torquehub.torquehub.domain.request.login_dtos.LoginRequest;
 import torquehub.torquehub.domain.request.user_dtos.UserCreateRequest;
 import torquehub.torquehub.domain.request.user_dtos.UserUpdateRequest;
+import torquehub.torquehub.domain.request.user_promotion_dtos.UserPromotionRequest;
 import torquehub.torquehub.domain.response.user_dtos.UserResponse;
+import torquehub.torquehub.domain.response.user_promotion_dtos.UserPromotionResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaRoleRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserPromotionLogRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -76,13 +80,17 @@ class UserServiceImplTest {
     void setUp() {
         userJpaRole = JpaRole.builder().name("USER").build();
         String salt = "testSalt";
-        String encodedPassword = new BCryptPasswordEncoder().encode("testpassword");
+        String rawPassword = "testpassword";
+
+        // Combine the raw password with the salt and encode it
+        String saltedPassword = rawPassword + salt;
+        String encodedPassword = passwordEncoder.encode(saltedPassword); // Properly encoded password with salt
 
         testJpaUser = JpaUser.builder()
                 .id(userId)
                 .email("test@email.com")
                 .username("testUser")
-                .password(encodedPassword)
+                .password(encodedPassword)  // Store the encoded password here
                 .salt(salt)
                 .jpaRole(userJpaRole)
                 .build();
@@ -90,19 +98,19 @@ class UserServiceImplTest {
         userCreateRequest = UserCreateRequest.builder()
                 .username("testUser")
                 .email(testEmail)
-                .password("testpassword")
+                .password(rawPassword)
                 .role("USER")
                 .build();
 
         userUpdateRequest = UserUpdateRequest.builder()
                 .username("testUser")
                 .email(testEmail)
-                .password("testpassword")
+                .password(rawPassword)
                 .build();
 
         loginRequest = LoginRequest.builder()
                 .email(testEmail)
-                .password("testpassword")
+                .password(rawPassword)
                 .build();
     }
 
@@ -376,4 +384,108 @@ class UserServiceImplTest {
     }
 
 
+
+    @Test
+    void shouldThrowException_WhenPasswordIsInvalidDuringLogin() {
+        // Mock the user repository to return a test user
+        when(userRepository.findByEmail(testEmail)).thenReturn(Optional.of(testJpaUser));
+
+        lenient().when(passwordEncoder.matches(anyString(), eq(testJpaUser.getPassword()))).thenReturn(false);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> userService.login(loginRequest));
+
+        assertEquals("Invalid credentials", exception.getMessage());
+    }
+
+
+    @Test
+    void shouldPromoteUser_WhenValidPromotionRequest() {
+        // Create the promotion request and expected role
+        UserPromotionRequest promotionRequest = new UserPromotionRequest(1L, 2L, "ADMIN", LocalDateTime.now());
+        JpaRole adminRole = JpaRole.builder().name("ADMIN").build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testJpaUser));
+        when(roleRepository.findByName("ADMIN")).thenReturn(Optional.of(adminRole));
+        when(userRepository.save(any(JpaUser.class))).thenReturn(testJpaUser);
+        when(userPromotionLogRepository.save(any(JpaUserPromotionLog.class))).thenReturn(mock(JpaUserPromotionLog.class));
+
+        UserPromotionResponse response = userService.promoteUser(promotionRequest);
+
+        assertNotNull(response);
+        assertEquals(1L, response.getPromotedUserId());
+        assertEquals(2L, response.getPromoterUserId());
+        assertEquals("ADMIN", response.getNewRole());
+        assertNotNull(response.getTimestamp());
+        assertEquals("User promoted successfully.", response.getMessage());
+    }
+
+
+    @Test
+    void shouldThrowException_WhenPromotedUserNotFound() {
+        UserPromotionRequest promotionRequest = new UserPromotionRequest(1L, 2L, "ADMIN", LocalDateTime.now());
+
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> userService.promoteUser(promotionRequest));
+
+        assertEquals("User with ID 1 not found.", exception.getMessage());
+    }
+
+
+    @Test
+    void shouldThrowException_WhenPromotionRoleInvalid() {
+        UserPromotionRequest promotionRequest = new UserPromotionRequest(1L, 2L, "INVALID_ROLE", LocalDateTime.now());
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testJpaUser));
+        when(roleRepository.findByName("INVALID_ROLE")).thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> userService.promoteUser(promotionRequest));
+
+        assertEquals("Invalid role: INVALID_ROLE", exception.getMessage());
+    }
+
+
+    // Test generateSalt method indirectly through user creation
+    @Test
+    void shouldGenerateUniqueSalt_WhenCreatingUser() {
+        when(roleRepository.findByName("USER")).thenReturn(Optional.of(userJpaRole));
+        when(userRepository.save(any(JpaUser.class))).thenAnswer(invocation -> {
+            JpaUser savedUser = invocation.getArgument(0);
+            assertNotNull(savedUser.getSalt());
+            assertTrue(savedUser.getSalt().length() > 0);
+            return savedUser;
+        });
+        when(userMapper.toResponse(any(JpaUser.class)))
+                .thenReturn(new UserResponse(1L, "testUser", testEmail, "USER", 10));
+
+        userService.createUser(userCreateRequest);
+
+        verify(userRepository).save(argThat(user ->
+                user.getSalt() != null && !user.getSalt().isEmpty()
+        ));
+    }
+
+    @Test
+    void shouldThrowException_WhenUserDeletedDoesNotExist() {
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        UserDeleteExpetion exception = assertThrows(UserDeleteExpetion.class,
+                () -> userService.deleteUser(userId));
+
+        assertEquals("Failed to delete user: User with ID 1 not found.", exception.getMessage());
+        verify(userRepository, never()).delete(any());
+    }
+
+    @Test
+    void shouldReturnEmptyOptional_WhenEmailDoesNotExist() {
+        when(userRepository.findByEmail(testEmail)).thenReturn(Optional.empty());
+
+        Optional<UserResponse> response = userService.findByEmail(testEmail);
+
+        assertTrue(response.isEmpty());
+        verify(userMapper, never()).toResponse(any());
+    }
 }

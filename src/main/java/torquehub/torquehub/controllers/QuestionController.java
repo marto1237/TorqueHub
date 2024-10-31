@@ -102,7 +102,7 @@ public class QuestionController {
 
     @PostMapping("/{questionId}/downvote")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ReputationResponse> downvoteAnswer(@PathVariable Long questionId, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<ReputationResponse> downvoteQuestion(@PathVariable Long questionId, @RequestHeader("Authorization") String token) {
         try {
             Long userId = tokenUtil.getUserIdFromToken(token);
             ReputationResponse reputationResponse = questionService.downvoteQuestion(questionId, userId);

@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -251,5 +251,108 @@ class TagControllerTest {
                         .header("Authorization", INVALID_TOKEN)
                         .content(objectMapper.writeValueAsString(tagUpdateRequest)))
                 .andExpect(status().isUnauthorized());
+    }
+    @Test
+    @WithMockUser(authorities = {"MODERATOR"})
+    void shouldReturnUnauthorized_whenCreateTagWithNullToken() throws Exception {
+        TagCreateRequest request = TagCreateRequest.builder().name("BMW").build();
+
+        mockMvc.perform(post("/tags")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"MODERATOR"})
+    void shouldReturnUnauthorized_whenCreateTagWithNullUserId() throws Exception {
+        TagCreateRequest request = TagCreateRequest.builder().name("BMW").build();
+        given(tokenUtil.getUserIdFromToken(any())).willReturn(null);
+
+        mockMvc.perform(post("/tags")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", VALID_TOKEN)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"MODERATOR"})
+    void shouldReturnInternalServerError_whenCreateTagThrowsUnexpectedException() throws Exception {
+        TagCreateRequest request = TagCreateRequest.builder().name("BMW").build();
+        given(tagService.createTag(any())).willThrow(new RuntimeException("Unexpected error"));
+
+        mockMvc.perform(post("/tags")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", VALID_TOKEN)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"MODERATOR"})
+    void shouldReturnInternalServerError_whenDeleteTagThrowsUnexpectedException() throws Exception {
+        given(tagService.getTagById(1L)).willReturn(Optional.of(tagResponse));
+        doThrow(new RuntimeException("Unexpected error")).when(tagService).deleteTag(1L);
+
+        mockMvc.perform(delete("/tags/1")
+                        .header("Authorization", VALID_TOKEN))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred."));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"MODERATOR"})
+    void shouldReturnUnauthorized_whenDeleteTagWithNullUserId() throws Exception {
+        given(tokenUtil.getUserIdFromToken(any())).willReturn(null);
+
+        mockMvc.perform(delete("/tags/1")
+                        .header("Authorization", VALID_TOKEN))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Unauthorized: Invalid token."));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"MODERATOR"})
+    void shouldReturnInternalServerError_whenUpdateTagThrowsUnexpectedException() throws Exception {
+        TagUpdateRequest request = TagUpdateRequest.builder().id(1L).name("UpdatedTag").build();
+        given(tagService.getTagById(1L)).willReturn(Optional.of(tagResponse));
+        doThrow(new RuntimeException("Unexpected error")).when(tagService).updateTagById(eq(1L), any());
+
+        mockMvc.perform(put("/tags/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", VALID_TOKEN)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred."));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"MODERATOR"})
+    void shouldReturnBadRequest_whenUpdateTagThrowsIllegalArgumentException() throws Exception {
+        TagUpdateRequest request = TagUpdateRequest.builder().id(1L).name("UpdatedTag").build();
+        given(tagService.getTagById(1L)).willReturn(Optional.of(tagResponse));
+        doThrow(new IllegalArgumentException("Invalid argument")).when(tagService).updateTagById(eq(1L), any());
+
+        mockMvc.perform(put("/tags/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", VALID_TOKEN)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid argument"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"MODERATOR"})
+    void shouldReturnUnauthorized_whenUpdateTagWithNullUserId() throws Exception {
+        TagUpdateRequest request = TagUpdateRequest.builder().id(1L).name("UpdatedTag").build();
+        given(tokenUtil.getUserIdFromToken(any())).willReturn(null);
+
+        mockMvc.perform(put("/tags/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", VALID_TOKEN)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Unauthorized: Invalid token."));
     }
 }

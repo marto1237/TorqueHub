@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import torquehub.torquehub.business.exeption.ErrorMessages;
 import torquehub.torquehub.business.exeption.answer_exptions.*;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.business.interfaces.VoteService;
@@ -20,6 +21,8 @@ import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -378,5 +381,24 @@ class AnswerServiceImplTest {
         when(questionRepository.findById(questionId)).thenReturn(Optional.of(question));
 
         assertThrows(AnswerBestAnswerException.class, () -> answerService.approveBestAnswer(questionId, answerId, userId));
+    }
+
+    @Test
+    void testUtilityClassConstructorThrowsException() throws NoSuchMethodException {
+        // Access the private constructor
+        Constructor<ErrorMessages> constructor = ErrorMessages.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+
+        // Attempt to instantiate ErrorMessages should throw an UnsupportedOperationException
+        InvocationTargetException exception = assertThrows(InvocationTargetException.class, constructor::newInstance);
+        assertEquals("This is a utility class and cannot be instantiated", exception.getTargetException().getMessage());
+    }
+
+    @Test
+    void testConstantsValues() {
+        // Verify that constants have the expected values
+        assertEquals("User not found", ErrorMessages.USER_NOT_FOUND);
+        assertEquals("Question not found", ErrorMessages.QUESTION_NOT_FOUND);
+        assertEquals("Answer not found", ErrorMessages.ANSWER_NOT_FOUND);
     }
 }

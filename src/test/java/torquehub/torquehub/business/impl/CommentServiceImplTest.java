@@ -10,7 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import torquehub.torquehub.business.exeption.answer_exptions.AnswerNotFoundExeption;
+import torquehub.torquehub.business.exeption.answer_exptions.AnswerNotFoundException;
 import torquehub.torquehub.business.exeption.comment_exeptions.*;
 import torquehub.torquehub.business.exeption.user_exeptions.UserNotFoundException;
 import torquehub.torquehub.business.interfaces.NotificationService;
@@ -111,7 +111,7 @@ class CommentServiceImplTest {
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(testUser));
         when(answerRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        assertThrows(AnswerNotFoundExeption.class, () -> commentService.addComment(commentCreateRequest));
+        assertThrows(AnswerNotFoundException.class, () -> commentService.addComment(commentCreateRequest));
     }
 
     @Test
@@ -224,4 +224,54 @@ class CommentServiceImplTest {
         assertFalse(response.isEmpty());
         verify(commentRepository).findByAnswerId(anyLong(), any(Pageable.class));
     }
+
+    @Test
+    void shouldThrowCommentDownvoteException_whenDownvoteFails() {
+        when(commentRepository.findById(anyLong())).thenReturn(Optional.of(testComment));
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(testUser));
+        when(voteService.handleDownvoteForComment(any(JpaUser.class), any(JpaComment.class)))
+                .thenThrow(new RuntimeException("Simulated failure"));  // Simulate a failure in vote handling
+
+        assertThrows(CommentDownvoteException.class, () -> commentService.downvoteComment(1L, 1L));
+    }
+
+    @Test
+    void shouldThrowCommentEditException_whenEditingFails() {
+        when(commentRepository.findById(anyLong())).thenReturn(Optional.of(testComment));
+        when(commentRepository.save(any(JpaComment.class)))
+                .thenThrow(new IllegalArgumentException("Simulated failure"));
+
+        assertThrows(CommentEditExeption.class, () -> commentService.editComment(1L, commentEditRequest));
+    }
+
+    @Test
+    void shouldThrowCommentUpvoteException_whenUpvoteFails() {
+        when(commentRepository.findById(anyLong())).thenReturn(Optional.of(testComment));
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(testUser));
+        when(voteService.handleUpvoteForComment(any(JpaUser.class), any(JpaComment.class)))
+                .thenThrow(new RuntimeException("Simulated failure"));
+
+        assertThrows(CommentUpvoteException.class, () -> commentService.upvoteComment(1L, 1L));
+    }
+
+    @Test
+    void addComment_ShouldThrowAnswerNotFoundException_WhenAnswerDoesNotExist() {
+        Long nonExistentAnswerId = 999L;
+        Long userId = 1L;
+
+        CommentCreateRequest commentRequest = CommentCreateRequest.builder()
+                .userId(userId)
+                .answerId(nonExistentAnswerId)
+                .text("This is a test comment.")
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(new JpaUser()));
+
+        when(answerRepository.findById(nonExistentAnswerId)).thenReturn(Optional.empty());
+
+        assertThrows(AnswerNotFoundException.class, () -> {
+            commentService.addComment(commentRequest);
+        });
+    }
+
 }

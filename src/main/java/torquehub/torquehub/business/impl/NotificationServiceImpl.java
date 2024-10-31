@@ -21,8 +21,9 @@ import torquehub.torquehub.domain.request.vote_dtos.VoteCommentNotificationReque
 import torquehub.torquehub.domain.request.vote_dtos.VoteQuestionNotificationRequest;
 import torquehub.torquehub.domain.response.notification_dtos.NotificationResponse;
 import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
+import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaNotificationRepository;
-import torquehub.torquehub.persistence.repository.QuestionRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
 
 import java.time.LocalDateTime;
@@ -36,18 +37,21 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationMapper notificationMapper;
     private final UserRepository userRepository;
     private final WebSocketNotificationController webSocketNotificationController;
-    private final QuestionRepository questionRepository;
+    private final JpaQuestionRepository questionRepository;
+    private final JpaAnswerRepository answerRepository;
 
     public NotificationServiceImpl(JpaNotificationRepository notificationRepository,
                                    NotificationMapper notificationMapper,
                                    UserRepository userRepository,
                                    WebSocketNotificationController webSocketNotificationController,
-                                   QuestionRepository questionRepository) {
+                                   JpaQuestionRepository questionRepository,
+                                   JpaAnswerRepository answerRepository) {
         this.notificationRepository = notificationRepository;
         this.notificationMapper = notificationMapper;
         this.userRepository = userRepository;
         this.webSocketNotificationController = webSocketNotificationController;
         this.questionRepository = questionRepository;
+        this.answerRepository = answerRepository;
     }
 
     private static final String USER_NOT_FOUND = "User not found";
@@ -148,23 +152,31 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    @Transactional
     public Optional<NotificationResponse> notifyUserAboutAnswerVote(VoteAnswerNotificationRequest request) {
+        // Fetch the answer creator and voter based on their IDs
         JpaUser answerCreator = userRepository.findById(request.getAnswerCreatorId())
                 .orElseThrow(() -> new IllegalArgumentException("Answer creator not found"));
         JpaUser voter = userRepository.findById(request.getVoterId())
                 .orElseThrow(() -> new IllegalArgumentException(VOTER_NOT_FOUND));
-        JpaQuestion question = questionRepository.findById(request.getAnswerId())
-                .orElseThrow(() -> new IllegalArgumentException(QUESTION_NOT_FOUND));
 
-        // Avoid sending notification to the same person
-        if (answerCreator.equals(voter)|| question.getJpaUser().equals(voter)) {
+        // Fetch the answer directly instead of looking for a question
+        JpaAnswer answer = answerRepository.findById(request.getAnswerId())
+                .orElseThrow(() -> new IllegalArgumentException("Answer not found"));
+
+        // Retrieve the associated question from the answer if necessary
+        JpaQuestion question = answer.getJpaQuestion();
+
+        // Avoid sending a notification to the same person
+        if (answerCreator.equals(voter) || question.getJpaUser().equals(voter)) {
             return Optional.empty();
         }
 
-
+        // Create and save the notification
         JpaNotification jpaNotification = createJpaNotification(answerCreator, voter, request.getMessage(), voter.getPoints());
         JpaNotification savedNotification = notificationRepository.save(jpaNotification);
 
+        // Synchronize the notification with WebSocket clients after the transaction
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -177,7 +189,9 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
 
+
     @Override
+    @Transactional
     public Optional<NotificationResponse> notifyAnswerOwnerForNewComment(CreateCommentAnswerRequest createCommentAnswerRequest) {
         JpaUser answerOwner = userRepository.findById(createCommentAnswerRequest.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException(ANSWER_OWNER_NOT_FOUND));
@@ -209,6 +223,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    @Transactional
     public Optional<NotificationResponse> notifyUserAboutCommentVote(VoteCommentNotificationRequest request) {
         JpaUser commentOwner = userRepository.findById(request.getCommentOwnerId())
                 .orElseThrow(() -> new IllegalArgumentException("Comment owner not found"));
