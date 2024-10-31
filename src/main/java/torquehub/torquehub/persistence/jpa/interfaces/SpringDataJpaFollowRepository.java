@@ -20,5 +20,8 @@ public interface SpringDataJpaFollowRepository extends JpaRepository<JpaFollow, 
     boolean existsByJpaUserAndJpaQuestion(JpaUser jpaUser, JpaQuestion jpaQuestion);
     Page<JpaFollow> findByJpaUserIdAndJpaQuestionIsNotNull(Long userId, Pageable pageable);
     Page<JpaFollow> findByJpaUserIdAndJpaAnswerIsNotNull(Long userId, Pageable pageable);
+    List<JpaFollow> findByJpaQuestion_IdAndIsMutedFalse(Long questionId);
+    List<JpaFollow> findByJpaAnswer_IdAndIsMutedFalse(Long answerId);
+
 
 }

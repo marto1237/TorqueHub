@@ -14,19 +14,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import torquehub.torquehub.controllers.websocketcontrollers.WebSocketNotificationController;
 import torquehub.torquehub.domain.mapper.NotificationMapper;
-import torquehub.torquehub.domain.model.jpa_models.JpaNotification;
-import torquehub.torquehub.domain.model.jpa_models.JpaUser;
-import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
-import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
-import torquehub.torquehub.domain.request.notification_dtos.CreateCommentAnswerRequest;
-import torquehub.torquehub.domain.request.notification_dtos.CreateNotificationRequest;
-import torquehub.torquehub.domain.request.notification_dtos.PointsNotificationRequest;
+import torquehub.torquehub.domain.model.jpa_models.*;
+import torquehub.torquehub.domain.request.notification_dtos.*;
 import torquehub.torquehub.domain.request.vote_dtos.VoteAnswerNotificationRequest;
 import torquehub.torquehub.domain.request.vote_dtos.VoteCommentNotificationRequest;
 import torquehub.torquehub.domain.request.vote_dtos.VoteQuestionNotificationRequest;
 import torquehub.torquehub.domain.response.notification_dtos.NotificationResponse;
 import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaFollowRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaNotificationRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
@@ -55,6 +51,9 @@ class NotificationServiceImplTest {
 
     @Mock
     private JpaQuestionRepository questionRepository;
+
+    @Mock
+    private JpaFollowRepository followRepository;
 
     @InjectMocks
     private NotificationServiceImpl notificationService;
@@ -394,7 +393,85 @@ class NotificationServiceImplTest {
         assertEquals(response2, resultPage.getContent().get(1));
     }
 
+    @Test
+    void testNotifyFollowersAboutNewAnswer() {
+        // Arrange: Create necessary objects and set up the request
+        NewAnswerNotificationRequest request = new NewAnswerNotificationRequest(1L, 1L, 2L, "New answer notification message");
 
+        JpaUser userWhoAnswered = new JpaUser();
+        userWhoAnswered.setId(2L);
+
+        JpaUser followerUser = new JpaUser();
+        followerUser.setId(3L);
+
+        JpaFollow follower = new JpaFollow();
+        follower.setJpaUser(followerUser);
+
+        JpaQuestion question = new JpaQuestion();
+        question.setId(1L);
+
+        List<JpaFollow> followers = List.of(follower);
+
+        // Set up mocks to return expected values
+        when(questionRepository.findById(1L)).thenReturn(Optional.of(question));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(userWhoAnswered));
+        when(followRepository.findByQuestionIdAndMutedFalse(1L)).thenReturn(followers);
+        doNothing().when(notificationRepository).saveAll(anyList());
+
+        // Mock static method in TransactionSynchronizationManager
+        try (MockedStatic<TransactionSynchronizationManager> transactionSynchronizationManagerMock = Mockito.mockStatic(TransactionSynchronizationManager.class)) {
+            transactionSynchronizationManagerMock.when(TransactionSynchronizationManager::isActualTransactionActive).thenReturn(true);
+
+            // Act: Call the method under test
+            Optional<NotificationResponse> result = notificationService.notifyFollowersAboutNewAnswer(request);
+
+            // Assert: Verify the outcome
+            assertTrue(result.isEmpty(), "Expected Optional.empty() as the result");
+            verify(notificationRepository, times(1)).saveAll(anyList());
+
+
+        }
+    }
+
+
+    @Test
+    void testNotifyAnswerFollowersAboutNewComment() {
+        NewCommentOnAnswerNotificationRequest request = new NewCommentOnAnswerNotificationRequest(1L, 1L, 2L, "New comment on answer message");
+
+        // Arrange: Setup test data
+        JpaUser userWhoCommented = new JpaUser();
+        userWhoCommented.setId(2L);
+
+        JpaUser followerUser = new JpaUser();
+        followerUser.setId(4L);
+
+        JpaFollow follower = new JpaFollow();
+        follower.setJpaUser(followerUser);
+
+        List<JpaFollow> answerFollowers = List.of(follower);
+
+        try (MockedStatic<TransactionSynchronizationManager> transactionSynchronizationManagerMock = Mockito.mockStatic(TransactionSynchronizationManager.class)) {
+            transactionSynchronizationManagerMock.when(TransactionSynchronizationManager::isActualTransactionActive).thenReturn(true);
+
+            // Setting up mocks to return expected values
+            when(userRepository.findById(2L)).thenReturn(Optional.of(userWhoCommented));
+            when(followRepository.findByAnswerIdAndMutedFalse(1L)).thenReturn(answerFollowers);
+
+            JpaNotification jpaNotification = new JpaNotification();
+            when(notificationRepository.save(any(JpaNotification.class))).thenReturn(jpaNotification);
+
+            // Optional: Add mapping of JpaNotification to NotificationResponse if necessary
+            NotificationResponse notificationResponse = new NotificationResponse();
+            when(notificationMapper.toResponse(jpaNotification)).thenReturn(notificationResponse);
+
+            // Act: Call the method under test
+            Optional<NotificationResponse> result = notificationService.notifyAnswerFollowersAboutNewComment(request);
+
+            // Assert: Verify the outcome
+            assertTrue(result.isEmpty(), "Expected Optional.empty() as the result");
+            verify(notificationRepository, times(1)).saveAll(anyList());
+        }
+    }
 
 
 }

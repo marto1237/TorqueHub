@@ -21,4 +21,6 @@ public interface FollowRepository {
     boolean deleteAll(List<JpaFollow> jpaFollows);
     Page<JpaFollow> findByUserIdAndJpaQuestionIsNotNull(Long userId, Pageable pageable);
     Page<JpaFollow> findByUserIdAndJpaAnswerIsNotNull(Long userId, Pageable pageable);
+    List<JpaFollow> findByQuestionIdAndMutedFalse(Long questionId);
+    List<JpaFollow> findByAnswerIdAndMutedFalse(Long answerId);
 }

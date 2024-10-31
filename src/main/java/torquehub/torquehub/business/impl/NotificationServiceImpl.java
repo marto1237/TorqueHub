@@ -9,24 +9,21 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import torquehub.torquehub.business.interfaces.NotificationService;
 import torquehub.torquehub.controllers.websocketcontrollers.WebSocketNotificationController;
 import torquehub.torquehub.domain.mapper.NotificationMapper;
-import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
-import torquehub.torquehub.domain.model.jpa_models.JpaUser;
-import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
-import torquehub.torquehub.domain.model.jpa_models.JpaNotification;
-import torquehub.torquehub.domain.request.notification_dtos.CreateCommentAnswerRequest;
-import torquehub.torquehub.domain.request.notification_dtos.CreateNotificationRequest;
-import torquehub.torquehub.domain.request.notification_dtos.PointsNotificationRequest;
+import torquehub.torquehub.domain.model.jpa_models.*;
+import torquehub.torquehub.domain.request.notification_dtos.*;
 import torquehub.torquehub.domain.request.vote_dtos.VoteAnswerNotificationRequest;
 import torquehub.torquehub.domain.request.vote_dtos.VoteCommentNotificationRequest;
 import torquehub.torquehub.domain.request.vote_dtos.VoteQuestionNotificationRequest;
 import torquehub.torquehub.domain.response.notification_dtos.NotificationResponse;
 import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaFollowRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaNotificationRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
 import torquehub.torquehub.persistence.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,19 +36,22 @@ public class NotificationServiceImpl implements NotificationService {
     private final WebSocketNotificationController webSocketNotificationController;
     private final JpaQuestionRepository questionRepository;
     private final JpaAnswerRepository answerRepository;
+    private final JpaFollowRepository followRepository;
 
     public NotificationServiceImpl(JpaNotificationRepository notificationRepository,
                                    NotificationMapper notificationMapper,
                                    UserRepository userRepository,
                                    WebSocketNotificationController webSocketNotificationController,
                                    JpaQuestionRepository questionRepository,
-                                   JpaAnswerRepository answerRepository) {
+                                   JpaAnswerRepository answerRepository,
+                                   JpaFollowRepository followRepository) {
         this.notificationRepository = notificationRepository;
         this.notificationMapper = notificationMapper;
         this.userRepository = userRepository;
         this.webSocketNotificationController = webSocketNotificationController;
         this.questionRepository = questionRepository;
         this.answerRepository = answerRepository;
+        this.followRepository = followRepository;
     }
 
     private static final String USER_NOT_FOUND = "User not found";
@@ -266,6 +266,82 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationRepository.findByJpaUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(notificationMapper::toResponse);
     }
+
+    @Override
+    @Transactional
+    public Optional<NotificationResponse> notifyFollowersAboutNewAnswer(NewAnswerNotificationRequest request) {
+        JpaQuestion question = questionRepository.findById(request.getQuestionId())
+                .orElseThrow(() -> new IllegalArgumentException(QUESTION_NOT_FOUND));
+
+        // Find followers of the question who are not muted
+        List<JpaFollow> followers = followRepository.findByQuestionIdAndMutedFalse(question.getId());
+
+        JpaUser userWhoAnswered = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException(USER_NOT_FOUND));
+
+        List<JpaNotification> notificationsToSave = new ArrayList<>();
+
+        for (JpaFollow follower : followers) {
+            JpaUser followerUser = follower.getJpaUser();
+            String message = request.getMessage();
+            JpaNotification notification = createJpaNotification(followerUser, userWhoAnswered, message, 0);
+            notificationsToSave.add(notification);
+        }
+
+        // Save all notifications in a batch
+        notificationRepository.saveAll(notificationsToSave);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                for (JpaNotification savedNotification : notificationsToSave) {
+                    Long followerUserId = savedNotification.getJpaUser().getId();
+                    NotificationResponse response = notificationMapper.toResponse(savedNotification);
+                    notifyClients(followerUserId, response);
+                }
+            }
+        });
+
+        // Returning empty Optional since there’s no specific response expected
+        return Optional.empty();
+    }
+
+    @Override
+    @Transactional
+    public Optional<NotificationResponse> notifyAnswerFollowersAboutNewComment(NewCommentOnAnswerNotificationRequest request) {
+        // Fetch followers who follow the specific answer (not the question)
+        List<JpaFollow> answerFollowers = followRepository.findByAnswerIdAndMutedFalse(request.getAnswerId());
+
+        JpaUser userWhoCommented = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException(USER_NOT_FOUND));
+
+        List<JpaNotification> notificationsToSave = new ArrayList<>();
+
+        for (JpaFollow follower : answerFollowers) {
+            JpaUser followerUser = follower.getJpaUser();
+            String message = request.getMessage();
+            JpaNotification notification = createJpaNotification(followerUser, userWhoCommented, message, 0);
+            notificationsToSave.add(notification);
+        }
+
+        // Save all notifications in a batch
+        notificationRepository.saveAll(notificationsToSave);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                for (JpaNotification savedNotification : notificationsToSave) {
+                    Long followerUserId = savedNotification.getJpaUser().getId();
+                    NotificationResponse response = notificationMapper.toResponse(savedNotification);
+                    notifyClients(followerUserId, response);
+                }
+            }
+        });
+
+        // Returning empty Optional as it notifies multiple followers
+        return Optional.empty();
+    }
+
 
 
     @Override

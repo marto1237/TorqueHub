@@ -63,7 +63,11 @@ sonarqube-check:
 sonarqube-vulnerability-report:
   stage: sonarqube-vulnerability-report
   script:
-    - 'curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=I525452_torquehubapi_7c23a2ce-e40d-4c42-9842-abb94eb67666&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -o gl-sast-sonar-report.json'
+    - |
+      $headers = @{
+          Authorization = "Basic $([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${SONAR_TOKEN}:")))"
+      }
+      Invoke-RestMethod -Uri "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=I525452_torquehubapi_7c23a2ce-e40d-4c42-9842-abb94eb67666&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -Headers $headers -OutFile gl-sast-sonar-report.json
   allow_failure: true
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'

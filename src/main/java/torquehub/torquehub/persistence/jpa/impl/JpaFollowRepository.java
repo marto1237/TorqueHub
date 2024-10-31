@@ -103,6 +103,16 @@ public class JpaFollowRepository implements FollowRepository {
     }
 
     @Override
+    public List<JpaFollow> findByQuestionIdAndMutedFalse(Long questionId) {
+        return followRepository.findByJpaQuestion_IdAndIsMutedFalse(questionId);
+    }
+
+    @Override
+    public List<JpaFollow> findByAnswerIdAndMutedFalse(Long answerId) {
+        return followRepository.findByJpaAnswer_IdAndIsMutedFalse(answerId);
+    }
+
+    @Override
     public List<JpaFollow> findAllById(List<Long> followIds){
         return followRepository.findAllById(followIds);
     }

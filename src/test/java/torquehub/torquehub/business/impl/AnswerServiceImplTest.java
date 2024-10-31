@@ -6,6 +6,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import torquehub.torquehub.business.exeption.ErrorMessages;
 import torquehub.torquehub.business.exeption.answer_exptions.*;
+import torquehub.torquehub.business.interfaces.NotificationService;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.business.interfaces.VoteService;
 import torquehub.torquehub.domain.mapper.AnswerMapper;
@@ -40,6 +41,7 @@ class AnswerServiceImplTest {
     @Mock private ReputationService reputationService;
     @Mock private JpaAnswerRepository answerRepository;
     @Mock private VoteService voteService;
+    @Mock private NotificationService notificationService;
 
     private AnswerServiceImpl answerService;
 
@@ -53,7 +55,8 @@ class AnswerServiceImplTest {
                 questionRepository,
                 reputationService,
                 answerRepository,
-                voteService
+                voteService,
+                notificationService
         );
     }
 

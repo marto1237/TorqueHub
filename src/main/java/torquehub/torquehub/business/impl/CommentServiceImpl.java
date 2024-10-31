@@ -17,6 +17,7 @@ import torquehub.torquehub.domain.model.jpa_models.*;
 import torquehub.torquehub.domain.request.comment_dtos.CommentCreateRequest;
 import torquehub.torquehub.domain.request.comment_dtos.CommentEditRequest;
 import torquehub.torquehub.domain.request.notification_dtos.CreateCommentAnswerRequest;
+import torquehub.torquehub.domain.request.notification_dtos.NewAnswerNotificationRequest;
 import torquehub.torquehub.domain.request.reputation_dtos.ReputationUpdateRequest;
 import torquehub.torquehub.domain.response.comment_dtos.CommentResponse;
 import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
@@ -95,6 +96,15 @@ public class CommentServiceImpl implements CommentService {
                     .message("Someone commented on your answer to the question: \"" + jpaQuestion.getTitle() + "\".")
                     .build();
             notificationService.notifyAnswerOwnerForNewComment(notificationRequest);
+
+            notificationService.notifyFollowersAboutNewAnswer(
+                    new NewAnswerNotificationRequest(
+                            jpaQuestion.getId(),
+                            savedJpaComment.getId(),
+                            jpaUser.getId(),
+                            "A new comment was posted to a answer you follow."
+                    )
+            );
 
             CommentResponse commentResponse = commentMapper.toResponse(savedJpaComment);
             commentResponse.setReputationResponse(reputationResponse);

@@ -4,9 +4,7 @@
     import org.springframework.data.domain.Pageable;
     import torquehub.torquehub.domain.model.jpa_models.JpaUser;
     import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
-    import torquehub.torquehub.domain.request.notification_dtos.CreateCommentAnswerRequest;
-    import torquehub.torquehub.domain.request.notification_dtos.CreateNotificationRequest;
-    import torquehub.torquehub.domain.request.notification_dtos.PointsNotificationRequest;
+    import torquehub.torquehub.domain.request.notification_dtos.*;
     import torquehub.torquehub.domain.request.vote_dtos.VoteAnswerNotificationRequest;
     import torquehub.torquehub.domain.request.vote_dtos.VoteCommentNotificationRequest;
     import torquehub.torquehub.domain.request.vote_dtos.VoteQuestionNotificationRequest;
@@ -26,6 +24,8 @@
         Optional<NotificationResponse> notifyUserAboutCommentVote(VoteCommentNotificationRequest voteRequest);
         List<NotificationResponse> findTop5ByUserIdUnread(Long userId);
         Page<NotificationResponse> findByUserId(Long userId, Pageable pageable);
+        Optional<NotificationResponse> notifyFollowersAboutNewAnswer(NewAnswerNotificationRequest request);
+        Optional<NotificationResponse> notifyAnswerFollowersAboutNewComment(NewCommentOnAnswerNotificationRequest request);
         boolean markAsRead(Long notificationId);
         boolean markAllAsRead(Long userId);
 

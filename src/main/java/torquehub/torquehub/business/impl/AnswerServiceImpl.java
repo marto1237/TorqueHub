@@ -10,6 +10,7 @@ import torquehub.torquehub.business.exeption.answer_exptions.*;
 import torquehub.torquehub.business.exeption.question_exeptions.QuestionNotFoundException;
 import torquehub.torquehub.business.exeption.user_exeptions.UserNotFoundException;
 import torquehub.torquehub.business.interfaces.AnswerService;
+import torquehub.torquehub.business.interfaces.NotificationService;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.business.interfaces.VoteService;
 import torquehub.torquehub.domain.ReputationConstants;
@@ -20,6 +21,7 @@ import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.domain.request.answer_dtos.AnswerCreateRequest;
 import torquehub.torquehub.domain.request.answer_dtos.AnswerEditRequest;
+import torquehub.torquehub.domain.request.notification_dtos.NewAnswerNotificationRequest;
 import torquehub.torquehub.domain.request.reputation_dtos.ReputationUpdateRequest;
 import torquehub.torquehub.domain.response.answer_dtos.AnswerResponse;
 import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
@@ -41,6 +43,7 @@ public class AnswerServiceImpl implements AnswerService {
     private final ReputationService reputationService;
     private final JpaAnswerRepository answerRepository;
     private final VoteService voteService;
+    private final NotificationService notificationService;
 
 
     public AnswerServiceImpl(
@@ -50,7 +53,8 @@ public class AnswerServiceImpl implements AnswerService {
             JpaQuestionRepository questionRepository,
             ReputationService reputationService,
             JpaAnswerRepository answerRepository,
-            VoteService voteService) {
+            VoteService voteService,
+            NotificationService notificationService) {
         this.answerMapper = answerMapper;
         this.commentMapper = commentMapper;
         this.userRepository = userRepository;
@@ -58,6 +62,7 @@ public class AnswerServiceImpl implements AnswerService {
         this.reputationService = reputationService;
         this.answerRepository = answerRepository;
         this.voteService = voteService;
+        this.notificationService = notificationService;
 
     }
 
@@ -94,6 +99,15 @@ public class AnswerServiceImpl implements AnswerService {
 
             AnswerResponse answerResponse = answerMapper.toResponse(savedJpaAnswer, commentMapper);
             answerResponse.setReputationUpdate(reputationResponse);
+
+            notificationService.notifyFollowersAboutNewAnswer(
+                    new NewAnswerNotificationRequest(
+                            jpaQuestion.getId(),
+                            savedJpaAnswer.getId(),
+                            jpaUser.getId(),
+                            "A new answer was posted to a question you follow."
+                    )
+            );
 
             return answerResponse;
         }
