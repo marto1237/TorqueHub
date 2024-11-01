@@ -202,5 +202,105 @@ class QuestionControllerTest {
         assertNull(response.getBody());
     }
 
+    @Test
+    void shouldHandleEmptyPageRequestForAllQuestions() {
+        when(questionService.getAllQuestions(any(PageRequest.class)))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+
+        ResponseEntity<Page<QuestionSummaryResponse>> response =
+                questionController.getAllQuestions(0, 10);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().isEmpty());
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenQuestionByIdNotExists() {
+        when(questionService.getQuestionbyId(anyLong(), any(), any()))
+                .thenReturn(Optional.empty());
+        when(tokenUtil.getUserIdFromToken(any())).thenReturn(1L);
+
+        ResponseEntity<QuestionDetailResponse> response =
+                questionController.getQuestionById(999L, 0, 10, testToken);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    void shouldHandleInternalServerErrorDuringUpvote() {
+        when(tokenUtil.getUserIdFromToken(any())).thenReturn(1L);
+        when(questionService.upvoteQuestion(anyLong(), anyLong()))
+                .thenThrow(new RuntimeException("Unexpected error"));
+
+        ResponseEntity<ReputationResponse> response =
+                questionController.upvoteQuestion(1L, testToken);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    void shouldHandleInternalServerErrorDuringDownvote() {
+        when(tokenUtil.getUserIdFromToken(any())).thenReturn(1L);
+        when(questionService.downvoteQuestion(anyLong(), anyLong()))
+                .thenThrow(new RuntimeException("Unexpected error"));
+
+        ResponseEntity<ReputationResponse> response =
+                questionController.downvoteQuestion(1L, testToken);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    void shouldHandleUpdateQuestionFailure() {
+        when(questionService.updateQuestion(anyLong(), any(QuestionUpdateRequest.class)))
+                .thenReturn(false);
+
+        ResponseEntity<MessageResponse> response =
+                questionController.updateQuestion(999L, updateRequest);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("Question with ID 999 not found.", response.getBody().getMessage());
+    }
+
+    @Test
+    void shouldHandleNullTokenInGetQuestionById() {
+        when(questionService.getQuestionbyId(anyLong(), any(), any()))
+                .thenReturn(Optional.of(new QuestionDetailResponse()));
+
+        ResponseEntity<QuestionDetailResponse> response =
+                questionController.getQuestionById(1L, 0, 10, null);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+    }
+
+    @Test
+    void shouldHandleInvalidTokenInGetQuestionById() {
+        when(tokenUtil.getUserIdFromToken(any()))
+                .thenThrow(new InvalidAccessTokenException("Invalid token"));
+
+        ResponseEntity<QuestionDetailResponse> response =
+                questionController.getQuestionById(1L, 0, 10, testToken);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    void shouldPreventDuplicateVotes() {
+        when(tokenUtil.getUserIdFromToken(any())).thenReturn(1L);
+        when(questionService.upvoteQuestion(anyLong(), anyLong()))
+                .thenThrow(new IllegalStateException("Already voted"));
+
+        ResponseEntity<ReputationResponse> response =
+                questionController.upvoteQuestion(1L, testToken);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
 }
 

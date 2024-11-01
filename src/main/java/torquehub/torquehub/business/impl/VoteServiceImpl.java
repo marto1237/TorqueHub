@@ -1,5 +1,6 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.NotificationService;
@@ -35,6 +36,7 @@ public class VoteServiceImpl implements VoteService {
     private static final String USER_PREFIX = "User ";
 
     @Override
+    @CacheEvict(value = "voteStatus", key = "#user.id + '-' + #question.id")
     @Transactional
     public ReputationResponse handleUpvote(JpaUser user, JpaQuestion question) {
         return handleVote(user, question, true);

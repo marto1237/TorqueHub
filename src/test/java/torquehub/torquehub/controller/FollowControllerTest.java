@@ -145,4 +145,78 @@ class FollowControllerTest {
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
         verify(followService).batchUnfollow(followIds);
     }
+
+    @Test
+    void shouldHandleExceptionInToggleFollowQuestion() {
+        Long questionId = 2L;
+        String token = "Bearer token";
+
+        when(tokenUtil.getUserIdFromToken(token)).thenThrow(new RuntimeException("Unexpected error"));
+
+        ResponseEntity<FollowResponse> response = followController.toggleFollowQuestion(questionId, token);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    void shouldHandleExceptionInFollowAnswer() {
+        Long answerId = 2L;
+        String token = "Bearer token";
+
+        when(tokenUtil.getUserIdFromToken(token)).thenThrow(new RuntimeException("Unexpected error"));
+
+        ResponseEntity<FollowResponse> response = followController.followAnswer(answerId, token);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    void shouldHandleExceptionInGetFollowedQuestions() {
+        String token = "Bearer token";
+
+        when(tokenUtil.getUserIdFromToken(token)).thenThrow(new RuntimeException("Unexpected error"));
+
+        ResponseEntity<Page<FollowResponse>> response = followController.getFollowedQuestions(token, 0, 5);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    void shouldHandleExceptionInGetFollowedAnswers() {
+        String token = "Bearer token";
+
+        when(tokenUtil.getUserIdFromToken(token)).thenThrow(new RuntimeException("Unexpected error"));
+
+        ResponseEntity<Page<FollowResponse>> response = followController.getFollowedAnswers(token, 0, 5);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    void shouldHandleExceptionInBatchMuteFollows() {
+        String token = "Bearer token";
+        List<Long> followIds = Arrays.asList(1L, 2L);
+
+        when(followService.batchMuteFollows(followIds)).thenThrow(new RuntimeException("Unexpected error"));
+
+        ResponseEntity<Void> response = followController.batchMuteFollows(token, followIds);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
+
+    @Test
+    void shouldHandleExceptionInBatchUnfollow() {
+        String token = "Bearer token";
+        List<Long> followIds = Arrays.asList(1L, 2L);
+
+        when(followService.batchUnfollow(followIds)).thenThrow(new RuntimeException("Unexpected error"));
+
+        ResponseEntity<Void> response = followController.batchUnfollow(token, followIds);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
 }

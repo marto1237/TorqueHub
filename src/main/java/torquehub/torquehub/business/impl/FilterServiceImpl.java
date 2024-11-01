@@ -1,5 +1,6 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class FilterServiceImpl implements FilterService {
     }
 
     @Override
+    @Cacheable(value = "questionsByTags", key = "#tags.toString() + '-' + #pageable.pageNumber")
     public Page<QuestionSummaryResponse> getQuestionsByTags(Set<String> tags, Pageable pageable) {
         // Collect Tag entities by unwrapping the Optional<Tag> from the repository
         List<JpaTag> jpaTagEntities = tags.stream()
@@ -41,30 +43,35 @@ public class FilterServiceImpl implements FilterService {
     }
 
     @Override
+    @Cacheable(value = "recentQuestions", key = "#pageable.pageNumber")
     public Page<QuestionSummaryResponse> findAllByOrderByAskedTimeDesc(Pageable pageable) {
         Page<JpaQuestion> questions = questionRepository.findAllByOrderByAskedTimeDesc(pageable);
         return questions.map(questionMapper::toSummaryResponse);
     }
 
     @Override
+    @Cacheable(value = "recentActivityQuestions", key = "#pageable.pageNumber")
     public Page<QuestionSummaryResponse> findAllByOrderByLastActivityTimeDesc(Pageable pageable) {
         Page<JpaQuestion> questions = questionRepository.findAllByOrderByLastActivityTimeDesc(pageable);
         return questions.map(questionMapper::toSummaryResponse);
     }
 
     @Override
+    @Cacheable(value = "topVotedQuestions", key = "#pageable.pageNumber")
     public Page<QuestionSummaryResponse> findAllByOrderByVotesDesc(Pageable pageable) {
         Page<JpaQuestion> questions = questionRepository.findAllByOrderByVotesDesc(pageable);
         return questions.map(questionMapper::toSummaryResponse);
     }
 
     @Override
+    @Cacheable(value = "popularQuestions", key = "#pageable.pageNumber")
     public Page<QuestionSummaryResponse> findAllByOrderByViewCountDesc(Pageable pageable) {
         Page<JpaQuestion> questions = questionRepository.findAllByOrderByViewCountDesc(pageable);
         return questions.map(questionMapper::toSummaryResponse);
     }
 
     @Override
+    @Cacheable(value = "questionsWithoutAnswers", key = "#pageable.pageNumber")
     public Page<QuestionSummaryResponse> findQuestionsWithNoAnswers(Pageable pageable) {
         Page<JpaQuestion> questions = questionRepository.findQuestionsWithNoAnswers(pageable);
         return questions.map(questionMapper::toSummaryResponse);

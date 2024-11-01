@@ -4,6 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.cache.concurrent.ConcurrentMapCache;
+import org.springframework.cache.support.SimpleCacheManager;
 import torquehub.torquehub.business.exeption.ErrorMessages;
 import torquehub.torquehub.business.exeption.answer_exptions.*;
 import torquehub.torquehub.business.interfaces.NotificationService;
@@ -43,6 +45,7 @@ class AnswerServiceImplTest {
     @Mock private VoteService voteService;
     @Mock private NotificationService notificationService;
 
+    private SimpleCacheManager cacheManager;
     private AnswerServiceImpl answerService;
 
     @BeforeEach
@@ -58,6 +61,9 @@ class AnswerServiceImplTest {
                 voteService,
                 notificationService
         );
+
+        cacheManager = new SimpleCacheManager();
+        cacheManager.setCaches(List.of(new ConcurrentMapCache("answersByQuestion")));
     }
 
     // Add Answer Tests
@@ -403,5 +409,34 @@ class AnswerServiceImplTest {
         assertEquals("User not found", ErrorMessages.USER_NOT_FOUND);
         assertEquals("Question not found", ErrorMessages.QUESTION_NOT_FOUND);
         assertEquals("Answer not found", ErrorMessages.ANSWER_NOT_FOUND);
+    }
+
+
+    @Test
+    void isAnswerOwner_AnswerExists() {
+        Long answerId = 1L;
+        String username = "testUser";
+
+        JpaAnswer answer = new JpaAnswer();
+        JpaUser user = new JpaUser();
+        user.setUsername(username);
+        answer.setJpaUser(user);
+
+        when(answerRepository.findById(answerId)).thenReturn(Optional.of(answer));
+
+        boolean result = answerService.isAnswerOwner(answerId, username);
+
+        assertTrue(result);
+        verify(answerRepository).findById(answerId);
+    }
+
+    @Test
+    void isAnswerOwner_AnswerNotFound() {
+        Long answerId = 1L;
+        String username = "testUser";
+
+        when(answerRepository.findById(answerId)).thenReturn(Optional.empty());
+
+        assertThrows(AnswerNotFoundException.class, () -> answerService.isAnswerOwner(answerId, username));
     }
 }

@@ -1,5 +1,8 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -112,6 +115,7 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
+    @CacheEvict(value = "questions", key = "#questionId")
     @Transactional
     public boolean deleteQuestion(Long questionId) {
         try {
@@ -138,6 +142,7 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
+    @CachePut(value = "questions", key = "#questionId")
     @Transactional
     public boolean updateQuestion(Long questionId, QuestionUpdateRequest questionUpdateRequest) {
         try{
@@ -166,12 +171,15 @@ public class QuestionServiceImpl implements QuestionService {
 
 
     @Override
+    @Cacheable(value = "questionDetailsByIdAndUser", key = "#questionId + '-' + #userId")
     public Optional<QuestionDetailResponse> getQuestionbyId(Long questionId, Pageable pageable) {
         return questionRepository.findById(questionId)
                 .map(question -> questionMapper.toDetailResponse(question, pageable, commentMapper));
     }
 
     @Override
+    @Cacheable(value = "questionDetailsByIdAndUser")
+    @Transactional
     public Optional<QuestionDetailResponse> getQuestionbyId(Long questionId, Pageable pageable, Long userId) {
         return questionRepository.findById(questionId)
                 .map(question -> {
@@ -204,12 +212,14 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
+    @Cacheable(value = "allQuestionsList", key = "#pageable.pageNumber")
     public Page<QuestionSummaryResponse> getAllQuestions(Pageable pageable) {
         Page<JpaQuestion> questionsPage = questionRepository.findAll(pageable);
         return questionsPage.map(questionMapper::toSummaryResponse);
     }
 
     @Override
+    @Cacheable(value = "userQuestions", key = "#userId")
     public Optional<List<QuestionSummaryResponse>> getQuestionsByUser(Long userId) {
         List<JpaQuestion> jpaQuestions = questionRepository.findByJpaUserId(userId);
 

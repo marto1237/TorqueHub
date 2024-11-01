@@ -1,5 +1,7 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.exeption.tag_exeptions.DuplicateTagException;
@@ -30,6 +32,7 @@ public class TagServiceImpl implements TagService {
 
 
     @Override
+    @Cacheable(value = "allTags")
     public List<TagResponse> getAllTags() {
         return  tagRepository.findAll().stream()
                 .map(tagMapper::toResponse)
@@ -40,6 +43,7 @@ public class TagServiceImpl implements TagService {
     private static final String NOT_FOUND_SUFFIX = " not found";
 
     @Override
+    @CacheEvict(value = {"allTags", "tagById"}, key = "#id", allEntries = true)
     @Transactional
     public TagResponse createTag(TagCreateRequest tagCreateRequest) {
         try{
@@ -59,11 +63,13 @@ public class TagServiceImpl implements TagService {
     }
 
     @Override
+    @Cacheable(value = "tagById", key = "#id")
     public Optional<TagResponse> getTagById(Long id) {
         return tagRepository.findById(id).map(tagMapper::toResponse);
     }
 
     @Override
+    @CacheEvict(value = {"allTags", "tagById"}, key = "#id", allEntries = true)
     public boolean deleteTag(Long id) {
         try{
             Optional<JpaTag> tagOptional = tagRepository.findById(id);

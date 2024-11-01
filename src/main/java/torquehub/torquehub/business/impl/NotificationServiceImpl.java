@@ -1,5 +1,7 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -253,6 +255,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    @Cacheable(value = "topUnreadNotifications", key = "#userId")
     public List<NotificationResponse> findTop5ByUserIdUnread(Long userId) {
         return notificationRepository.findByJpaUserIdAndIsReadFalse(userId, Pageable.ofSize(5)) // Limit to top 5
                 .stream()
@@ -262,6 +265,7 @@ public class NotificationServiceImpl implements NotificationService {
 
 
     @Override
+    @Cacheable(value = "userNotifications", key = "#userId + '-' + #pageable.pageNumber")
     public Page<NotificationResponse> findByUserId(Long userId, Pageable pageable) {
         return notificationRepository.findByJpaUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(notificationMapper::toResponse);
@@ -356,6 +360,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    @CacheEvict(value = {"topUnreadNotifications", "userNotifications"}, key = "#userId", allEntries = true)
     public boolean markAllAsRead(Long userId) {
         List<JpaNotification> notifications = notificationRepository.findByJpaUserIdAndIsReadFalse(userId);
         if (notifications.isEmpty()) {

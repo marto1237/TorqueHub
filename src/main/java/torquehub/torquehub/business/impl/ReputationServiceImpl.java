@@ -1,5 +1,6 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.interfaces.ReputationService;
@@ -121,6 +122,7 @@ public class ReputationServiceImpl  implements ReputationService {
     }
 
     @Override
+    @Cacheable(value = "currentReputation", key = "#userId")
     public ReputationResponse getCurrentReputation(Long userId) {
         try {
             Optional<JpaUser> userOptional = userRepository.findById(userId);

@@ -1,5 +1,7 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -73,6 +75,7 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"userBookmarkedQuestions", "userBookmarkedAnswers"}, key = "#bookmarkRequest.userId")
     public BookmarkResponse bookmarkAnswer(BookmarkRequest bookmarkRequest) {
         try {
             JpaBookmark jpaBookmark = bookmarkRepository.findByUserIdAndJpaAnswerId(bookmarkRequest.getUserId(), bookmarkRequest.getAnswerId())
@@ -103,12 +106,14 @@ public class BookmarkServiceImpl implements BookmarkService {
     }
 
     @Override
+    @Cacheable(value = "userBookmarkedQuestions", key = "#userId + '-' + #pageable.pageNumber")
     public Page<BookmarkResponse> getUserBookmarkedQuestions(Long userId, Pageable pageable) {
         Page<JpaBookmark> jpaBookmarks = bookmarkRepository.findByUserIdAndJpaQuestionIsNotNull(userId, pageable);
         return jpaBookmarks.map(bookmarkMapper::toResponse);
     }
 
     @Override
+    @Cacheable(value = "userBookmarkedAnswers", key = "#userId + '-' + #pageable.pageNumber")
     public Page<BookmarkResponse> getUserBookmarkedAnswers(Long userId, Pageable pageable) {
         Page<JpaBookmark> jpaBookmarks = bookmarkRepository.findByUserIdAndJpaAnswerIsNotNull(userId, pageable);
         return jpaBookmarks.map(bookmarkMapper::toResponse);

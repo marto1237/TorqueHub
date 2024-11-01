@@ -1,6 +1,8 @@
 package torquehub.torquehub.business.impl;
 
 import org.hibernate.Hibernate;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -140,6 +142,7 @@ public class AnswerServiceImpl implements AnswerService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"answerDetailsById", "answersByQuestion"}, key = "#answerId")
     public boolean deleteAnswer(Long answerId) {
         try{
             Optional<JpaAnswer> optionalAnswer = answerRepository.findById(answerId);
@@ -177,6 +180,7 @@ public class AnswerServiceImpl implements AnswerService {
     }
 
     @Override
+    @Cacheable(value = "answerDetailsById", key = "#answerId")
     public AnswerResponse getAnswerById(Long answerId) {
         Optional<JpaAnswer> optionalAnswer = answerRepository.findById(answerId);
         if (optionalAnswer.isEmpty()) {
@@ -187,6 +191,7 @@ public class AnswerServiceImpl implements AnswerService {
     }
 
     @Override
+    @Cacheable(value = "userAnswers", key = "#userId")
     public Optional<List<AnswerResponse>> getAnswersByUser(Long userId) {
         List<JpaAnswer> jpaAnswers = answerRepository.findByUserId(userId);
         if (jpaAnswers.isEmpty()) {
@@ -253,6 +258,7 @@ public class AnswerServiceImpl implements AnswerService {
     }
 
     @Override
+    @Cacheable(value = "answersByQuestion", key = "#questionId + '-' + #pageable.pageNumber")
     public Page<AnswerResponse> getAnswersByQuestion(Long questionId, Pageable pageable) {
         Page<JpaAnswer> answers = answerRepository.findByQuestionId(questionId, pageable);
         return answers.map(answer -> answerMapper.toResponse(answer, commentMapper));

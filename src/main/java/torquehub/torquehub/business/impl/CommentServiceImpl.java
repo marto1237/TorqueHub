@@ -1,5 +1,7 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -137,6 +139,7 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @CacheEvict(value = {"commentsByAnswer", "commentsByUser"}, allEntries = true)
     @Transactional
     public boolean deleteComment(Long commentId) {
         try {
@@ -183,6 +186,7 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @Cacheable(value = "commentsByUser", key = "#userId")
     public Optional<List<CommentResponse>> getCommentsByUser(Long userId) {
         List<JpaComment> jpaComments = commentRepository.findByUserId(userId);
         if (jpaComments.isEmpty()) {
@@ -220,6 +224,7 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @Cacheable(value = "commentsByAnswer", key = "#answerId + '-' + #pageable.pageNumber")
     public Page<CommentResponse> getPaginatedComments(Long answerId, Pageable pageable) {
         Page<JpaComment> comments = commentRepository.findByAnswerId(answerId, pageable);
         return comments.map(commentMapper::toResponse);

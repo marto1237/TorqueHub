@@ -1,5 +1,7 @@
     package torquehub.torquehub.business.impl;
 
+    import org.springframework.cache.annotation.CacheEvict;
+    import org.springframework.cache.annotation.Cacheable;
     import org.springframework.dao.DataIntegrityViolationException;
     import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
     import org.springframework.stereotype.Service;
@@ -66,6 +68,7 @@
         private final SecureRandom random = new SecureRandom();
 
         @Override
+        @Cacheable(value = "allUsers")
         public List<UserResponse> getAllUsers() {
             return userRepository.findAll().stream()
                     .map(userMapper::toResponse)
@@ -74,6 +77,7 @@
 
 
         @Override
+        @CacheEvict(value = {"allUsers", "userById", "userByUsername", "userByEmail"}, allEntries = true)
         @Transactional
         public UserResponse createUser(UserCreateRequest userDto) {
             String roleName = (userDto.getRole() == null || userDto.getRole().isEmpty()) ? "USER" : userDto.getRole();
@@ -109,11 +113,13 @@
         }
 
         @Override
+        @Cacheable(value = "userById", key = "#id")
         public Optional<UserResponse> getUserById(Long id) {
             return userRepository.findById(id).map(userMapper::toResponse);
         }
 
         @Override
+        @CacheEvict(value = {"allUsers", "userById", "userByUsername", "userByEmail"}, key = "#id", allEntries = true)
         @Transactional
         public boolean deleteUser(Long id) {
             try {
@@ -141,6 +147,7 @@
         }
 
         @Override
+        @CacheEvict(value = {"allUsers", "userById", "userByUsername", "userByEmail"}, key = "#id", allEntries = true)
         @Transactional
         public boolean updateUserById(Long id, UserUpdateRequest userUpdateRequest) {
             try {
@@ -162,6 +169,7 @@
         }
 
         @Override
+        @CacheEvict(value = {"allUsers", "userById", "userByUsername", "userByEmail"}, key = "#id", allEntries = true)
         @Transactional
         public UserPromotionResponse promoteUser(UserPromotionRequest request) {
             Long promoterId = request.getPromoterUserId();
@@ -203,12 +211,14 @@
 
 
         @Override
+        @Cacheable(value = "userByUsername", key = "#username")
         public Optional<UserResponse> findByUsername(String username) {
             return userRepository.findByUsername(username).map(userMapper::toResponse);
         }
 
 
         @Override
+        @Cacheable(value = "userByEmail", key = "#email")
         public Optional<UserResponse> findByEmail(String email) {
             return userRepository.findByEmail(email).map(userMapper::toResponse);
         }

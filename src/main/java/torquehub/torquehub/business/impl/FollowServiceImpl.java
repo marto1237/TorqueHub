@@ -1,7 +1,8 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.exeption.filter_exeption.FilterFollowAnswerExeption;
@@ -48,6 +49,7 @@ public class FollowServiceImpl implements FollowService {
 
 
     @Override
+    @CacheEvict(value = {"followedQuestions", "followedAnswers"}, key = "#followQuestionRequest.userId", allEntries = true)
     @Transactional
     public FollowResponse toggleFollowQuestion(FollowQuestionRequest followQuestionRequest) {
         try {
@@ -80,6 +82,7 @@ public class FollowServiceImpl implements FollowService {
     }
 
     @Override
+    @CacheEvict(value = {"followedQuestions", "followedAnswers"}, key = "#followAnswerRequest.userId", allEntries = true)
     @Transactional
     public FollowResponse toggleFollowAnswer(FollowAnswerRequest followAnswerRequest) {
         try {
@@ -130,12 +133,14 @@ public class FollowServiceImpl implements FollowService {
     }
 
     @Override
+    @Cacheable(value = "followedQuestions", key = "#request.userId + '-' + #request.pageable.pageNumber")
     public Page<FollowResponse> getFollowedQuestions(FollowedQuestionRequest request) {
         Page<JpaFollow> followedQuestions = followRepository.findByUserIdAndJpaQuestionIsNotNull(request.getUserId(), request.getPageable());
         return followedQuestions.map(followMapper::toResponse);
     }
 
     @Override
+    @Cacheable(value = "followedAnswers", key = "#request.userId + '-' + #request.pageable.pageNumber")
     public Page<FollowResponse> getFollowedAnswers(FollowedAnswerRequest request) {
         Page<JpaFollow> followedAnswers = followRepository.findByUserIdAndJpaAnswerIsNotNull(request.getUserId(), request.getPageable());
         return followedAnswers.map(followMapper::toResponse);

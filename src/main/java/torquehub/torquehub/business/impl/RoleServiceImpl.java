@@ -1,5 +1,7 @@
 package torquehub.torquehub.business.impl;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.exeption.role_exeptions.RoleDeleteExeption;
@@ -41,6 +43,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
+    @Cacheable(value = "allRoles")
     public List<RoleResponse> getAllRoles() {
         return roleRepository.findAll().stream()
                 .map(roleMapper::toResponse)
@@ -48,11 +51,13 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
+    @Cacheable(value = "roleById", key = "#id")
     public Optional<RoleResponse> getRoleById(Long id) {
         return roleRepository.findById(id).map(roleMapper::toResponse);
     }
 
     @Override
+    @CacheEvict(value = {"allRoles", "roleById"}, allEntries = true)
     @Transactional
     public boolean updateRole(long id, RoleUpdateRequest roleUpdateRequest) {
         try {
@@ -73,6 +78,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
+    @CacheEvict(value = {"allRoles", "roleById"}, key = "#id")
     public boolean deleteRole(Long id) {
         try {
             Optional<JpaRole> roleOptional = roleRepository.findById(id);
