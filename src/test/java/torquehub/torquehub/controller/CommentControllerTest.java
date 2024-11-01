@@ -20,6 +20,7 @@ import torquehub.torquehub.configuration.jwt.token.exeption.InvalidAccessTokenEx
 import torquehub.torquehub.configuration.jwt.token.impl.AccessTokenEncoderDecoderImpl;
 import torquehub.torquehub.configuration.jwt.token.impl.BlacklistService;
 import torquehub.torquehub.configuration.utils.TokenUtil;
+import torquehub.torquehub.configuration.utils.VoteRateLimiterInterceptor;
 import torquehub.torquehub.controllers.CommentController;
 import torquehub.torquehub.domain.response.comment_dtos.CommentResponse;
 import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
@@ -32,8 +33,7 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -56,11 +56,14 @@ class CommentControllerTest {
     @MockBean
     private BlacklistService blacklistService;
 
+    @MockBean
+    private VoteRateLimiterInterceptor voteRateLimiterInterceptor;
+
     private static final String VALID_TOKEN = "Bearer valid-token";
 
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
 
         AccessToken mockAccessToken = mock(AccessToken.class);
@@ -73,6 +76,8 @@ class CommentControllerTest {
 
         // Simulate invalid token behavior
         when(accessTokenDecoder.decode("invalid-token")).thenThrow(new InvalidAccessTokenException("Invalid token"));
+        doReturn(true).when(voteRateLimiterInterceptor).preHandle(any(), any(), any());
+
     }
 
 
