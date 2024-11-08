@@ -8,6 +8,7 @@
     import torquehub.torquehub.domain.request.vote_dtos.VoteAnswerNotificationRequest;
     import torquehub.torquehub.domain.request.vote_dtos.VoteCommentNotificationRequest;
     import torquehub.torquehub.domain.request.vote_dtos.VoteQuestionNotificationRequest;
+    import torquehub.torquehub.domain.response.notification_dtos.DetailNotificationResponse;
     import torquehub.torquehub.domain.response.notification_dtos.NotificationResponse;
     import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 
@@ -28,5 +29,6 @@
         Optional<NotificationResponse> notifyAnswerFollowersAboutNewComment(NewCommentOnAnswerNotificationRequest request);
         boolean markAsRead(Long notificationId);
         boolean markAllAsRead(Long userId);
+        List<DetailNotificationResponse> findTop5UnreadWithCount(Long userId);
 
     }

@@ -1,6 +1,5 @@
 package torquehub.torquehub.business.impl;
 
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,8 +12,8 @@ import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
 import torquehub.torquehub.domain.model.jpa_models.JpaBookmark;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
+import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkAnswerRequest;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkQuestionRequest;
-import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkRequest;
 import torquehub.torquehub.domain.response.bookmark_dtos.BookmarkResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaBookmarkRepository;
@@ -75,8 +74,7 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {"userBookmarkedQuestions", "userBookmarkedAnswers"}, key = "#bookmarkRequest.userId")
-    public BookmarkResponse bookmarkAnswer(BookmarkRequest bookmarkRequest) {
+    public BookmarkResponse bookmarkAnswer(BookmarkAnswerRequest bookmarkRequest) {
         try {
             JpaBookmark jpaBookmark = bookmarkRepository.findByUserIdAndJpaAnswerId(bookmarkRequest.getUserId(), bookmarkRequest.getAnswerId())
                     .orElse(null);

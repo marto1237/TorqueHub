@@ -1,9 +1,12 @@
 package torquehub.torquehub.persistence.jpa.impl;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
+import torquehub.torquehub.domain.mapper.NotificationMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaNotification;
+import torquehub.torquehub.domain.response.notification_dtos.NotificationResponse;
 import torquehub.torquehub.persistence.jpa.interfaces.SpringDataJpaNotificationRepository;
 import torquehub.torquehub.persistence.repository.NotificationRepository;
 
@@ -13,9 +16,12 @@ import java.util.List;
 public class JpaNotificationRepository implements NotificationRepository {
 
     private final SpringDataJpaNotificationRepository notificationRepository;
+    private final NotificationMapper notificationMapper;
 
-    public JpaNotificationRepository(SpringDataJpaNotificationRepository notificationRepository) {
+    public JpaNotificationRepository(SpringDataJpaNotificationRepository notificationRepository,
+                                     NotificationMapper notificationMapper) {
         this.notificationRepository = notificationRepository;
+        this.notificationMapper = notificationMapper;
     }
 
     @Override
@@ -50,7 +56,19 @@ public class JpaNotificationRepository implements NotificationRepository {
         return notificationRepository.findByJpaUserIdAndIsReadFalseOrderByCreatedAtDesc(userId, pageable);
     }
 
+    @Override
+    @Cacheable(value = "topUnreadNotifications", key = "#userId")
+    public List<NotificationResponse> findTop5ByUserIdUnread(Long userId) {
+        return notificationRepository.findByJpaUserIdAndIsReadFalseOrderByCreatedAtDesc(userId, Pageable.ofSize(5))
+                .stream()
+                .map(notificationMapper::toResponse)
+                .toList();
+    }
 
+    @Override
+    public long countUnreadByUserId(Long userId) {
+        return notificationRepository.countByJpaUserIdAndIsReadFalse(userId);
+    }
 
     @Override
     public void saveAll(List<JpaNotification> notifications) {

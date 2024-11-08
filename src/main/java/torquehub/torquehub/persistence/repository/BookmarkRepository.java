@@ -17,4 +17,5 @@ public interface BookmarkRepository {
     void deleteById(Long id);
     Page<JpaBookmark> findByUserIdAndJpaQuestionIsNotNull(Long userId, Pageable pageable);
     Page<JpaBookmark> findByUserIdAndJpaAnswerIsNotNull(Long userId, Pageable pageable);
+    Optional<JpaBookmark> findByUserIdAndAnswerId(Long userId, Long answerId);
 }

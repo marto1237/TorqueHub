@@ -4,8 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.cache.concurrent.ConcurrentMapCache;
-import org.springframework.cache.support.SimpleCacheManager;
 import torquehub.torquehub.business.exeption.ErrorMessages;
 import torquehub.torquehub.business.exeption.answer_exptions.*;
 import torquehub.torquehub.business.interfaces.NotificationService;
@@ -13,6 +11,7 @@ import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.business.interfaces.VoteService;
 import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.CommentMapper;
+import torquehub.torquehub.domain.mapper.NotificationMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
@@ -20,9 +19,7 @@ import torquehub.torquehub.domain.request.answer_dtos.AnswerCreateRequest;
 import torquehub.torquehub.domain.request.answer_dtos.AnswerEditRequest;
 import torquehub.torquehub.domain.response.answer_dtos.AnswerResponse;
 import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
-import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
+import torquehub.torquehub.persistence.jpa.impl.*;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -44,8 +41,11 @@ class AnswerServiceImplTest {
     @Mock private JpaAnswerRepository answerRepository;
     @Mock private VoteService voteService;
     @Mock private NotificationService notificationService;
+    @Mock private JpaNotificationRepository notificationRepository;
+    @Mock private NotificationMapper notificationMapper;
+    @Mock private JpaFollowRepository followRepository;
+    @Mock private JpaBookmarkRepository bookmarkRepository;
 
-    private SimpleCacheManager cacheManager;
     private AnswerServiceImpl answerService;
 
     @BeforeEach
@@ -59,11 +59,13 @@ class AnswerServiceImplTest {
                 reputationService,
                 answerRepository,
                 voteService,
-                notificationService
+                notificationService,
+                notificationRepository,
+                notificationMapper,
+                followRepository,
+                bookmarkRepository
         );
 
-        cacheManager = new SimpleCacheManager();
-        cacheManager.setCaches(List.of(new ConcurrentMapCache("answersByQuestion")));
     }
 
     // Add Answer Tests
@@ -91,7 +93,7 @@ class AnswerServiceImplTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(questionRepository.findById(questionId)).thenReturn(Optional.of(question));
         when(answerRepository.save(any())).thenReturn(savedAnswer);
-        when(answerMapper.toResponse(any(), any())).thenReturn(expectedResponse);
+        when(answerMapper.toResponse(any(), any(),any(),any(),any())).thenReturn(expectedResponse);
         when(reputationService.updateReputationForNewAnswer(any())).thenReturn(reputationResponse);
 
         // Act
@@ -144,7 +146,7 @@ class AnswerServiceImplTest {
 
         when(answerRepository.findById(answerId)).thenReturn(Optional.of(existingAnswer));
         when(answerRepository.save(any())).thenReturn(existingAnswer);
-        when(answerMapper.toResponse(any(), any())).thenReturn(expectedResponse);
+        when(answerMapper.toResponse(any(), any(),any(),any(),any())).thenReturn(expectedResponse);
 
         AnswerResponse result = answerService.editAnswer(answerId, request);
 
@@ -245,7 +247,7 @@ class AnswerServiceImplTest {
         AnswerResponse expectedResponse = new AnswerResponse();
 
         when(answerRepository.findById(answerId)).thenReturn(Optional.of(answer));
-        when(answerMapper.toResponse(answer, commentMapper)).thenReturn(expectedResponse);
+        when(answerMapper.toResponse(eq(answer), any(), any(), any(), eq(commentMapper))).thenReturn(expectedResponse);
 
         AnswerResponse result = answerService.getAnswerById(answerId);
 
@@ -269,7 +271,7 @@ class AnswerServiceImplTest {
         AnswerResponse mockResponse = new AnswerResponse();
 
         when(answerRepository.findByUserId(userId)).thenReturn(answers);
-        when(answerMapper.toResponse(any(), any())).thenReturn(mockResponse);
+        when(answerMapper.toResponse(any(), any(),any(),any(),any())).thenReturn(mockResponse);
 
         Optional<List<AnswerResponse>> result = answerService.getAnswersByUser(userId);
 

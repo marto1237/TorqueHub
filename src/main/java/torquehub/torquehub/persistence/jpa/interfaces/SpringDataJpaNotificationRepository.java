@@ -15,6 +15,7 @@ public interface SpringDataJpaNotificationRepository extends JpaRepository<JpaNo
     Page<JpaNotification> findByJpaUserIdAndIsReadFalseOrderByCreatedAtDesc(Long userId, Pageable pageable);
     Page<JpaNotification> findByJpaUserIdAndIsReadFalse(Long userId, Pageable pageable);
     Optional<JpaNotification> findJpaNotificationById (Long id);
+    long countByJpaUserIdAndIsReadFalse(Long userId);
 
 
 }

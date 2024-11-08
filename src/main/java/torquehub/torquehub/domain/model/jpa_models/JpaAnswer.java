@@ -54,5 +54,5 @@ public class JpaAnswer extends BaseAnswer {
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false)
-    private boolean isEdited = false;
+    private boolean edited = false;
 }

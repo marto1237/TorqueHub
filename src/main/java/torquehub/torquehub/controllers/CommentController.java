@@ -1,5 +1,6 @@
 package torquehub.torquehub.controllers;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import torquehub.torquehub.business.interfaces.AnswerService;
 import torquehub.torquehub.business.interfaces.CommentService;
 import torquehub.torquehub.configuration.jwt.token.exeption.InvalidAccessTokenException;
 import torquehub.torquehub.configuration.utils.TokenUtil;
@@ -26,11 +28,14 @@ public class CommentController {
 
     private final CommentService commentService;
     private final TokenUtil tokenUtil;
+    private final AnswerService answerService;
 
     public CommentController(CommentService commentService,
-                             TokenUtil tokenUtil) {
+                             TokenUtil tokenUtil,
+                             AnswerService answerService) {
         this.commentService = commentService;
         this.tokenUtil = tokenUtil;
+        this.answerService = answerService;
     }
 
     @GetMapping("/{commentId}")
@@ -63,11 +68,16 @@ public class CommentController {
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = "questionDetailsByIdAndUser", allEntries = true)
     public ResponseEntity<CommentResponse> addComment(@RequestBody @Validated CommentCreateRequest commentCreateRequest,
                                                       @RequestHeader("Authorization") String token) {
         try {
             Long userId = tokenUtil.getUserIdFromToken(token);
             commentCreateRequest.setUserId(userId);
+            Long questionId = answerService.getQuestionIdByAnswerId(commentCreateRequest.getAnswerId());
+            if (questionId == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+            }
             CommentResponse commentResponse = commentService.addComment(commentCreateRequest);
             return ResponseEntity.ok(commentResponse);
         } catch (InvalidAccessTokenException e) {

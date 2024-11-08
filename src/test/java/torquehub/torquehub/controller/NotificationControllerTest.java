@@ -13,8 +13,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import torquehub.torquehub.business.interfaces.NotificationService;
 import torquehub.torquehub.controllers.NotificationController;
+import torquehub.torquehub.domain.response.notification_dtos.DetailNotificationResponse;
 import torquehub.torquehub.domain.response.notification_dtos.NotificationResponse;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -37,15 +39,28 @@ class NotificationControllerTest {
     @Test
     void testGetLatestUnreadNotifications() {
         Long userId = 1L;
-        List<NotificationResponse> unreadNotifications = Collections.singletonList(new NotificationResponse());
+        long totalUnreadCount = 10L;
 
-        when(notificationService.findTop5ByUserIdUnread(userId)).thenReturn(unreadNotifications);
+        DetailNotificationResponse detailNotification = DetailNotificationResponse.builder()
+                .id(1L)
+                .message("Test Notification")
+                .userId(userId)
+                .voterId(2L)
+                .points(5)
+                .createdAt(LocalDateTime.now())
+                .isRead(false)
+                .count(totalUnreadCount)
+                .build();
 
-        ResponseEntity<List<NotificationResponse>> response = notificationController.getLatestUnreadNotifications(userId);
+        List<DetailNotificationResponse> unreadNotifications = Collections.singletonList(detailNotification);
+
+        when(notificationService.findTop5UnreadWithCount(userId)).thenReturn(unreadNotifications);
+
+        ResponseEntity<List<DetailNotificationResponse>> response = notificationController.getLatestUnreadNotifications(userId);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(unreadNotifications, response.getBody());
-        verify(notificationService, times(1)).findTop5ByUserIdUnread(userId);
+        verify(notificationService, times(1)).findTop5UnreadWithCount(userId);
     }
 
     @Test

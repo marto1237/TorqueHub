@@ -90,22 +90,36 @@ public class AuthController {
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<MessageResponse> refreshAccessToken(@RequestHeader("Authorization") String authorizationHeader) {
+    public ResponseEntity<MessageResponse> refreshAccessToken(
+            @CookieValue(value = "jwtToken", required = false) String jwtToken,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+
         MessageResponse response = new MessageResponse();
+
         try {
-            // Extract the token from the Authorization header
-            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-                response.setMessage("Invalid token format");
+            // Extract token from either cookie or Authorization header
+            String token = null;
+
+            if (jwtToken != null) {
+                token = jwtToken;
+            } else if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+                token = authorizationHeader.substring(7);
+            }
+
+            if (token == null) {
+                response.setMessage("No valid token found");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
-            String refreshToken = authorizationHeader.substring(7); // Remove "Bearer " prefix
 
-            AccessToken accessToken = accessTokenDecoder.decode(refreshToken);
+
+            // Decode and validate the refresh token
+            AccessToken accessToken = accessTokenDecoder.decode(token);
             String newAccessToken = accessTokenEncoder.encode(accessToken);
 
+            // Set the new access token in the HTTP-only cookie
             ResponseCookie newJwtCookie = ResponseCookie.from(JWT_TOKEN_COOKIE, newAccessToken)
                     .httpOnly(true)
-                    .secure(true)
+                    .secure(true) // Set to true in production
                     .path("/")
                     .maxAge(SECONDS_IN_A_DAY)
                     .sameSite(SAME_SITE_STRICT)
@@ -120,20 +134,19 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         } catch (RuntimeException e) {
             response.setMessage("An unexpected error occurred");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
 
     @PostMapping("/logout")
-    public ResponseEntity<MessageResponse> logout(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<MessageResponse> logout(@RequestHeader(value = "Authorization", required = false) String token) {
         MessageResponse response = new MessageResponse();
-
 
         // Invalidate the JWT cookie by setting a past expiration date
         ResponseCookie logoutCookie = ResponseCookie.from(JWT_TOKEN_COOKIE, "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(true) // Set this to true only if HTTPS is used in production
                 .path("/")
                 .maxAge(0) // Set expiry to 0 to remove the cookie
                 .sameSite(SAME_SITE_STRICT)
@@ -141,14 +154,26 @@ public class AuthController {
 
         if (token != null && token.startsWith("Bearer ")) {
             String jwt = token.substring(7);
-            blacklistService.addTokenToBlacklist(jwt);  // Blacklist the token on logout
+
+            // Add the token to the blacklist
+            try {
+                blacklistService.addTokenToBlacklist(jwt);
+            } catch (Exception e) {
+                // Log the error if blacklist operation fails
+                response.setMessage("Logout failed due to internal error while blacklisting the token.");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .header(HttpHeaders.SET_COOKIE, logoutCookie.toString())
+                        .body(response);
+            }
         }
+
         response.setMessage("Logged out successfully");
 
         return ResponseEntity.status(HttpStatus.OK)
                 .header(HttpHeaders.SET_COOKIE, logoutCookie.toString())
                 .body(response);
     }
+
 
     @GetMapping("/check-session")
     public ResponseEntity<UserResponse> checkSession(@CookieValue(JWT_TOKEN_COOKIE) String jwtToken) {

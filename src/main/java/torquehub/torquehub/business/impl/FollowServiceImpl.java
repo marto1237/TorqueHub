@@ -82,7 +82,7 @@ public class FollowServiceImpl implements FollowService {
     }
 
     @Override
-    @CacheEvict(value = {"followedQuestions", "followedAnswers"}, key = "#followAnswerRequest.userId", allEntries = true)
+    @CacheEvict(value = "questionDetailsByIdAndUser", key = "#followAnswerRequest.answerId")
     @Transactional
     public FollowResponse toggleFollowAnswer(FollowAnswerRequest followAnswerRequest) {
         try {

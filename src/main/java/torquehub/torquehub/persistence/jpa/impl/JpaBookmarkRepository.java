@@ -68,5 +68,11 @@ public class JpaBookmarkRepository implements BookmarkRepository {
     public Page<JpaBookmark> findByUserIdAndJpaAnswerIsNotNull(Long userId, Pageable pageable) {
         return bookmarkRepository.findByJpaUserIdAndJpaAnswerIsNotNull(userId, pageable);
     }
+
+    @Override
+    public Optional<JpaBookmark> findByUserIdAndAnswerId(Long userId, Long answerId) {
+        return bookmarkRepository.findByJpaUserIdAndJpaAnswerId(userId, answerId);
+    }
+
 }
 

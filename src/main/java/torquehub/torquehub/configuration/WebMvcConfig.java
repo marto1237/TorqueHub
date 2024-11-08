@@ -18,9 +18,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         // Adjust this pattern to cover all your vote-related paths
-        registry.addInterceptor(voteRateLimiterInterceptor).addPathPatterns("/questions/*/upvote", "/questions/*/downvote",
+        registry.addInterceptor(voteRateLimiterInterceptor).addPathPatterns(
+                "/questions/*/upvote", "/questions/*/downvote",
                 "/answers/*/upvote", "/answers/*/downvote",
-                "/comments/*/upvote", "/comments/*/downvote");
+                "/bookmarks/*", "/bookmarks/answer",
+                "/follows/questions/*", "/follows/answers/*");
     }
 
     @Override

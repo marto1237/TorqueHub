@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import torquehub.torquehub.business.exeption.question_exeptions.QuestionCreationException;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.business.interfaces.VoteService;
+import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.CommentMapper;
 import torquehub.torquehub.domain.mapper.QuestionMapper;
 import torquehub.torquehub.domain.model.jpa_models.*;
@@ -48,8 +49,6 @@ class QuestionServiceImplTest {
     private ReputationService reputationService;
     @Mock
     private JpaVoteRepository voteRepository;
-    @Mock
-    private CommentMapper commentMapper;
     @Mock
     private VoteService voteService;
     @Mock
@@ -139,8 +138,15 @@ class QuestionServiceImplTest {
     @Test
     void shouldGetQuestionByIdSuccessfully() {
         when(questionRepository.findById(anyLong())).thenReturn(Optional.of(testQuestion));
-        when(questionMapper.toDetailResponse(any(JpaQuestion.class), any(Pageable.class), any(CommentMapper.class)))
-                .thenReturn(new QuestionDetailResponse());
+        when(questionMapper.toDetailResponse(
+                any(JpaQuestion.class),
+                any(Pageable.class),
+                nullable(CommentMapper.class),
+                nullable(AnswerMapper.class),
+                nullable(JpaBookmarkRepository.class),
+                nullable(JpaFollowRepository.class),
+                nullable(Long.class)
+        )).thenReturn(new QuestionDetailResponse());
 
         Optional<QuestionDetailResponse> response = questionService.getQuestionbyId(1L, PageRequest.of(0, 10));
 
@@ -168,7 +174,7 @@ class QuestionServiceImplTest {
         when(voteRepository.findByUserAndJpaQuestion(any(), any())).thenReturn(Optional.of(vote));
         when(followRepository.findByUserIdAndQuestionId(anyLong(), anyLong())).thenReturn(Optional.of(new JpaFollow()));
         when(bookmarkRepository.findByUserIdAndJpaQuestionId(anyLong(), anyLong())).thenReturn(Optional.of(new JpaBookmark()));
-        when(questionMapper.toDetailResponse(any(), any(), any())).thenReturn(new QuestionDetailResponse());
+        when(questionMapper.toDetailResponse(any(), any(), any(), any(), any(), any(), anyLong())).thenReturn(new QuestionDetailResponse());
 
         Optional<QuestionDetailResponse> response = questionService.getQuestionbyId(1L, pageable, 1L);
 
@@ -185,7 +191,7 @@ class QuestionServiceImplTest {
         when(voteRepository.findByUserAndJpaQuestion(any(), any())).thenReturn(Optional.empty());
         when(followRepository.findByUserIdAndQuestionId(anyLong(), anyLong())).thenReturn(Optional.empty());
         when(bookmarkRepository.findByUserIdAndJpaQuestionId(anyLong(), anyLong())).thenReturn(Optional.empty());
-        when(questionMapper.toDetailResponse(any(), any(), any())).thenReturn(new QuestionDetailResponse());
+        when(questionMapper.toDetailResponse(any(), any(), any(), any(), any(), any(), any())).thenReturn(new QuestionDetailResponse());
 
         Optional<QuestionDetailResponse> response = questionService.getQuestionbyId(1L, pageable, 1L);
 

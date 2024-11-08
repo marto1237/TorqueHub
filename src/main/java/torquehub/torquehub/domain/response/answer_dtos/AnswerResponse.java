@@ -24,4 +24,6 @@ public class AnswerResponse {
     private List<CommentResponse> comments;
     private ReputationResponse reputationUpdate;
     private Date postedTime;
+    private Boolean isBookmarked;
+    private Boolean isFollowing;
 }

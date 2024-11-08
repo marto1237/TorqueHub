@@ -53,9 +53,10 @@ class AnswerControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Default valid token behavior
+        // Initialize the token behavior
         when(tokenUtil.getUserIdFromToken(VALID_TOKEN)).thenReturn(USER_ID);
     }
+
 
     @Test
     void createAnswer_Success() {
@@ -178,9 +179,9 @@ class AnswerControllerTest {
         Pageable pageable = PageRequest.of(0, 10);
         List<AnswerResponse> answers = Arrays.asList(new AnswerResponse(), new AnswerResponse());
         Page<AnswerResponse> expectedPage = new PageImpl<>(answers);
-        when(answerService.getAnswersByQuestion(QUESTION_ID, pageable)).thenReturn(expectedPage);
+        when(answerService.getAnswersByQuestion(QUESTION_ID, pageable,null)).thenReturn(expectedPage);
 
-        ResponseEntity<Page<AnswerResponse>> response = answerController.getAnswersByQuestion(QUESTION_ID, 0, 10);
+        ResponseEntity<Page<AnswerResponse>> response = answerController.getAnswersByQuestion(QUESTION_ID, 0, 10,null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(expectedPage, response.getBody());

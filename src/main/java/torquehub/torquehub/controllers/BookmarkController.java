@@ -11,8 +11,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.BookmarkService;
 import torquehub.torquehub.configuration.utils.TokenUtil;
+import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkAnswerRequest;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkQuestionRequest;
-import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkRequest;
 import torquehub.torquehub.domain.response.bookmark_dtos.BookmarkResponse;
 
 @RestController
@@ -29,7 +29,7 @@ public class BookmarkController {
         this.tokenUtil = tokenUtil;
     }
 
-    @PostMapping("/{questionId}")
+    @PostMapping("/question/{questionId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BookmarkResponse> toggleBookmarkQuestion(
             @PathVariable Long questionId,
@@ -44,9 +44,24 @@ public class BookmarkController {
         }
     }
 
+    @PostMapping("/answer/{answerId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<BookmarkResponse> toggleBookmarkAnswer(
+            @PathVariable Long answerId,
+            @RequestHeader("Authorization") String token) {
+        try {
+            Long userId = tokenUtil.getUserIdFromToken(token);
+            BookmarkAnswerRequest bookmarkRequest = new BookmarkAnswerRequest(userId, answerId);
+            BookmarkResponse bookmarkResponse = bookmarkService.bookmarkAnswer(bookmarkRequest);
+            return ResponseEntity.ok(bookmarkResponse);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
     @PostMapping("/answer")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<BookmarkResponse> bookmarkAnswer(@Valid @RequestBody BookmarkRequest bookmarkRequest,
+    public ResponseEntity<BookmarkResponse> bookmarkAnswer(@Valid @RequestBody BookmarkAnswerRequest bookmarkRequest,
                                                            @RequestHeader("Authorization") String token) {
         try {
             Long userId = tokenUtil.getUserIdFromToken(token);

@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.NotificationService;
+import torquehub.torquehub.domain.response.notification_dtos.DetailNotificationResponse;
 import torquehub.torquehub.domain.response.notification_dtos.NotificationResponse;
 
 import java.util.List;
@@ -22,8 +23,8 @@ public class NotificationController {
 
     // Fetch the latest 5 unread notifications
     @GetMapping("/{userId}/unread/latest")
-    public ResponseEntity<List<NotificationResponse>> getLatestUnreadNotifications(@PathVariable Long userId) {
-        List<NotificationResponse> unreadNotifications = notificationService.findTop5ByUserIdUnread(userId);
+    public ResponseEntity<List<DetailNotificationResponse>> getLatestUnreadNotifications(@PathVariable Long userId) {
+        List<DetailNotificationResponse> unreadNotifications = notificationService.findTop5UnreadWithCount(userId);
         return ResponseEntity.ok(unreadNotifications);
     }
 

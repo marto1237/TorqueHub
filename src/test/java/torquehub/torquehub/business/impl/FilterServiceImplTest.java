@@ -1,5 +1,6 @@
 package torquehub.torquehub.business.impl;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -118,5 +119,27 @@ class FilterServiceImplTest {
         assertEquals(1, result.getContent().size());
         assertEquals(mockResponse, result.getContent().get(0));
     }
+
+    @Test
+    void testGetQuestionsByTags_TagNotFoundException() {
+        // Arrange
+        String nonexistentTag = "nonexistent";
+        when(tagRepository.findByName(nonexistentTag)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        IllegalArgumentException exception = Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> invokeGetQuestionsByTags(nonexistentTag) // Single invocation in lambda
+        );
+
+        // Verify exception message
+        assertEquals("Tag not found: nonexistent", exception.getMessage());
+    }
+
+    // Helper method to encapsulate the potentially exception-throwing code
+    private void invokeGetQuestionsByTags(String tag) {
+        filterService.getQuestionsByTags(Set.of(tag), PageRequest.of(0, 10));
+    }
+
 }
 

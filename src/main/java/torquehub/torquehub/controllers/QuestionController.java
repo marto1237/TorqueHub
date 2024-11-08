@@ -1,6 +1,7 @@
 package torquehub.torquehub.controllers;
 
 import jakarta.validation.Valid;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -79,6 +80,7 @@ public class QuestionController {
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = "allQuestionsList", allEntries = true)
     public ResponseEntity<QuestionResponse> askQuestion(@Valid @RequestBody QuestionCreateRequest questionCreateRequest) {
         QuestionResponse createdQuestion = questionService.askQuestion(questionCreateRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdQuestion);

@@ -14,8 +14,8 @@ import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
 import torquehub.torquehub.domain.model.jpa_models.JpaBookmark;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
+import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkAnswerRequest;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkQuestionRequest;
-import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkRequest;
 import torquehub.torquehub.domain.response.bookmark_dtos.BookmarkResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaBookmarkRepository;
@@ -103,7 +103,7 @@ class BookmarkServiceImplTest {
 
     @Test
     void bookmarkAnswer_shouldBookmarkSuccessfully() {
-        BookmarkRequest request = new BookmarkRequest(1L, 1L, 1L);
+        BookmarkAnswerRequest request = new BookmarkAnswerRequest(1L, 1L);
         when(bookmarkRepository.findByUserIdAndJpaAnswerId(1L, 1L)).thenReturn(Optional.empty());
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         when(answerRepository.findById(1L)).thenReturn(Optional.of(testAnswer));
@@ -119,7 +119,7 @@ class BookmarkServiceImplTest {
 
     @Test
     void bookmarkAnswer_shouldUnbookmarkIfExists() {
-        BookmarkRequest request = new BookmarkRequest(1L, 1L, 1L);
+        BookmarkAnswerRequest request = new BookmarkAnswerRequest(1L, 1L);
         when(bookmarkRepository.findByUserIdAndJpaAnswerId(1L, 1L)).thenReturn(Optional.of(testBookmark));
 
         BookmarkResponse result = bookmarkService.bookmarkAnswer(request);
@@ -130,7 +130,7 @@ class BookmarkServiceImplTest {
 
     @Test
     void bookmarkAnswer_shouldThrowExceptionIfAnswerNotFound() {
-        BookmarkRequest request = new BookmarkRequest(1L, 1L, 1L);
+        BookmarkAnswerRequest request = new BookmarkAnswerRequest(1L, 1L);
         when(answerRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(RuntimeException.class, () -> bookmarkService.bookmarkAnswer(request));

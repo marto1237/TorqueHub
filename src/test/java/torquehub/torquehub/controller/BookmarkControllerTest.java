@@ -24,6 +24,7 @@ import torquehub.torquehub.configuration.jwt.token.impl.AccessTokenEncoderDecode
 import torquehub.torquehub.configuration.jwt.token.impl.BlacklistService;
 import torquehub.torquehub.configuration.utils.TokenUtil;
 import torquehub.torquehub.controllers.BookmarkController;
+import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkAnswerRequest;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkQuestionRequest;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkRequest;
 import torquehub.torquehub.domain.response.bookmark_dtos.BookmarkResponse;
@@ -86,7 +87,7 @@ class BookmarkControllerTest {
         given(tokenUtil.getUserIdFromToken(VALID_TOKEN)).willReturn(1L);
         given(bookmarkService.bookmarkQuestion(any(BookmarkQuestionRequest.class))).willReturn(bookmarkResponse);
 
-        mockMvc.perform(post("/bookmarks/1")
+        mockMvc.perform(post("/bookmarks/question/1")
                         .header("Authorization", VALID_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -99,7 +100,7 @@ class BookmarkControllerTest {
         given(tokenUtil.getUserIdFromToken(VALID_TOKEN)).willReturn(1L);
         doThrow(new RuntimeException("Error")).when(bookmarkService).bookmarkQuestion(any(BookmarkQuestionRequest.class));
 
-        mockMvc.perform(post("/bookmarks/1")
+        mockMvc.perform(post("/bookmarks/question/1")
                         .header("Authorization", VALID_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
@@ -109,7 +110,7 @@ class BookmarkControllerTest {
     @WithMockUser
     void shouldBookmarkAnswer_whenValidRequest() throws Exception {
         given(tokenUtil.getUserIdFromToken(VALID_TOKEN)).willReturn(1L);
-        given(bookmarkService.bookmarkAnswer(any(BookmarkRequest.class))).willReturn(bookmarkResponse);
+        given(bookmarkService.bookmarkAnswer(any(BookmarkAnswerRequest.class))).willReturn(bookmarkResponse);
 
         validBookmarkRequest.setQuestionId(1L);
 
@@ -125,7 +126,7 @@ class BookmarkControllerTest {
     @WithMockUser
     void shouldReturnInternalServerError_whenExceptionOccursInBookmarkAnswer() throws Exception {
         given(tokenUtil.getUserIdFromToken(VALID_TOKEN)).willReturn(1L);
-        doThrow(new RuntimeException("Error")).when(bookmarkService).bookmarkAnswer(any(BookmarkRequest.class));
+        doThrow(new RuntimeException("Error")).when(bookmarkService).bookmarkAnswer(any(BookmarkAnswerRequest.class));
 
         validBookmarkRequest.setQuestionId(1L);
 

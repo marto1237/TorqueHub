@@ -12,6 +12,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
 import torquehub.torquehub.business.exeption.comment_exeptions.CommentNotFoundException;
+import torquehub.torquehub.business.interfaces.AnswerService;
 import torquehub.torquehub.business.interfaces.CommentService;
 import torquehub.torquehub.configuration.SecurityConfig;
 import torquehub.torquehub.configuration.jwt.token.AccessToken;
@@ -58,6 +59,9 @@ class CommentControllerTest {
 
     @MockBean
     private VoteRateLimiterInterceptor voteRateLimiterInterceptor;
+
+    @MockBean
+    private AnswerService answerService;
 
     private static final String VALID_TOKEN = "Bearer valid-token";
 

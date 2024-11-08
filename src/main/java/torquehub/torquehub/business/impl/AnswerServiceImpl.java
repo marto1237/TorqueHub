@@ -18,7 +18,9 @@ import torquehub.torquehub.business.interfaces.VoteService;
 import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.CommentMapper;
+import torquehub.torquehub.domain.mapper.NotificationMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
+import torquehub.torquehub.domain.model.jpa_models.JpaNotification;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.domain.request.answer_dtos.AnswerCreateRequest;
@@ -27,9 +29,7 @@ import torquehub.torquehub.domain.request.notification_dtos.NewAnswerNotificatio
 import torquehub.torquehub.domain.request.reputation_dtos.ReputationUpdateRequest;
 import torquehub.torquehub.domain.response.answer_dtos.AnswerResponse;
 import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
-import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
+import torquehub.torquehub.persistence.jpa.impl.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -46,6 +46,10 @@ public class AnswerServiceImpl implements AnswerService {
     private final JpaAnswerRepository answerRepository;
     private final VoteService voteService;
     private final NotificationService notificationService;
+    private final JpaNotificationRepository notificationRepository;
+    private final NotificationMapper notificationMapper;
+    private final JpaFollowRepository followRepository;
+    private final JpaBookmarkRepository bookmarkRepository;
 
 
     public AnswerServiceImpl(
@@ -56,7 +60,11 @@ public class AnswerServiceImpl implements AnswerService {
             ReputationService reputationService,
             JpaAnswerRepository answerRepository,
             VoteService voteService,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            JpaNotificationRepository notificationRepository,
+            NotificationMapper notificationMapper,
+            JpaFollowRepository followRepository,
+            JpaBookmarkRepository bookmarkRepository) {
         this.answerMapper = answerMapper;
         this.commentMapper = commentMapper;
         this.userRepository = userRepository;
@@ -65,7 +73,10 @@ public class AnswerServiceImpl implements AnswerService {
         this.answerRepository = answerRepository;
         this.voteService = voteService;
         this.notificationService = notificationService;
-
+        this.notificationRepository = notificationRepository;
+        this.notificationMapper = notificationMapper;
+        this.followRepository = followRepository;
+        this.bookmarkRepository = bookmarkRepository;
     }
 
     private static final String ANSWER_ID_PREFIX = "Answer with ID ";
@@ -73,6 +84,7 @@ public class AnswerServiceImpl implements AnswerService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "questionDetailsByIdAndUser", key = "#answerCreateRequest.getQuestionId()")
     public AnswerResponse addAnswer(AnswerCreateRequest answerCreateRequest) {
         try{
             JpaUser jpaUser = userRepository.findById(answerCreateRequest.getUserId())
@@ -88,7 +100,7 @@ public class AnswerServiceImpl implements AnswerService {
                     .text(answerCreateRequest.getText())
                     .jpaUser(jpaUser)
                     .jpaQuestion(jpaQuestion)
-                    .isEdited(false)
+                    .edited(false)
                     .answeredTime(LocalDateTime.now())
                     .votes(0)
                     .build();
@@ -99,17 +111,19 @@ public class AnswerServiceImpl implements AnswerService {
             ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(jpaUser.getId(), ReputationConstants.POINTS_NEW_ANSWER);
             ReputationResponse reputationResponse = reputationService.updateReputationForNewAnswer(reputationUpdateRequest);
 
-            AnswerResponse answerResponse = answerMapper.toResponse(savedJpaAnswer, commentMapper);
+            AnswerResponse answerResponse = answerMapper.toResponse(savedJpaAnswer, jpaUser.getId(), bookmarkRepository, followRepository, commentMapper);
             answerResponse.setReputationUpdate(reputationResponse);
 
-            notificationService.notifyFollowersAboutNewAnswer(
-                    new NewAnswerNotificationRequest(
-                            jpaQuestion.getId(),
-                            savedJpaAnswer.getId(),
-                            jpaUser.getId(),
-                            "A new answer was posted to a question you follow."
-                    )
+            NewAnswerNotificationRequest notificationRequest = new NewAnswerNotificationRequest(
+                    jpaQuestion.getId(),
+                    savedJpaAnswer.getId(),
+                    jpaUser.getId(),
+                    "A new answer was posted to a question you follow."
             );
+            notificationService.notifyFollowersAboutNewAnswer(notificationRequest);
+
+            JpaNotification notification = notificationMapper.toJpaNotification(notificationRequest, jpaQuestion.getJpaUser(), jpaUser,  jpaUser.getPoints());
+            notificationRepository.save(notification);
 
             return answerResponse;
         }
@@ -130,7 +144,7 @@ public class AnswerServiceImpl implements AnswerService {
                 jpaAnswer.setEdited(true);
                 JpaAnswer savedJpaAnswer = answerRepository.save(jpaAnswer);
 
-                return answerMapper.toResponse(savedJpaAnswer, commentMapper);
+                return answerMapper.toResponse(savedJpaAnswer,  answerEditRequest.getUserId(), bookmarkRepository, followRepository, commentMapper);
             } else {
                 throw new IllegalArgumentException(ANSWER_ID_PREFIX + answerId + NOT_FOUND_SUFFIX);
             }
@@ -187,7 +201,7 @@ public class AnswerServiceImpl implements AnswerService {
             throw new IllegalArgumentException(ErrorMessages.ANSWER_NOT_FOUND);
         }
 
-        return answerMapper.toResponse(optionalAnswer.get(), commentMapper);
+        return answerMapper.toResponse(optionalAnswer.get(), null, bookmarkRepository, followRepository, commentMapper);
     }
 
     @Override
@@ -198,7 +212,7 @@ public class AnswerServiceImpl implements AnswerService {
             return Optional.empty();
         }else {
             return Optional.of(jpaAnswers.stream()
-                    .map(answer -> answerMapper.toResponse(answer, commentMapper))
+                    .map(answer -> answerMapper.toResponse(answer, userId, bookmarkRepository, followRepository, commentMapper))
                     .toList());
         }
     }
@@ -259,9 +273,24 @@ public class AnswerServiceImpl implements AnswerService {
 
     @Override
     @Cacheable(value = "answersByQuestion", key = "#questionId + '-' + #pageable.pageNumber")
-    public Page<AnswerResponse> getAnswersByQuestion(Long questionId, Pageable pageable) {
+    public Page<AnswerResponse> getAnswersByQuestion(Long questionId, Pageable pageable, Long userId) {
         Page<JpaAnswer> answers = answerRepository.findByQuestionId(questionId, pageable);
-        return answers.map(answer -> answerMapper.toResponse(answer, commentMapper));
+        return answers.map(answer -> {
+            AnswerResponse answerResponse = answerMapper.toResponse(answer,  userId, bookmarkRepository, followRepository, commentMapper);
+
+            // Set isBookmarked and isFollowing if userId is provided
+            if (userId != null) {
+                boolean isBookmarked = bookmarkRepository.findByUserIdAndAnswerId(userId, answer.getId()).isPresent();
+                boolean isFollowing = followRepository.findByUserIdAndAnswerId(userId, answer.getId()).isPresent();
+
+                answerResponse.setIsBookmarked(isBookmarked);
+                answerResponse.setIsFollowing(isFollowing);
+            } else {
+                answerResponse.setIsBookmarked(false);
+                answerResponse.setIsFollowing(false);
+            }
+            return answerResponse;
+        });
     }
 
     @Override
@@ -270,6 +299,13 @@ public class AnswerServiceImpl implements AnswerService {
                 .orElseThrow(() -> new AnswerNotFoundException("Answer not found with ID: " + answerId));
 
         return jpaAnswer.getJpaUser().getUsername().equals(username);
+    }
+
+    @Override
+    public Long getQuestionIdByAnswerId(Long answerId) {
+        JpaAnswer jpaAnswer = answerRepository.findById(answerId)
+                .orElseThrow(() -> new AnswerNotFoundException("Answer not found with ID: " + answerId));
+        return jpaAnswer.getJpaQuestion().getId();
     }
 
     private JpaAnswer findAnswerById(Long answerId) {

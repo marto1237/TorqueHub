@@ -187,6 +187,18 @@ class ReputationServiceImplTest {
         assertThrows(UnsupportedOperationException.class, () -> instantiateConstructor(constructor));
     }
 
+    @Test
+    void testGetCurrentReputation_userNotFound() {
+        when(userRepository.findById(any())).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> reputationService.getCurrentReputation(1L));
+    }
+
+    @Test
+    void testUpdateReputation_exceptionHandling() {
+        when(userRepository.findById(any())).thenThrow(new RuntimeException("Database error"));
+        assertThrows(IllegalArgumentException.class, () -> reputationService.updateReputationForNewQuestion(request));
+    }
+
     private void instantiateConstructor(Constructor<ReputationConstants> constructor) {
         try {
             constructor.newInstance();

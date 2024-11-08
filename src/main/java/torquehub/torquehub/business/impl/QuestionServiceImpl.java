@@ -12,6 +12,7 @@ import torquehub.torquehub.business.interfaces.QuestionService;
 import torquehub.torquehub.business.interfaces.ReputationService;
 import torquehub.torquehub.business.interfaces.VoteService;
 import torquehub.torquehub.domain.ReputationConstants;
+import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.CommentMapper;
 import torquehub.torquehub.domain.mapper.QuestionMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
@@ -40,23 +41,27 @@ public class QuestionServiceImpl implements QuestionService {
     private final JpaTagRepository tagRepository;
     private final JpaUserRepository userRepository;
     private final QuestionMapper questionMapper;
+    private final AnswerMapper answerMapper;
     private final ReputationService reputationService;
     private final JpaVoteRepository voteRepository;
     private final CommentMapper commentMapper;
     private final VoteService voteService;
     private final JpaFollowRepository followRepository;
     private final JpaBookmarkRepository bookmarkRepository;
+    private final JpaBookmarkRepository jpaBookmarkRepository;
+    private final JpaFollowRepository jpaFollowRepository;
 
     public QuestionServiceImpl(JpaQuestionRepository questionRepository,
                                JpaTagRepository tagRepository,
                                JpaUserRepository userRepository,
                                QuestionMapper questionMapper,
+                               AnswerMapper answerMapper,
                                ReputationService reputationService,
                                JpaVoteRepository voteRepository,
                                CommentMapper commentMapper,
                                VoteService voteService,
                                JpaFollowRepository followRepository,
-                               JpaBookmarkRepository bookmarkRepository) {
+                               JpaBookmarkRepository bookmarkRepository, JpaBookmarkRepository jpaBookmarkRepository, JpaFollowRepository jpaFollowRepository) {
         this.questionRepository = questionRepository;
         this.tagRepository = tagRepository;
         this.userRepository = userRepository;
@@ -67,6 +72,9 @@ public class QuestionServiceImpl implements QuestionService {
         this.voteService = voteService;
         this.followRepository = followRepository;
         this.bookmarkRepository = bookmarkRepository;
+        this.answerMapper = answerMapper;
+        this.jpaBookmarkRepository = jpaBookmarkRepository;
+        this.jpaFollowRepository = jpaFollowRepository;
     }
 
     private static final String QUESTION_ID_PREFIX = "Question with ID ";
@@ -174,7 +182,7 @@ public class QuestionServiceImpl implements QuestionService {
     @Cacheable(value = "questionDetailsByIdAndUser", key = "#questionId + '-' + #userId")
     public Optional<QuestionDetailResponse> getQuestionbyId(Long questionId, Pageable pageable) {
         return questionRepository.findById(questionId)
-                .map(question -> questionMapper.toDetailResponse(question, pageable, commentMapper));
+                .map(question -> questionMapper.toDetailResponse(question, pageable, commentMapper, answerMapper, jpaBookmarkRepository, jpaFollowRepository, null));
     }
 
     @Override
@@ -183,7 +191,7 @@ public class QuestionServiceImpl implements QuestionService {
     public Optional<QuestionDetailResponse> getQuestionbyId(Long questionId, Pageable pageable, Long userId) {
         return questionRepository.findById(questionId)
                 .map(question -> {
-                    QuestionDetailResponse questionDetailResponse = questionMapper.toDetailResponse(question, pageable, commentMapper);
+                    QuestionDetailResponse questionDetailResponse = questionMapper.toDetailResponse(question, pageable, commentMapper, answerMapper,jpaBookmarkRepository, jpaFollowRepository, userId);
 
                     // If userId is provided, check for the vote status
                     if (userId != null) {

@@ -1,6 +1,7 @@
 package torquehub.torquehub.controllers;
 
 import jakarta.validation.Valid;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -42,6 +43,7 @@ public class AnswerController {
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = {"questionDetailsByIdAndUser"}, key = "#answerCreateRequest.questionId")
     public ResponseEntity<AnswerResponse> createAnswer(
             @RequestBody @Validated AnswerCreateRequest answerCreateRequest,
             @RequestHeader("Authorization") String token) {
@@ -50,6 +52,7 @@ public class AnswerController {
             Long userId = tokenUtil.getUserIdFromToken(token);
             answerCreateRequest.setUserId(userId);
             AnswerResponse createdAnswer = answerService.addAnswer(answerCreateRequest);
+
             webSocketAnswerController.notifyClients(answerCreateRequest.getQuestionId(), createdAnswer);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdAnswer);
         } catch (InvalidAccessTokenException e) {
@@ -118,12 +121,27 @@ public class AnswerController {
     public ResponseEntity<Page<AnswerResponse>> getAnswersByQuestion(
             @PathVariable Long questionId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestHeader(value = "Authorization", required = false) String token) {
 
-        Pageable pageable = PageRequest.of(page, size);
-        Page<AnswerResponse> answers = answerService.getAnswersByQuestion(questionId, pageable);
-        return ResponseEntity.ok(answers);
+        Long userId = null;
+        if (token != null && !token.isEmpty()) {
+            try {
+                userId = tokenUtil.getUserIdFromToken(token);
+            } catch (InvalidAccessTokenException e) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+            }
+        }
+
+        try {
+            Pageable pageable = PageRequest.of(page, size);
+            Page<AnswerResponse> answers = answerService.getAnswersByQuestion(questionId, pageable, userId);
+            return ResponseEntity.ok(answers);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
+
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<AnswerResponse>> getAnswersByUser(@PathVariable Long userId) {

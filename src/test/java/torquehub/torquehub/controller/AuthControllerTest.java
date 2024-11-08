@@ -197,7 +197,7 @@ class AuthControllerTest {
                         .header("Authorization", invalidAuthorizationHeader)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Invalid token format"));
+                .andExpect(jsonPath("$.message").value("No valid token found"));
     }
 
 

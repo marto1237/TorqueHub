@@ -16,6 +16,7 @@ import torquehub.torquehub.domain.request.notification_dtos.*;
 import torquehub.torquehub.domain.request.vote_dtos.VoteAnswerNotificationRequest;
 import torquehub.torquehub.domain.request.vote_dtos.VoteCommentNotificationRequest;
 import torquehub.torquehub.domain.request.vote_dtos.VoteQuestionNotificationRequest;
+import torquehub.torquehub.domain.response.notification_dtos.DetailNotificationResponse;
 import torquehub.torquehub.domain.response.notification_dtos.NotificationResponse;
 import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
@@ -369,6 +370,31 @@ public class NotificationServiceImpl implements NotificationService {
         notifications.forEach(notification -> notification.setRead(true));
         notificationRepository.saveAll(notifications);
         return true;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DetailNotificationResponse> findTop5UnreadWithCount(Long userId) {
+        List<NotificationResponse> unreadNotifications = notificationRepository
+                .findByJpaUserIdAndIsReadFalseOrderByCreatedAtDesc(userId, Pageable.ofSize(5))
+                .stream()
+                .map(notificationMapper::toResponse)
+                .toList();
+
+        List<JpaNotification> totalUnreadCount = notificationRepository.findByJpaUserIdAndIsReadFalse(userId);
+
+        return unreadNotifications.stream()
+                .map(notification -> DetailNotificationResponse.builder()
+                        .id(notification.getId())
+                        .message(notification.getMessage())
+                        .userId(notification.getUserId())
+                        .voterId(notification.getVoterId())
+                        .points(notification.getPoints())
+                        .createdAt(notification.getCreatedAt())
+                        .isRead(notification.isRead())
+                        .count(totalUnreadCount.size())  // Setting the total unread count in each response
+                        .build())
+                .toList();
     }
 
 
