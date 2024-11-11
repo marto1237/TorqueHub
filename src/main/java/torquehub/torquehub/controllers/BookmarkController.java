@@ -2,6 +2,7 @@ package torquehub.torquehub.controllers;
 
 
 import jakarta.validation.Valid;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,7 @@ public class BookmarkController {
 
     @PostMapping("/question/{questionId}")
     @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = {"questionDetailsByIdAndUser", "userBookmarkedQuestions"}, key = "#questionId", allEntries = true)
     public ResponseEntity<BookmarkResponse> toggleBookmarkQuestion(
             @PathVariable Long questionId,
             @RequestHeader("Authorization") String token) {
@@ -46,6 +48,7 @@ public class BookmarkController {
 
     @PostMapping("/answer/{answerId}")
     @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = {"questionDetailsByIdAndUser", "userBookmarkedAnswers"}, key = "#answerId", allEntries = true)
     public ResponseEntity<BookmarkResponse> toggleBookmarkAnswer(
             @PathVariable Long answerId,
             @RequestHeader("Authorization") String token) {
@@ -61,6 +64,7 @@ public class BookmarkController {
 
     @PostMapping("/answer")
     @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = {"questionDetailsByIdAndUser", "userBookmarkedAnswers"}, allEntries = true)
     public ResponseEntity<BookmarkResponse> bookmarkAnswer(@Valid @RequestBody BookmarkAnswerRequest bookmarkRequest,
                                                            @RequestHeader("Authorization") String token) {
         try {

@@ -1,5 +1,6 @@
 package torquehub.torquehub.controllers;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,7 @@ public class FollowController {
 
     @PostMapping("/questions/{questionId}")
     @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = {"questionDetailsByIdAndUser", "followedQuestions"}, allEntries = true)
     public ResponseEntity<FollowResponse> toggleFollowQuestion(
             @PathVariable Long questionId,
             @RequestHeader("Authorization") String token) {
@@ -45,6 +47,7 @@ public class FollowController {
 
     @PostMapping("/answers/{answerId}")
     @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = {"questionDetailsByIdAndUser", "followedAnswers"}, allEntries = true)
     public ResponseEntity<FollowResponse> followAnswer(
             @PathVariable Long answerId,
             @RequestHeader("Authorization") String token) {
@@ -94,6 +97,7 @@ public class FollowController {
 
     @PostMapping("/batch-mute")
     @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = {"followedQuestions", "followedAnswers"}, allEntries = true)
     public ResponseEntity<Void> batchMuteFollows(
             @RequestHeader("Authorization") String token,
             @RequestBody List<Long> followIds) {
@@ -107,6 +111,7 @@ public class FollowController {
 
     @DeleteMapping("/batch-unfollow")
     @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = {"followedQuestions", "followedAnswers"}, allEntries = true)
     public ResponseEntity<Void> batchUnfollow(
             @RequestHeader("Authorization") String token,
             @RequestBody List<Long> followIds) {

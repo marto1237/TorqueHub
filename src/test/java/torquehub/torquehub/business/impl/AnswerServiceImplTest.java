@@ -45,6 +45,7 @@ class AnswerServiceImplTest {
     @Mock private NotificationMapper notificationMapper;
     @Mock private JpaFollowRepository followRepository;
     @Mock private JpaBookmarkRepository bookmarkRepository;
+    @Mock private JpaVoteRepository voteRepository;
 
     private AnswerServiceImpl answerService;
 
@@ -63,7 +64,8 @@ class AnswerServiceImplTest {
                 notificationRepository,
                 notificationMapper,
                 followRepository,
-                bookmarkRepository
+                bookmarkRepository,
+                voteRepository
         );
 
     }
@@ -93,7 +95,7 @@ class AnswerServiceImplTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(questionRepository.findById(questionId)).thenReturn(Optional.of(question));
         when(answerRepository.save(any())).thenReturn(savedAnswer);
-        when(answerMapper.toResponse(any(), any(),any(),any(),any())).thenReturn(expectedResponse);
+        when(answerMapper.toResponse(any(), any(),any(),any(),any(),any())).thenReturn(expectedResponse);
         when(reputationService.updateReputationForNewAnswer(any())).thenReturn(reputationResponse);
 
         // Act
@@ -146,7 +148,7 @@ class AnswerServiceImplTest {
 
         when(answerRepository.findById(answerId)).thenReturn(Optional.of(existingAnswer));
         when(answerRepository.save(any())).thenReturn(existingAnswer);
-        when(answerMapper.toResponse(any(), any(),any(),any(),any())).thenReturn(expectedResponse);
+        when(answerMapper.toResponse(any(), any(),any(),any(),any(),any())).thenReturn(expectedResponse);
 
         AnswerResponse result = answerService.editAnswer(answerId, request);
 
@@ -247,7 +249,7 @@ class AnswerServiceImplTest {
         AnswerResponse expectedResponse = new AnswerResponse();
 
         when(answerRepository.findById(answerId)).thenReturn(Optional.of(answer));
-        when(answerMapper.toResponse(eq(answer), any(), any(), any(), eq(commentMapper))).thenReturn(expectedResponse);
+        when(answerMapper.toResponse(eq(answer), any(), any(), any(),any(), eq(commentMapper))).thenReturn(expectedResponse);
 
         AnswerResponse result = answerService.getAnswerById(answerId);
 
@@ -271,7 +273,7 @@ class AnswerServiceImplTest {
         AnswerResponse mockResponse = new AnswerResponse();
 
         when(answerRepository.findByUserId(userId)).thenReturn(answers);
-        when(answerMapper.toResponse(any(), any(),any(),any(),any())).thenReturn(mockResponse);
+        when(answerMapper.toResponse(any(), any(),any(),any(),any(),any())).thenReturn(mockResponse);
 
         Optional<List<AnswerResponse>> result = answerService.getAnswersByUser(userId);
 

@@ -63,6 +63,7 @@ public class AnswerController {
 
     @PostMapping("/{answerId}/upvote")
     @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = "questionDetailsByIdAndUser", allEntries = true)
     public ResponseEntity<ReputationResponse> upvoteAnswer(@PathVariable Long answerId,
                                                            @RequestHeader("Authorization") String token) {
         try {
@@ -76,6 +77,7 @@ public class AnswerController {
 
     @PostMapping("/{answerId}/downvote")
     @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = "questionDetailsByIdAndUser", allEntries = true)
     public ResponseEntity<ReputationResponse> downvoteAnswer(@PathVariable Long answerId,
                                                              @RequestHeader("Authorization") String token) {
         try {
@@ -84,6 +86,8 @@ public class AnswerController {
             return ResponseEntity.ok(reputationResponse);
         } catch (InvalidAccessTokenException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
@@ -103,6 +107,7 @@ public class AnswerController {
 
     @PutMapping("/{answerId}")
     @PreAuthorize("@answerService.isAnswerOwner(#answerId, authentication.name) or hasAuthority('ADMIN')")
+    @CacheEvict(value = "questionDetailsByIdAndUser", allEntries = true)
     public ResponseEntity<AnswerResponse> editAnswer(@PathVariable Long answerId,
                                                      @Valid @RequestBody AnswerEditRequest answerEditRequest,
                                                      @RequestHeader("Authorization") String token) {
@@ -157,6 +162,7 @@ public class AnswerController {
 
     @DeleteMapping("/{answerId}")
     @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('MODERATOR')")
+    @CacheEvict(value = "questionDetailsByIdAndUser", allEntries = true)
     public ResponseEntity<MessageResponse> deleteAnswer(@PathVariable Long answerId) {
         MessageResponse response = new MessageResponse();
         boolean deleted = answerService.deleteAnswer(answerId);

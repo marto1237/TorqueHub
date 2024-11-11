@@ -21,4 +21,5 @@ public class CommentResponse {
     private boolean isEdited;
     private ReputationResponse reputationResponse;
     private Date postedTime;
+    private String userVote;
 }

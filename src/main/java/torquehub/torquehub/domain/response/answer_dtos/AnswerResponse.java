@@ -26,4 +26,5 @@ public class AnswerResponse {
     private Date postedTime;
     private Boolean isBookmarked;
     private Boolean isFollowing;
+    private String userVote;
 }

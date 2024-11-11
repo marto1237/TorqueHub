@@ -15,6 +15,7 @@ import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.CommentMapper;
 import torquehub.torquehub.domain.mapper.QuestionMapper;
+import torquehub.torquehub.domain.mapper.QuestionMapperContext;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaTag;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
@@ -48,8 +49,6 @@ public class QuestionServiceImpl implements QuestionService {
     private final VoteService voteService;
     private final JpaFollowRepository followRepository;
     private final JpaBookmarkRepository bookmarkRepository;
-    private final JpaBookmarkRepository jpaBookmarkRepository;
-    private final JpaFollowRepository jpaFollowRepository;
 
     public QuestionServiceImpl(JpaQuestionRepository questionRepository,
                                JpaTagRepository tagRepository,
@@ -61,7 +60,7 @@ public class QuestionServiceImpl implements QuestionService {
                                CommentMapper commentMapper,
                                VoteService voteService,
                                JpaFollowRepository followRepository,
-                               JpaBookmarkRepository bookmarkRepository, JpaBookmarkRepository jpaBookmarkRepository, JpaFollowRepository jpaFollowRepository) {
+                               JpaBookmarkRepository bookmarkRepository) {
         this.questionRepository = questionRepository;
         this.tagRepository = tagRepository;
         this.userRepository = userRepository;
@@ -73,8 +72,6 @@ public class QuestionServiceImpl implements QuestionService {
         this.followRepository = followRepository;
         this.bookmarkRepository = bookmarkRepository;
         this.answerMapper = answerMapper;
-        this.jpaBookmarkRepository = jpaBookmarkRepository;
-        this.jpaFollowRepository = jpaFollowRepository;
     }
 
     private static final String QUESTION_ID_PREFIX = "Question with ID ";
@@ -182,7 +179,10 @@ public class QuestionServiceImpl implements QuestionService {
     @Cacheable(value = "questionDetailsByIdAndUser", key = "#questionId + '-' + #userId")
     public Optional<QuestionDetailResponse> getQuestionbyId(Long questionId, Pageable pageable) {
         return questionRepository.findById(questionId)
-                .map(question -> questionMapper.toDetailResponse(question, pageable, commentMapper, answerMapper, jpaBookmarkRepository, jpaFollowRepository, null));
+                .map(question -> {
+                    QuestionMapperContext context = new QuestionMapperContext(commentMapper, answerMapper, bookmarkRepository, followRepository, voteRepository, null, pageable);
+                    return questionMapper.toDetailResponse(question, context);
+                });
     }
 
     @Override
@@ -191,30 +191,21 @@ public class QuestionServiceImpl implements QuestionService {
     public Optional<QuestionDetailResponse> getQuestionbyId(Long questionId, Pageable pageable, Long userId) {
         return questionRepository.findById(questionId)
                 .map(question -> {
-                    QuestionDetailResponse questionDetailResponse = questionMapper.toDetailResponse(question, pageable, commentMapper, answerMapper,jpaBookmarkRepository, jpaFollowRepository, userId);
+                    QuestionMapperContext context = new QuestionMapperContext(commentMapper, answerMapper, bookmarkRepository, followRepository, voteRepository, userId, pageable);
+                    QuestionDetailResponse questionDetailResponse = questionMapper.toDetailResponse(question, context);
 
-                    // If userId is provided, check for the vote status
                     if (userId != null) {
-                        Optional<JpaVote> userVoteOptional = voteRepository.findByUserAndJpaQuestion(
-                                userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found")),
-                                question
-                        );
+                        // Retrieve the user's vote status on the question
+                        Optional<JpaVote> userVoteOptional = voteRepository.findByUserAndJpaQuestion(userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found")), question);
+                        String userVote = userVoteOptional.map(vote -> vote.isUpvote() ? "up" : "down").orElse(null);
+                        questionDetailResponse.setUserVote(userVote);
 
-                        String userVote = null;
-                        if (userVoteOptional.isPresent()) {
-                            userVote = userVoteOptional.get().isUpvote() ? "up" : "down";
-                        }
-                        questionDetailResponse.setUserVote(userVote); // Set the user vote status
-
-                        // Check if the user is following the question
+                        // Check follow and bookmark status
                         boolean isFollowing = followRepository.findByUserIdAndQuestionId(userId, questionId).isPresent();
-                        questionDetailResponse.setIsFollowing(isFollowing); // Set the follow status
-
                         boolean isBookmarked = bookmarkRepository.findByUserIdAndJpaQuestionId(userId, questionId).isPresent();
-                        questionDetailResponse.setIsBookmarked(isBookmarked); // Set the bookmark status
-
+                        questionDetailResponse.setIsFollowing(isFollowing);
+                        questionDetailResponse.setIsBookmarked(isBookmarked);
                     }
-                    // If userId is null (user is not logged in), userVote will remain null
                     return questionDetailResponse;
                 });
     }
@@ -249,6 +240,7 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
+    @Transactional
     public ReputationResponse downvoteQuestion(Long questionId, Long userId) {
         JpaQuestion question = findQuestionById(questionId);
         JpaUser user = findUserById(userId);

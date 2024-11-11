@@ -9,10 +9,12 @@ import java.util.Optional;
 public interface VoteRepository {
 
     Optional<JpaVote> findByUserAndJpaAnswer(JpaUser jpaUser, JpaAnswer jpaAnswer);
+    Optional<JpaVote> findByUserIdAndAnswerId(Long userId, Long answerId);
     boolean delete(JpaVote jpaVote);
     JpaVote save(JpaVote jpaVote);
     Optional<JpaVote> findTopByJpaUserAndJpaQuestionOrderByVotedAtDesc(JpaUser jpaUser, JpaQuestion jpaQuestion);
     Optional<JpaVote> findByUserAndJpaComment(JpaUser jpaUser, JpaComment jpaComment);
     Optional<JpaVote> findByUserAndJpaQuestion(JpaUser jpaUser, JpaQuestion jpaQuestion);
+    Optional<JpaVote> findByUserIdAndCommentId(Long userId, Long commentId);
 
 }

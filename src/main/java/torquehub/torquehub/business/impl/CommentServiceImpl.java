@@ -26,6 +26,7 @@ import torquehub.torquehub.domain.response.reputation_dtos.ReputationResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaCommentRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaVoteRepository;
 
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -42,6 +43,7 @@ public class CommentServiceImpl implements CommentService {
     private final ReputationService reputationService;
     private final NotificationService notificationService;
     private final VoteService voteService;
+    private final JpaVoteRepository voteRepository;
 
     public CommentServiceImpl(CommentMapper commentMapper,
                               JpaCommentRepository commentRepository,
@@ -49,7 +51,8 @@ public class CommentServiceImpl implements CommentService {
                               JpaAnswerRepository answerRepository,
                               ReputationService reputationService,
                               NotificationService notificationService,
-                              VoteService voteService) {
+                              VoteService voteService,
+                              JpaVoteRepository voteRepository) {
         this.commentMapper = commentMapper;
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
@@ -57,6 +60,7 @@ public class CommentServiceImpl implements CommentService {
         this.reputationService = reputationService;
         this.notificationService = notificationService;
         this.voteService = voteService;
+        this.voteRepository = voteRepository;
     }
 
     private static final String USER_NOT_FOUND = "User not found";
@@ -67,6 +71,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "questionDetailsByIdAndUser", key = "#commentCreateRequest.getAnswerId()")
     public CommentResponse addComment(CommentCreateRequest commentCreateRequest) {
         try {
             JpaUser jpaUser = userRepository.findById(commentCreateRequest.getUserId())
@@ -108,7 +113,7 @@ public class CommentServiceImpl implements CommentService {
                     )
             );
 
-            CommentResponse commentResponse = commentMapper.toResponse(savedJpaComment);
+            CommentResponse commentResponse = commentMapper.toResponse(savedJpaComment, jpaUser.getId(), voteRepository);
             commentResponse.setReputationResponse(reputationResponse);
             return commentResponse;
 
@@ -119,6 +124,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "questionDetailsByIdAndUser", key = "#commentId")
     public CommentResponse editComment(Long commentId, CommentEditRequest commentEditRequest) {
         try {
             Optional<JpaComment> commentOptional = commentRepository.findById(commentId);
@@ -128,7 +134,7 @@ public class CommentServiceImpl implements CommentService {
                 jpaComment.setEdited(true);
                 JpaComment savedJpaComment = commentRepository.save(jpaComment);
 
-                return commentMapper.toResponse(savedJpaComment);
+                return commentMapper.toResponse(savedJpaComment, null, voteRepository);
             } else {
                 throw new CommentNotFoundException(COMMENT_NOT_FOUND);
             }
@@ -169,7 +175,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public CommentResponse getCommentById(Long commentId) {
         return commentRepository.findById(commentId)
-                .map(commentMapper::toResponse)
+                .map(comment -> commentMapper.toResponse(comment, null, voteRepository))
                 .orElseThrow(() -> new CommentNotFoundException(COMMENT_NOT_FOUND));
     }
 
@@ -180,7 +186,7 @@ public class CommentServiceImpl implements CommentService {
             return Optional.empty();
         } else {
             return Optional.of(jpaComments.stream()
-                    .map(commentMapper::toResponse)
+                    .map(comment -> commentMapper.toResponse(comment, null, voteRepository))
                     .toList());
         }
     }
@@ -193,13 +199,14 @@ public class CommentServiceImpl implements CommentService {
             return Optional.empty();
         } else {
             return Optional.of(jpaComments.stream()
-                    .map(commentMapper::toResponse)
+                    .map(comment -> commentMapper.toResponse(comment, userId, voteRepository))
                     .toList());
         }
     }
 
     @Override
     @Transactional
+    @CacheEvict(value = "questionDetailsByIdAndUser", key = "#root.target.getQuestionIdByCommentId(#commentId)")
     public ReputationResponse upvoteComment(Long commentId, Long userId) {
         try {
             JpaComment jpaComment = findCommentById(commentId);
@@ -212,6 +219,7 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @CacheEvict(value = "questionDetailsByIdAndUser", key = "#root.target.getQuestionIdByCommentId(#commentId)")
     public ReputationResponse downvoteComment(Long commentId, Long userId) {
         try {
             JpaComment jpaComment = findCommentById(commentId);
@@ -227,12 +235,18 @@ public class CommentServiceImpl implements CommentService {
     @Cacheable(value = "commentsByAnswer", key = "#answerId + '-' + #pageable.pageNumber")
     public Page<CommentResponse> getPaginatedComments(Long answerId, Pageable pageable) {
         Page<JpaComment> comments = commentRepository.findByAnswerId(answerId, pageable);
-        return comments.map(commentMapper::toResponse);
+        return comments.map(comment -> commentMapper.toResponse(comment, null, voteRepository));
     }
 
-    private JpaComment findCommentById(Long answerId) {
-        return commentRepository.findById(answerId)
-                .orElseThrow(() -> new IllegalArgumentException(COMMENT_ID_PREFIX + answerId + NOT_FOUND_SUFFIX));
+    public Long getQuestionIdByCommentId(Long commentId) {
+        JpaComment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new CommentNotFoundException("Comment not found with ID: " + commentId));
+        return comment.getJpaAnswer().getJpaQuestion().getId();
+    }
+
+    private JpaComment findCommentById(Long commentId) {
+        return commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException(COMMENT_ID_PREFIX + commentId + NOT_FOUND_SUFFIX));
     }
 
     private JpaUser findUserById(Long userId) {

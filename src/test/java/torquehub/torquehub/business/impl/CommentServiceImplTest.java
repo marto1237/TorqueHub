@@ -89,7 +89,7 @@ class CommentServiceImplTest {
         when(answerRepository.findById(anyLong())).thenReturn(Optional.of(testAnswer));
         when(commentRepository.save(any(JpaComment.class))).thenReturn(testComment);
         when(reputationService.updateReputationForNewComment(any())).thenReturn(new ReputationResponse());
-        when(commentMapper.toResponse(any(JpaComment.class))).thenReturn(new CommentResponse());
+        when(commentMapper.toResponse(any(JpaComment.class), anyLong(),any())).thenReturn(new CommentResponse());
 
         CommentResponse response = commentService.addComment(commentCreateRequest);
 
@@ -116,15 +116,31 @@ class CommentServiceImplTest {
 
     @Test
     void shouldEditCommentSuccessfully_whenCommentExists() {
+        JpaComment editedComment = JpaComment.builder()
+                .id(1L)
+                .jpaUser(testUser)
+                .jpaAnswer(testAnswer)
+                .text("Edited Comment")
+                .isEdited(true)  // This should be true after editing
+                .build();
+
         when(commentRepository.findById(anyLong())).thenReturn(Optional.of(testComment));
-        when(commentRepository.save(any(JpaComment.class))).thenReturn(testComment);
-        when(commentMapper.toResponse(any(JpaComment.class))).thenReturn(new CommentResponse());
+        when(commentRepository.save(any(JpaComment.class))).thenReturn(editedComment);
+        when(commentMapper.toResponse(any(JpaComment.class), isNull(), any())).thenReturn(
+                CommentResponse.builder()
+                        .id(1L)
+                        .text("Edited Comment")
+                        .build()
+        );
 
         CommentResponse response = commentService.editComment(1L, commentEditRequest);
 
         assertNotNull(response);
-        assertEquals("Edited Comment", testComment.getText());
-        verify(commentRepository).save(any(JpaComment.class));
+        verify(commentRepository).save(argThat(comment ->
+                comment.getText().equals("Edited Comment") &&
+                        comment.isEdited()  // Verify isEdited flag is set
+        ));
+        verify(commentMapper).toResponse(any(JpaComment.class), isNull(), any());
     }
 
     @Test
@@ -155,12 +171,21 @@ class CommentServiceImplTest {
 
     @Test
     void shouldReturnCommentResponse_whenCommentExistsById() {
-        when(commentRepository.findById(anyLong())).thenReturn(Optional.of(testComment));
-        when(commentMapper.toResponse(any(JpaComment.class))).thenReturn(new CommentResponse());
+        CommentResponse expectedResponse = CommentResponse.builder()
+                .id(1L)
+                .text("Test Comment")
+                .build();
+
+        when(commentRepository.findById(1L)).thenReturn(Optional.of(testComment));
+        when(commentMapper.toResponse(eq(testComment), isNull(), any())).thenReturn(expectedResponse);
 
         CommentResponse response = commentService.getCommentById(1L);
 
         assertNotNull(response);
+        verify(commentRepository).findById(1L);
+        verify(commentMapper).toResponse(eq(testComment), isNull(), any());
+        assertEquals(expectedResponse.getId(), response.getId());
+        assertEquals(expectedResponse.getText(), response.getText());
     }
 
     @Test
@@ -172,12 +197,23 @@ class CommentServiceImplTest {
 
     @Test
     void shouldReturnCommentsByAnswer_whenCommentsExist() {
-        when(commentRepository.findByAnswerId(anyLong())).thenReturn(Collections.singletonList(testComment));
-        when(commentMapper.toResponse(any(JpaComment.class))).thenReturn(new CommentResponse());
+        List<JpaComment> comments = Collections.singletonList(testComment);
+        CommentResponse mappedResponse = CommentResponse.builder()
+                .id(1L)
+                .text("Test Comment")
+                .build();
+
+        when(commentRepository.findByAnswerId(1L)).thenReturn(comments);
+        when(commentMapper.toResponse(eq(testComment), isNull(), any())).thenReturn(mappedResponse);
 
         Optional<List<CommentResponse>> response = commentService.getCommentsByAnswer(1L);
 
         assertTrue(response.isPresent());
+        assertEquals(1, response.get().size());
+        verify(commentRepository).findByAnswerId(1L);
+        verify(commentMapper).toResponse(eq(testComment), isNull(), any());
+        assertEquals(mappedResponse.getId(), response.get().get(0).getId());
+        assertEquals(mappedResponse.getText(), response.get().get(0).getText());
     }
 
     @Test
@@ -215,15 +251,26 @@ class CommentServiceImplTest {
 
     @Test
     void shouldReturnPaginatedComments_whenCalled() {
-        Page<JpaComment> commentPage = new PageImpl<>(Collections.singletonList(testComment));
-        when(commentRepository.findByAnswerId(anyLong(), any(Pageable.class))).thenReturn(commentPage);
-        when(commentMapper.toResponse(any(JpaComment.class))).thenReturn(new CommentResponse());
+        List<JpaComment> comments = Collections.singletonList(testComment);
+        Page<JpaComment> commentPage = new PageImpl<>(comments, PageRequest.of(0, 10), 1);
+        CommentResponse mappedResponse = CommentResponse.builder()
+                .id(1L)
+                .text("Test Comment")
+                .build();
+
+        when(commentRepository.findByAnswerId(eq(1L), any(Pageable.class))).thenReturn(commentPage);
+        when(commentMapper.toResponse(eq(testComment), isNull(), any())).thenReturn(mappedResponse);
 
         Page<CommentResponse> response = commentService.getPaginatedComments(1L, PageRequest.of(0, 10));
 
         assertFalse(response.isEmpty());
-        verify(commentRepository).findByAnswerId(anyLong(), any(Pageable.class));
+        assertEquals(1, response.getTotalElements());
+        verify(commentRepository).findByAnswerId(eq(1L), any(Pageable.class));
+        verify(commentMapper).toResponse(eq(testComment), isNull(), any());
+        assertEquals(mappedResponse.getId(), response.getContent().get(0).getId());
+        assertEquals(mappedResponse.getText(), response.getContent().get(0).getText());
     }
+
 
     @Test
     void shouldThrowCommentDownvoteException_whenDownvoteFails() {

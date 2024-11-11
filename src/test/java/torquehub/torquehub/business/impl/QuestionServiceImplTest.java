@@ -16,6 +16,7 @@ import torquehub.torquehub.business.interfaces.VoteService;
 import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.CommentMapper;
 import torquehub.torquehub.domain.mapper.QuestionMapper;
+import torquehub.torquehub.domain.mapper.QuestionMapperContext;
 import torquehub.torquehub.domain.model.jpa_models.*;
 import torquehub.torquehub.domain.request.question_dtos.QuestionCreateRequest;
 import torquehub.torquehub.domain.request.question_dtos.QuestionUpdateRequest;
@@ -55,6 +56,10 @@ class QuestionServiceImplTest {
     private JpaFollowRepository followRepository;
     @Mock
     private JpaBookmarkRepository bookmarkRepository;
+    @Mock
+    private CommentMapper commentMapper;
+    @Mock
+    private AnswerMapper answerMapper;
 
     private JpaQuestion testQuestion;
     private JpaUser testUser;
@@ -138,17 +143,10 @@ class QuestionServiceImplTest {
     @Test
     void shouldGetQuestionByIdSuccessfully() {
         when(questionRepository.findById(anyLong())).thenReturn(Optional.of(testQuestion));
-        when(questionMapper.toDetailResponse(
-                any(JpaQuestion.class),
-                any(Pageable.class),
-                nullable(CommentMapper.class),
-                nullable(AnswerMapper.class),
-                nullable(JpaBookmarkRepository.class),
-                nullable(JpaFollowRepository.class),
-                nullable(Long.class)
-        )).thenReturn(new QuestionDetailResponse());
+        when(questionMapper.toDetailResponse(any(JpaQuestion.class), any(QuestionMapperContext.class)))
+                .thenReturn(new QuestionDetailResponse());
 
-        Optional<QuestionDetailResponse> response = questionService.getQuestionbyId(1L, PageRequest.of(0, 10));
+        Optional<QuestionDetailResponse> response = questionService.getQuestionbyId(1L, pageable);
 
         assertTrue(response.isPresent());
     }
@@ -174,11 +172,14 @@ class QuestionServiceImplTest {
         when(voteRepository.findByUserAndJpaQuestion(any(), any())).thenReturn(Optional.of(vote));
         when(followRepository.findByUserIdAndQuestionId(anyLong(), anyLong())).thenReturn(Optional.of(new JpaFollow()));
         when(bookmarkRepository.findByUserIdAndJpaQuestionId(anyLong(), anyLong())).thenReturn(Optional.of(new JpaBookmark()));
-        when(questionMapper.toDetailResponse(any(), any(), any(), any(), any(), any(), anyLong())).thenReturn(new QuestionDetailResponse());
+
+        when(questionMapper.toDetailResponse(any(JpaQuestion.class), any(QuestionMapperContext.class)))
+                .thenReturn(new QuestionDetailResponse());
 
         Optional<QuestionDetailResponse> response = questionService.getQuestionbyId(1L, pageable, 1L);
 
         assertTrue(response.isPresent());
+        verify(questionMapper).toDetailResponse(eq(testQuestion), any(QuestionMapperContext.class));
         verify(voteRepository).findByUserAndJpaQuestion(any(), any());
         verify(followRepository).findByUserIdAndQuestionId(anyLong(), anyLong());
         verify(bookmarkRepository).findByUserIdAndJpaQuestionId(anyLong(), anyLong());
@@ -188,10 +189,9 @@ class QuestionServiceImplTest {
     void shouldGetQuestionByIdWithUserWhenNoVoteExists() {
         when(questionRepository.findById(anyLong())).thenReturn(Optional.of(testQuestion));
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(testUser));
-        when(voteRepository.findByUserAndJpaQuestion(any(), any())).thenReturn(Optional.empty());
-        when(followRepository.findByUserIdAndQuestionId(anyLong(), anyLong())).thenReturn(Optional.empty());
-        when(bookmarkRepository.findByUserIdAndJpaQuestionId(anyLong(), anyLong())).thenReturn(Optional.empty());
-        when(questionMapper.toDetailResponse(any(), any(), any(), any(), any(), any(), any())).thenReturn(new QuestionDetailResponse());
+
+        when(questionMapper.toDetailResponse(any(JpaQuestion.class), any(QuestionMapperContext.class)))
+                .thenReturn(new QuestionDetailResponse());
 
         Optional<QuestionDetailResponse> response = questionService.getQuestionbyId(1L, pageable, 1L);
 

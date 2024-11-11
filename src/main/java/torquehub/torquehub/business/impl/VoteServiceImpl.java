@@ -48,6 +48,7 @@ public class VoteServiceImpl implements VoteService {
         return handleVote(user, question, false);
     }
 
+    @CacheEvict(value = "questionDetailsByIdAndUser", key = "#question.id")
     public ReputationResponse handleVote(JpaUser user, JpaQuestion question, boolean isUpvote) {
         Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaQuestion(user, question);
 
@@ -139,27 +140,35 @@ public class VoteServiceImpl implements VoteService {
     }
 
     @Override
+    @Transactional
     public ReputationResponse handleUpvoteForAnswer(JpaUser user, JpaAnswer answer) {
         return handleVoteForAnswer(user, answer, true);
     }
 
     @Override
+    @Transactional
     public ReputationResponse handleDownvoteForAnswer(JpaUser user, JpaAnswer answer) {
         return handleVoteForAnswer(user, answer, false);
     }
 
     @Override
+    @CacheEvict(value = "questionDetailsByIdAndUser", key = "#answer.id")
     public ReputationResponse handleVoteForAnswer(JpaUser user, JpaAnswer answer, boolean isUpvote) {
         Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaAnswer(user, answer);
 
         if (existingVote.isPresent()) {
             JpaVote vote = existingVote.get();
             if (vote.isUpvote() == isUpvote) {
-                // Return the current reputation state without saving anything or sending notifications.
-                return reputationService.getCurrentReputation(user.getId());
+                // Neutralize vote by deleting it and adjusting the vote count
+                voteRepository.delete(vote);
+                answer.setVotes(answer.getVotes() + (isUpvote ? -1 : 1)); // Adjust vote count accordingly
+                return reputationService.getCurrentReputation(user.getId()); // Return updated reputation
+            } else {
+                // Update the vote type if it's opposite
+                return processExistingVoteForAnswer(vote, answer, user, isUpvote);
             }
-            return processExistingVoteForAnswer(vote, answer, user, isUpvote);
         } else {
+            // Add a new vote if none exists
             return processNewVoteForAnswer(user, answer, isUpvote);
         }
     }
@@ -251,16 +260,21 @@ public class VoteServiceImpl implements VoteService {
         return handleVoteForComment(user, comment, false);
     }
 
+    @Override
+    @CacheEvict(value = {"questionDetailsByIdAndUser", "commentsByAnswer"}, key = "#comment.jpaAnswer.jpaQuestion.id")
     public ReputationResponse handleVoteForComment(JpaUser user, JpaComment comment, boolean isUpvote) {
         Optional<JpaVote> existingVote = voteRepository.findByUserAndJpaComment(user, comment);
 
         if (existingVote.isPresent()) {
             JpaVote vote = existingVote.get();
             if (vote.isUpvote() == isUpvote) {
-                // Return the current reputation state without saving anything or sending notifications.
-                return reputationService.getCurrentReputation(user.getId());
+                voteRepository.delete(vote);
+                comment.setVotes(comment.getVotes() + (isUpvote ? -1 : 1)); // Adjust vote count accordingly
+                return reputationService.getCurrentReputation(user.getId()); // Return updated reputation
+            } else {
+                // Update the vote type if it's opposite
+                return processExistingVoteForComment(vote, comment, user, isUpvote);
             }
-            return processExistingVoteForComment(vote, comment, user, isUpvote);
         } else {
             return processNewVoteForComment(user, comment, isUpvote);
         }

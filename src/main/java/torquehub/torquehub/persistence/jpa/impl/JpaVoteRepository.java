@@ -22,6 +22,11 @@ public class JpaVoteRepository implements VoteRepository {
     }
 
     @Override
+    public Optional<JpaVote> findByUserIdAndAnswerId(Long userId, Long answerId) {
+        return voteRepository.findByJpaUserIdAndJpaAnswerId(userId, answerId);
+    }
+
+    @Override
     public boolean delete(JpaVote jpaVote) {
         if (voteRepository.existsById(jpaVote.getId())) {
             voteRepository.delete(jpaVote);
@@ -51,5 +56,9 @@ public class JpaVoteRepository implements VoteRepository {
         return voteRepository.findByJpaUserAndJpaQuestion(jpaUser, jpaQuestion);
     }
 
+    @Override
+    public Optional<JpaVote> findByUserIdAndCommentId(Long userId, Long commentId) {
+        return voteRepository.findByJpaUserIdAndJpaCommentId(userId, commentId);
+    }
 
 }

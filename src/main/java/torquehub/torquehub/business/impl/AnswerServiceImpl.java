@@ -19,10 +19,7 @@ import torquehub.torquehub.domain.ReputationConstants;
 import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.CommentMapper;
 import torquehub.torquehub.domain.mapper.NotificationMapper;
-import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
-import torquehub.torquehub.domain.model.jpa_models.JpaNotification;
-import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
-import torquehub.torquehub.domain.model.jpa_models.JpaUser;
+import torquehub.torquehub.domain.model.jpa_models.*;
 import torquehub.torquehub.domain.request.answer_dtos.AnswerCreateRequest;
 import torquehub.torquehub.domain.request.answer_dtos.AnswerEditRequest;
 import torquehub.torquehub.domain.request.notification_dtos.NewAnswerNotificationRequest;
@@ -50,6 +47,7 @@ public class AnswerServiceImpl implements AnswerService {
     private final NotificationMapper notificationMapper;
     private final JpaFollowRepository followRepository;
     private final JpaBookmarkRepository bookmarkRepository;
+    private final JpaVoteRepository voteRepository;
 
 
     public AnswerServiceImpl(
@@ -64,7 +62,8 @@ public class AnswerServiceImpl implements AnswerService {
             JpaNotificationRepository notificationRepository,
             NotificationMapper notificationMapper,
             JpaFollowRepository followRepository,
-            JpaBookmarkRepository bookmarkRepository) {
+            JpaBookmarkRepository bookmarkRepository,
+            JpaVoteRepository voteRepository) {
         this.answerMapper = answerMapper;
         this.commentMapper = commentMapper;
         this.userRepository = userRepository;
@@ -77,6 +76,7 @@ public class AnswerServiceImpl implements AnswerService {
         this.notificationMapper = notificationMapper;
         this.followRepository = followRepository;
         this.bookmarkRepository = bookmarkRepository;
+        this.voteRepository = voteRepository;
     }
 
     private static final String ANSWER_ID_PREFIX = "Answer with ID ";
@@ -111,7 +111,7 @@ public class AnswerServiceImpl implements AnswerService {
             ReputationUpdateRequest reputationUpdateRequest = new ReputationUpdateRequest(jpaUser.getId(), ReputationConstants.POINTS_NEW_ANSWER);
             ReputationResponse reputationResponse = reputationService.updateReputationForNewAnswer(reputationUpdateRequest);
 
-            AnswerResponse answerResponse = answerMapper.toResponse(savedJpaAnswer, jpaUser.getId(), bookmarkRepository, followRepository, commentMapper);
+            AnswerResponse answerResponse = answerMapper.toResponse(savedJpaAnswer, jpaUser.getId(), bookmarkRepository, followRepository,voteRepository, commentMapper);
             answerResponse.setReputationUpdate(reputationResponse);
 
             NewAnswerNotificationRequest notificationRequest = new NewAnswerNotificationRequest(
@@ -144,7 +144,7 @@ public class AnswerServiceImpl implements AnswerService {
                 jpaAnswer.setEdited(true);
                 JpaAnswer savedJpaAnswer = answerRepository.save(jpaAnswer);
 
-                return answerMapper.toResponse(savedJpaAnswer,  answerEditRequest.getUserId(), bookmarkRepository, followRepository, commentMapper);
+                return answerMapper.toResponse(savedJpaAnswer,  answerEditRequest.getUserId(), bookmarkRepository, followRepository,voteRepository, commentMapper);
             } else {
                 throw new IllegalArgumentException(ANSWER_ID_PREFIX + answerId + NOT_FOUND_SUFFIX);
             }
@@ -201,7 +201,7 @@ public class AnswerServiceImpl implements AnswerService {
             throw new IllegalArgumentException(ErrorMessages.ANSWER_NOT_FOUND);
         }
 
-        return answerMapper.toResponse(optionalAnswer.get(), null, bookmarkRepository, followRepository, commentMapper);
+        return answerMapper.toResponse(optionalAnswer.get(), null, bookmarkRepository, followRepository,voteRepository, commentMapper);
     }
 
     @Override
@@ -212,13 +212,14 @@ public class AnswerServiceImpl implements AnswerService {
             return Optional.empty();
         }else {
             return Optional.of(jpaAnswers.stream()
-                    .map(answer -> answerMapper.toResponse(answer, userId, bookmarkRepository, followRepository, commentMapper))
+                    .map(answer -> answerMapper.toResponse(answer, userId, bookmarkRepository, followRepository,voteRepository, commentMapper))
                     .toList());
         }
     }
 
     @Override
     @Transactional
+    @CacheEvict(value = "questionDetailsByIdAndUser", key = "#root.target.getQuestionIdByAnswerId(#answerId)")
     public ReputationResponse upvoteAnswer(Long answerId, Long userId) {
         try {
             JpaAnswer jpaAnswer = findAnswerById(answerId);
@@ -232,6 +233,7 @@ public class AnswerServiceImpl implements AnswerService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "questionDetailsByIdAndUser", key = "#root.target.getQuestionIdByAnswerId(#answerId)")
     public ReputationResponse downvoteAnswer(Long answerId, Long userId) {
         try {
             JpaAnswer jpaAnswer = findAnswerById(answerId);
@@ -276,7 +278,7 @@ public class AnswerServiceImpl implements AnswerService {
     public Page<AnswerResponse> getAnswersByQuestion(Long questionId, Pageable pageable, Long userId) {
         Page<JpaAnswer> answers = answerRepository.findByQuestionId(questionId, pageable);
         return answers.map(answer -> {
-            AnswerResponse answerResponse = answerMapper.toResponse(answer,  userId, bookmarkRepository, followRepository, commentMapper);
+            AnswerResponse answerResponse = answerMapper.toResponse(answer,  userId, bookmarkRepository, followRepository,voteRepository, commentMapper);
 
             // Set isBookmarked and isFollowing if userId is provided
             if (userId != null) {

@@ -15,6 +15,7 @@ import torquehub.torquehub.domain.response.answer_dtos.AnswerResponse;
 import torquehub.torquehub.domain.response.comment_dtos.CommentResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaBookmarkRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaFollowRepository;
+import torquehub.torquehub.persistence.jpa.impl.JpaVoteRepository;
 
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
@@ -22,9 +23,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AnswerMapperTest {
@@ -36,6 +36,9 @@ class AnswerMapperTest {
 
     @Mock
     private JpaFollowRepository followRepository;
+
+    @Mock
+    private JpaVoteRepository voteRepository;
 
     @Mock
     private CommentMapper commentMapper;
@@ -90,9 +93,9 @@ class AnswerMapperTest {
         // Mock commentMapper response
         CommentResponse mockCommentResponse = new CommentResponse();
         mockCommentResponse.setText("Sample Comment");
-        when(commentMapper.toResponse(any(JpaComment.class))).thenReturn(mockCommentResponse);
+        when(commentMapper.toResponse(any(JpaComment.class), nullable(Long.class), any(JpaVoteRepository.class))).thenReturn(mockCommentResponse);
 
-        AnswerResponse response = answerMapper.toResponse(jpaAnswer, 1L, bookmarkRepository, followRepository, commentMapper);
+        AnswerResponse response = answerMapper.toResponse(jpaAnswer, 1L, bookmarkRepository, followRepository, voteRepository, commentMapper);
 
         assertNotNull(response);
         assertEquals("testUser", response.getUsername());
@@ -106,7 +109,7 @@ class AnswerMapperTest {
     void testToResponseWithNoComments() {
         jpaAnswer.setJpaComments(List.of());
 
-        AnswerResponse response = answerMapper.toResponse(jpaAnswer, 1L, bookmarkRepository, followRepository, commentMapper);
+        AnswerResponse response = answerMapper.toResponse(jpaAnswer, 1L, bookmarkRepository, followRepository,voteRepository, commentMapper);
 
         assertNotNull(response);
         assertTrue(response.getComments().isEmpty());
@@ -117,14 +120,14 @@ class AnswerMapperTest {
         when(bookmarkRepository.findByUserIdAndAnswerId(anyLong(), anyLong())).thenReturn(Optional.empty());
         when(followRepository.findByUserIdAndAnswerId(anyLong(), anyLong())).thenReturn(Optional.empty());
 
-        AnswerResponse response = answerMapper.toResponse(jpaAnswer, 1L, bookmarkRepository, followRepository, commentMapper);
+        AnswerResponse response = answerMapper.toResponse(jpaAnswer, 1L, bookmarkRepository, followRepository,voteRepository, commentMapper);
 
         assertNotNull(response);
     }
 
     @Test
     void testToResponseWhenUserIdIsNull() {
-        AnswerResponse response = answerMapper.toResponse(jpaAnswer, null, bookmarkRepository, followRepository, commentMapper);
+        AnswerResponse response = answerMapper.toResponse(jpaAnswer, null, bookmarkRepository, followRepository,voteRepository, commentMapper);
 
         assertNotNull(response);
     }
@@ -136,15 +139,25 @@ class AnswerMapperTest {
                 new JpaComment(), new JpaComment(), new JpaComment()
         );
 
+        // Create mock response
         CommentResponse mockCommentResponse = CommentResponse.builder()
                 .text("Sample Comment")
                 .build();
 
-        when(commentMapper.toResponse(any(JpaComment.class))).thenReturn(mockCommentResponse);
+        // Setup mock behavior properly
+        when(commentMapper.toResponse(any(JpaComment.class), any(Long.class), any(JpaVoteRepository.class)))
+                .thenReturn(mockCommentResponse);
 
-        List<CommentResponse> limitedComments = answerMapper.limitComments(jpaComments, 0, commentMapper);
+        // Call the method
+        Long userId = 1L; // provide a concrete userId instead of null
+        List<CommentResponse> limitedComments = answerMapper.limitComments(jpaComments, 0, commentMapper, userId, voteRepository);
 
+        // Verify the results
         assertEquals(5, limitedComments.size()); // Limited to 5 comments
+        assertEquals("Sample Comment", limitedComments.get(0).getText());
+
+        // Verify that the mock was called exactly 5 times (since we limit to 5 comments)
+        verify(commentMapper, times(5)).toResponse(any(JpaComment.class), eq(userId), any(JpaVoteRepository.class));
     }
 
     @Test
