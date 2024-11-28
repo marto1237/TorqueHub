@@ -1,6 +1,7 @@
 package torquehub.torquehub.domain.model.jpa_models;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,5 +22,9 @@ public class JpaTag extends BaseTag {
 
     @Column(unique = true, nullable = false)
     private String name;
+
+    @Column(nullable = false)
+    @Min(0)
+    private int usageCount;
 }
 

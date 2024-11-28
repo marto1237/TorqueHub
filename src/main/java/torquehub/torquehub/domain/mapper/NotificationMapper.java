@@ -15,6 +15,7 @@ public interface NotificationMapper {
 
     @Mapping(target = "userId", source = "jpaUser.id")
     @Mapping(target = "voterId", source = "voter.id")
+    @Mapping(target = "isRead", source = "read")
     NotificationResponse toResponse(JpaNotification jpaNotification);
 
     @Mapping(target = "id", ignore = true) // ID is auto-generated, so ignore it

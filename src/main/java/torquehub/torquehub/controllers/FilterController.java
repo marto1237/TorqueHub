@@ -83,4 +83,14 @@ public class FilterController {
         return ResponseEntity.ok(questions);
     }
 
+    @GetMapping("/question/filter")
+    public Page<QuestionSummaryResponse> filterQuestions(
+            @RequestParam(required = false) Set<String> tags,
+            @RequestParam(required = false) Boolean noAnswers,
+            @RequestParam(required = false) Boolean noAcceptedAnswer,
+            @RequestParam(required = false, defaultValue = "newest") String sortOption,
+            Pageable pageable) {
+        return filterService.filterQuestions(tags, noAnswers, noAcceptedAnswer, sortOption, pageable);
+    }
+
 }

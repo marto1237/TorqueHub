@@ -12,4 +12,5 @@ public interface FilterService {
     Page<QuestionSummaryResponse> findAllByOrderByVotesDesc(Pageable pageable);
     Page<QuestionSummaryResponse> findAllByOrderByViewCountDesc(Pageable pageable);
     Page<QuestionSummaryResponse> findQuestionsWithNoAnswers(Pageable pageable);
+    Page<QuestionSummaryResponse> filterQuestions(Set<String> tags, Boolean noAnswers , Boolean noAcceptedAnswer, String  sortOption, Pageable pageable);
 }

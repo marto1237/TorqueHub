@@ -51,7 +51,9 @@ public class TagServiceImpl implements TagService {
             if (existingTag.isPresent()) {
                 throw new DuplicateTagException("Tag with name '" + tagCreateRequest.getName() + "' already exists.");
             }else {
-                JpaTag jpaTag = JpaTag.builder().name(tagCreateRequest.getName()).build();
+                JpaTag jpaTag = JpaTag.builder()
+                        .usageCount(0)
+                        .name(tagCreateRequest.getName()).build();
                 JpaTag createdJpaTag = tagRepository.save(jpaTag);
                 return tagMapper.toResponse(createdJpaTag);
             }
@@ -109,4 +111,31 @@ public class TagServiceImpl implements TagService {
         }
 
     }
+
+    @Override
+    public List<TagResponse> getTop5Tags(String searchQuery) {
+        List<JpaTag> tags;
+
+        if (searchQuery == null || searchQuery.isEmpty()) {
+            // Fetch the top 5 most-used tags without any filter
+            tags = tagRepository.findTop5ByOrderByUsageCountDesc();
+        } else {
+            // Fetch the top 5 most-used tags that match the search query
+            tags = tagRepository.findTop5ByNameContainingIgnoreCaseOrderByUsageCountDesc(searchQuery);
+        }
+
+        // Map JpaTag entities to TagResponse DTOs
+        return tags.stream()
+                .map(tagMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<TagResponse> findTagsByName(String name) {
+        return tagRepository.findByNameContainingIgnoreCase(name).stream()
+                .map(tagMapper::toResponse)
+                .toList();
+    }
+
+
 }

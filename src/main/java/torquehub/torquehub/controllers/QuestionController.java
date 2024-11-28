@@ -97,7 +97,7 @@ public class QuestionController {
             return ResponseEntity.ok(reputationResponse);
         } catch (InvalidAccessTokenException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-        } catch (Exception e) {
+        }  catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }

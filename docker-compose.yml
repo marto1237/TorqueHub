@@ -1,0 +1,74 @@
+
+services:
+  react-frontend:
+    build:
+      context: ..\react-torquehub
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api # Ensure API is up before starting
+    networks:
+      - torquehub-network
+    environment:
+      REACT_APP_API_BASE_URL: "http://api:8080"
+      REACT_APP_WEBSOCKET_URL: "ws://api:8080/ws"
+
+  api:
+    build:
+      context: . # Use the root directory as the context
+      dockerfile: Dockerfile # Dockerfile for the API
+    ports:
+      - "8090:8080"
+    depends_on:
+      - db # Ensure database is up before starting
+    networks:
+      - torquehub-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://torquehub-db:3306/torquehubdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: marto100
+      MYSQL_ROOT_PASSWORD: marto100
+      DATABASE_NAME: torquehubdb
+      STRIPE_SECRET_KEY: sk_test_51Q81C0JogmBpxx3KITROkvx1OFcWi7K9aDRxkXhCFK67ECrL4PpCWaww4jk7W7zKSWg3tyIB9FqBbmaHAEWMT6XY00Im5ZzOo8
+      STRIPE_PUBLISHABLE_KEY: pk_test_51Q81C0JogmBpxx3KnWzNjet1pq1bz3GE1fAX5jzbSDtnYtjQ0TtE9lxQ2ZEuL58tDLPNWxTLoMqcaP8wJORa09BM0084WuiIOW
+      JWT_SECRET: E91B158E4C6656Q68B1B5D1C31676ME98D2AD6EF3BDB44F78E9CFCDF5
+
+  db:
+    image: mysql:8.0
+    container_name: torquehub-db
+    ports:
+      - "3307:3306" # Expose MySQL on port 3306
+    environment:
+      SPRING_DATASOURCE_USERNAME: root
+      MYSQL_ROOT_PASSWORD: marto100
+      MYSQL_DATABASE: torquehubdb
+    volumes:
+      - db_data:/var/lib/mysql # Persist database data
+    networks:
+      - torquehub-network
+
+  integration-test-db:
+    image: mysql:8.0
+    container_name: integration-test-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: testdb
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: testpassword
+    ports:
+      - "3308:3306" # Use a different port to avoid conflicts with other MySQL instances
+    volumes:
+      - integration_db_data:/var/lib/mysql
+    networks:
+      - integration-test-network
+
+networks:
+  torquehub-network:
+    driver: bridge
+  integration-test-network:
+    driver: bridge
+
+volumes:
+  db_data:
+  integration_db_data:

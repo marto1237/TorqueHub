@@ -131,4 +131,14 @@ public class TagController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+
+    @GetMapping("/top")
+    public List<TagResponse> getTopTags(@RequestParam(required = false) String query) {
+        return tagService.getTop5Tags(query);
+    }
+
+    @GetMapping("/search")
+    public List<TagResponse> searchTags(@RequestParam String name) {
+        return tagService.findTagsByName(name);
+    }
 }

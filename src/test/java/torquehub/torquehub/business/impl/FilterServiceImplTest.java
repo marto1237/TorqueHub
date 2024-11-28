@@ -9,6 +9,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import torquehub.torquehub.domain.mapper.QuestionMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaTag;
@@ -140,6 +141,54 @@ class FilterServiceImplTest {
     private void invokeGetQuestionsByTags(String tag) {
         filterService.getQuestionsByTags(Set.of(tag), PageRequest.of(0, 10));
     }
+
+    @Test
+    void testFilterQuestionsWithTags() {
+        JpaTag mockTag = new JpaTag();
+        mockTag.setName("java");
+
+        // Explicitly mock Pageable
+        Pageable mockPageable = PageRequest.of(0, 10);
+
+        when(tagRepository.findByName("java")).thenReturn(Optional.of(mockTag));
+        when(questionRepository.findQuestionsByTags(List.of(mockTag), (mockPageable)))
+                .thenReturn(new PageImpl<>(List.of(mockQuestion)));
+        when(questionMapper.toSummaryResponse(mockQuestion)).thenReturn(mockResponse);
+
+        Page<QuestionSummaryResponse> result = filterService.filterQuestions(Set.of("java"), null, null, "newest", mockPageable);
+
+        assertEquals(1, result.getContent().size());
+        assertEquals(mockResponse, result.getContent().get(0));
+    }
+
+    @Test
+    void testFilterQuestionsNewest() {
+        Pageable mockPageable = PageRequest.of(0, 10);
+
+        when(questionRepository.findAllByOrderByAskedTimeDesc(mockPageable))
+                .thenReturn(new PageImpl<>(List.of(mockQuestion)));
+        when(questionMapper.toSummaryResponse(mockQuestion)).thenReturn(mockResponse);
+
+        Page<QuestionSummaryResponse> result = filterService.filterQuestions(null, null, null, "newest", mockPageable);
+
+        assertEquals(1, result.getContent().size());
+        assertEquals(mockResponse, result.getContent().get(0));
+    }
+
+
+    @Test
+    void testFilterQuestionsNoAnswers() {
+        when(questionRepository.findQuestionsWithNoAnswers(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(mockQuestion)));
+        when(questionMapper.toSummaryResponse(mockQuestion)).thenReturn(mockResponse);
+
+        Page<QuestionSummaryResponse> result = filterService.filterQuestions(null, true, null, "newest", PageRequest.of(0, 10));
+        assertEquals(1, result.getContent().size());
+        assertEquals(mockResponse, result.getContent().get(0));
+    }
+
+
+
 
 }
 

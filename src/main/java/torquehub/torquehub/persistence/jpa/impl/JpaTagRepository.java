@@ -51,4 +51,20 @@ public class JpaTagRepository implements TagRepository {
     public List<JpaTag> findAll() {
         return tagRepository.findAll();
     }
+
+    @Override
+    public List<JpaTag> findTop5ByOrderByUsageCountDesc() {
+        return tagRepository.findTop5ByOrderByUsageCountDesc();
+    }
+
+    @Override
+    public List<JpaTag> findTop5ByNameContainingIgnoreCaseOrderByUsageCountDesc(String searchQuery) {
+        return tagRepository.findTop5ByNameContainingIgnoreCaseOrderByUsageCountDesc(searchQuery);
+    }
+
+    @Override
+    public List<JpaTag> findByNameContainingIgnoreCase(String name) {
+        return tagRepository.findByNameContainingIgnoreCase(name);
+    }
+
 }

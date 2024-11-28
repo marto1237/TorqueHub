@@ -58,7 +58,7 @@ public class AuthController {
                 AccessToken accessToken = tokenService.createAccessToken(response);   // Call method to generate AccessToken
                 String jwtToken = accessTokenEncoder.encode(accessToken);  // Encode the AccessToken into JWT
 
-                long cookieMaxAge = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60; // 1 day or 1 week
+                long cookieMaxAge = 60; // 1 day or 1 week
                 ResponseCookie jwtCookie = ResponseCookie.from(JWT_TOKEN_COOKIE, jwtToken)
                         .httpOnly(true)
                         .secure(true) // Use 'true' in production to enable HTTPS

@@ -76,4 +76,39 @@ public class FilterServiceImpl implements FilterService {
         Page<JpaQuestion> questions = questionRepository.findQuestionsWithNoAnswers(pageable);
         return questions.map(questionMapper::toSummaryResponse);
     }
+
+    @Override
+    public Page<QuestionSummaryResponse> filterQuestions(Set<String> tags, Boolean noAnswers, Boolean noAcceptedAnswer, String sortOption, Pageable pageable) {
+        // Build your dynamic query based on these parameters
+        Page<JpaQuestion> questions;
+
+        if (tags != null && !tags.isEmpty()) {
+            // Find questions by tags if tags are specified
+            List<JpaTag> jpaTagEntities = tags.stream()
+                    .map(tagName -> tagRepository.findByName(tagName)
+                            .orElseThrow(() -> new IllegalArgumentException("Tag not found: " + tagName)))
+                    .toList();
+            questions = questionRepository.findQuestionsByTags(jpaTagEntities, pageable);
+        } else {
+            // Use sorting and no answers/accepted answers filters
+            if (sortOption.equals("newest")) {
+                questions = questionRepository.findAllByOrderByAskedTimeDesc(pageable);
+            } else if (sortOption.equals("recentActivity")) {
+                questions = questionRepository.findAllByOrderByLastActivityTimeDesc(pageable);
+            } else if (sortOption.equals("mostLiked")) {
+                questions = questionRepository.findAllByOrderByVotesDesc(pageable);
+            } else if (sortOption.equals("mostViews")) {
+                questions = questionRepository.findAllByOrderByViewCountDesc(pageable);
+            } else {
+                questions = questionRepository.findAll(pageable); // Default fallback
+            }
+        }
+
+        if (noAnswers != null && noAnswers) {
+            questions = questionRepository.findQuestionsWithNoAnswers(pageable);
+        }
+
+        return questions.map(questionMapper::toSummaryResponse);
+    }
+
 }

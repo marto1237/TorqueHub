@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import torquehub.torquehub.business.exeption.filter_exeption.FilterFollowAnswerExeption;
 import torquehub.torquehub.business.exeption.filter_exeption.FilterFollowQuestionExeption;
 import torquehub.torquehub.domain.mapper.FollowMapper;
 import torquehub.torquehub.domain.model.jpa_models.*;
@@ -269,6 +270,37 @@ class FollowServiceImplTest {
         Page<FollowResponse> result = followService.getFollowedAnswers(request);
 
         assertFalse(result.isEmpty());
+    }
+
+    @Test
+    void shouldThrowFilterFollowAnswerExceptionWhenErrorOccurs() {
+
+        Long userId = 1L;
+        Long answerId = 2L;
+        FollowAnswerRequest request = new FollowAnswerRequest(userId, answerId);
+
+        when(followRepository.findByUserIdAndAnswerId(userId, answerId)).thenReturn(Optional.empty());
+        when(userRepository.findById(userId)).thenThrow(new RuntimeException("User not found"));
+
+        assertThrows(FilterFollowAnswerExeption.class, () -> followService.toggleFollowAnswer(request));
+
+        verify(followRepository, never()).save(any(JpaFollow.class));
+    }
+
+    @Test
+    void shouldThrowFilterFollowAnswerExceptionWhenAnswerNotFound() {
+
+        Long userId = 1L;
+        Long answerId = 2L;
+        FollowAnswerRequest request = new FollowAnswerRequest(userId, answerId);
+
+        when(followRepository.findByUserIdAndAnswerId(userId, answerId)).thenReturn(Optional.empty());
+        when(userRepository.findById(userId)).thenReturn(Optional.of(new JpaUser()));
+        when(answerRepository.findById(answerId)).thenThrow(new RuntimeException("Answer not found"));
+
+        assertThrows(FilterFollowAnswerExeption.class, () -> followService.toggleFollowAnswer(request));
+
+        verify(followRepository, never()).save(any(JpaFollow.class));
     }
 
 }

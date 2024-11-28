@@ -262,10 +262,18 @@ public class QuestionServiceImpl implements QuestionService {
 
     private Set<JpaTag> convertTagNamesToTags(Set<String> tagNames) {
         return tagNames.stream()
-                .map(tagName -> tagRepository.findByName(tagName)
-                        .orElseThrow(() -> new IllegalArgumentException("Tag not found: " + tagName)))
+                .map(tagName -> {
+                    JpaTag tag = tagRepository.findByName(tagName)
+                            .orElseThrow(() -> new IllegalArgumentException("Tag not found: " + tagName));
+
+                    tag.setUsageCount(tag.getUsageCount() + 1);
+                    tagRepository.save(tag);
+
+                    return tag;
+                })
                 .collect(Collectors.toSet());
     }
+
 
     private JpaQuestion findQuestionById(Long questionId) {
         return questionRepository.findById(questionId)

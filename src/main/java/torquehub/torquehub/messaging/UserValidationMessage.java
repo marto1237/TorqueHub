@@ -1,4 +1,4 @@
-package torquehub.torquehub.domain.response.payment_dtos;
+package torquehub.torquehub.messaging;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class PaymentResponse {
+public class UserValidationMessage {
 
-    private String clientSecret;
+    private Long userId;
+    private boolean isValid;
+
 }

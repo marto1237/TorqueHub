@@ -20,4 +20,8 @@ public interface TagService {
     boolean tagExistsById(Long id);
 
     boolean updateTagById(Long id, TagUpdateRequest tagUpdateRequest);
+
+    List<TagResponse> getTop5Tags(String searchQuery);
+
+    List<TagResponse> findTagsByName(String name);
 }

@@ -1,6 +1,7 @@
     package torquehub.torquehub.controllers;
 
     import jakarta.validation.Valid;
+    import org.springframework.beans.factory.annotation.Value;
     import org.springframework.http.HttpStatus;
     import org.springframework.http.ResponseEntity;
     import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +27,9 @@
 
         private final UserService userService;
         private final TokenUtil tokenUtil;
+
+        @Value("${rabbitmq.exchange:default.exchange}")
+        private String exchange;
 
         public UserController(UserService userService, TokenUtil tokenUtil) {
             this.userService = userService;

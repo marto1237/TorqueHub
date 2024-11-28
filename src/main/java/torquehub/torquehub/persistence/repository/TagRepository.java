@@ -16,4 +16,7 @@ public interface TagRepository {
     boolean delete(JpaTag jpaTag);
     boolean existsById(Long tagId);
     List<JpaTag> findAll();
+    List<JpaTag> findTop5ByOrderByUsageCountDesc();
+    List<JpaTag> findTop5ByNameContainingIgnoreCaseOrderByUsageCountDesc(String searchQuery);
+    List<JpaTag> findByNameContainingIgnoreCase(String name);
 }

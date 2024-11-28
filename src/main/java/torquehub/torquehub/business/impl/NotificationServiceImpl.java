@@ -350,6 +350,7 @@ public class NotificationServiceImpl implements NotificationService {
 
 
     @Override
+    @CacheEvict(value = {"topUnreadNotifications", "userNotifications", "top5UnreadNotificationsWithCount"}, key = "#notificationId", allEntries = true)
     public boolean markAsRead(Long notificationId) {
         JpaNotification notification = notificationRepository.findById(notificationId);
         if (notification == null) {
@@ -361,7 +362,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    @CacheEvict(value = {"topUnreadNotifications", "userNotifications"}, key = "#userId", allEntries = true)
+    @CacheEvict(value = {"topUnreadNotifications", "userNotifications", "top5UnreadNotificationsWithCount"}, key = "#userId", allEntries = true)
     public boolean markAllAsRead(Long userId) {
         List<JpaNotification> notifications = notificationRepository.findByJpaUserIdAndIsReadFalse(userId);
         if (notifications.isEmpty()) {
@@ -374,6 +375,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "topUnreadNotifications", key = "#userId")
     public List<DetailNotificationResponse> findTop5UnreadWithCount(Long userId) {
         List<NotificationResponse> unreadNotifications = notificationRepository
                 .findByJpaUserIdAndIsReadFalseOrderByCreatedAtDesc(userId, Pageable.ofSize(5))

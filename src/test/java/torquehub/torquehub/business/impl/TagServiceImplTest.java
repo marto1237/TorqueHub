@@ -218,4 +218,91 @@ class TagServiceImplTest {
         assertFalse(exists);
         verify(tagRepository, times(1)).existsById(tagId);
     }
+
+    @Test
+    void shouldGetTop5TagsWithSearchQuery() {
+        String searchQuery = "Tech";
+        List<JpaTag> mockTags = List.of(
+                JpaTag.builder().id(1L).name("Technology").usageCount(100).build(),
+                JpaTag.builder().id(2L).name("Tech").usageCount(50).build()
+        );
+
+        when(tagRepository.findTop5ByNameContainingIgnoreCaseOrderByUsageCountDesc(searchQuery)).thenReturn(mockTags);
+        when(tagMapper.toResponse(any(JpaTag.class)))
+                .thenReturn(TagResponse.builder().id(1L).name("Technology").build())
+                .thenReturn(TagResponse.builder().id(2L).name("Tech").build());
+
+        List<TagResponse> response = tagService.getTop5Tags(searchQuery);
+
+        assertNotNull(response);
+        assertEquals(2, response.size());
+        assertEquals("Technology", response.get(0).getName());
+        assertEquals("Tech", response.get(1).getName());
+        verify(tagRepository, times(1)).findTop5ByNameContainingIgnoreCaseOrderByUsageCountDesc(searchQuery);
+        verify(tagMapper, times(2)).toResponse(any(JpaTag.class));
+    }
+
+    @Test
+    void shouldGetTop5TagsWithoutSearchQuery() {
+        List<JpaTag> mockTags = List.of(
+                JpaTag.builder().id(1L).name("Technology").usageCount(100).build(),
+                JpaTag.builder().id(2L).name("Science").usageCount(80).build()
+        );
+
+        when(tagRepository.findTop5ByOrderByUsageCountDesc()).thenReturn(mockTags);
+        when(tagMapper.toResponse(any(JpaTag.class)))
+                .thenReturn(TagResponse.builder().id(1L).name("Technology").build())
+                .thenReturn(TagResponse.builder().id(2L).name("Science").build());
+
+        List<TagResponse> response = tagService.getTop5Tags(null);
+
+        assertNotNull(response);
+        assertEquals(2, response.size());
+        assertEquals("Technology", response.get(0).getName());
+        assertEquals("Science", response.get(1).getName());
+        verify(tagRepository, times(1)).findTop5ByOrderByUsageCountDesc();
+        verify(tagMapper, times(2)).toResponse(any(JpaTag.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDeleteTagFails() {
+        when(tagRepository.findById(tagId)).thenReturn(Optional.of(testJpaTag));
+        doThrow(new RuntimeException("Database error")).when(tagRepository).delete(any(JpaTag.class));
+
+        TagDeleteExeption exception = assertThrows(TagDeleteExeption.class, () -> {
+            tagService.deleteTag(tagId);
+        });
+
+        assertTrue(exception.getMessage().contains("Failed to delete tag"));
+        verify(tagRepository, times(1)).findById(tagId);
+        verify(tagRepository, times(1)).delete(any(JpaTag.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUpdateTagFails() {
+        when(tagRepository.findById(tagId)).thenReturn(Optional.of(testJpaTag));
+        doThrow(new RuntimeException("Database error")).when(tagRepository).save(any(JpaTag.class));
+
+        TagNotFoundException exception = assertThrows(TagNotFoundException.class, () -> {
+            tagService.updateTagById(tagId, tagUpdateRequest);
+        });
+
+        assertTrue(exception.getMessage().contains("Tag with ID 1 not found"));
+        verify(tagRepository, times(1)).findById(tagId);
+        verify(tagRepository, times(1)).save(any(JpaTag.class));
+    }
+
+
+    @Test
+    void shouldThrowExceptionWhenGetTagByIdFails() {
+        when(tagRepository.findById(tagId)).thenThrow(new RuntimeException("Database error"));
+
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            tagService.getTagById(tagId);
+        });
+
+        assertEquals("Database error", exception.getMessage());
+        verify(tagRepository, times(1)).findById(tagId);
+    }
+
 }

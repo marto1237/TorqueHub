@@ -81,7 +81,7 @@ class TagControllerTest {
     @Test
     @WithMockUser(authorities = {"MODERATOR"})
     void shouldReturnAllTagsSuccessfully() throws Exception {
-        List<TagResponse> tagList = List.of(tagResponse, new TagResponse(2L, "Mercedes"));
+        List<TagResponse> tagList = List.of(tagResponse, new TagResponse(2L, "Mercedes",0L));
         given(tagService.getAllTags()).willReturn(tagList);
 
         mockMvc.perform(get("/tags"))
