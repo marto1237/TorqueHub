@@ -52,6 +52,5 @@ sonarqube-check:
     - ./gradlew assemble
     - ./gradlew test jacocoTestReport
     - ./gradlew sonar
-  allow_failure: true
   rules:
     - if: $CI_COMMIT_BRANCH == 'main'
