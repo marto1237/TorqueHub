@@ -33,4 +33,6 @@ public interface SpringDataJpaQuestionRepository extends JpaRepository<JpaQuesti
 
     @Query("SELECT q FROM JpaQuestion q LEFT JOIN FETCH q.jpaAnswers WHERE SIZE(q.jpaAnswers) = 0")
     Page<JpaQuestion> findQuestionsWithNoAnswers(Pageable pageable);
+
+    Long countByJpaUserId(Long userId);
 }

@@ -310,6 +310,11 @@ public class AnswerServiceImpl implements AnswerService {
         return jpaAnswer.getJpaQuestion().getId();
     }
 
+    @Override
+    public Long getAnswerCountOfUser(Long userId) {
+        return answerRepository.countByJpaUserId(userId);
+    }
+
     private JpaAnswer findAnswerById(Long answerId) {
         return answerRepository.findById(answerId)
                 .orElseThrow(() -> new IllegalArgumentException(ANSWER_ID_PREFIX + answerId + NOT_FOUND_SUFFIX));

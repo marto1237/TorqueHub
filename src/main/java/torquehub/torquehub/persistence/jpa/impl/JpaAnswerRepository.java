@@ -38,6 +38,11 @@ public class JpaAnswerRepository implements AnswerRepository {
     }
 
     @Override
+    public Long countByJpaUserId(Long userId) {
+        return answerRepository.countByJpaUserId(userId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<JpaAnswer> findByUserId(Long userId) {
         return answerRepository.findByJpaUser_Id(userId);

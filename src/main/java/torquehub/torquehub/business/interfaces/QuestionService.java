@@ -29,5 +29,6 @@ public interface QuestionService {
     ReputationResponse upvoteQuestion(Long questionId, Long userId);
     ReputationResponse downvoteQuestion(Long questionId, Long userId);
     boolean incrementQuestionView(Long questionId);
+    Long getQuestionCountOfUser(Long userId);
 
 }

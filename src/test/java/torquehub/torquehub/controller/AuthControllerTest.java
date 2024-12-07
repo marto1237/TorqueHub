@@ -29,6 +29,8 @@ import torquehub.torquehub.domain.response.login_dtos.LoginResponse;
 import torquehub.torquehub.business.interfaces.UserService;
 import torquehub.torquehub.domain.response.user_dtos.UserResponse;
 
+import java.util.Optional;
+
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -174,31 +176,30 @@ class AuthControllerTest {
     @Test
     @WithMockUser
     void shouldReturnNewToken_whenValidRefreshToken() throws Exception {
-        String validToken = "valid-refresh-token";
-        AccessToken accessToken = createMockAccessToken();
+        String validRefreshToken = "valid-refresh-token";
+        AccessToken decodedRefreshToken = createMockAccessToken();
 
-        given(accessTokenDecoder.decode(validToken)).willReturn(accessToken);
-        given(accessTokenEncoder.encode(accessToken)).willReturn("new-jwt-token");
+        given(accessTokenDecoder.decode(validRefreshToken)).willReturn(decodedRefreshToken);
+        given(blacklistService.isTokenBlacklisted(validRefreshToken)).willReturn(false);
+        given(tokenService.createAccessToken(decodedRefreshToken)).willReturn(decodedRefreshToken);
+        given(accessTokenEncoder.encode(decodedRefreshToken)).willReturn("new-access-token");
 
         mockMvc.perform(post("/auth/refresh-token")
-                        .header("Authorization", "Bearer " + validToken)
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .cookie(new MockCookie("refreshToken", validRefreshToken)))
                 .andExpect(status().isOk())
-                .andExpect(header().exists("Set-Cookie"))
-                .andExpect(jsonPath("$.message").value("Token refreshed successfully"));
+                .andExpect(header().exists(HttpHeaders.SET_COOKIE))
+                .andExpect(jsonPath("$.message").value("Access Token refreshed successfully"));
     }
+
 
     @Test
     @WithMockUser
-    void shouldReturnBadRequest_whenAuthorizationHeaderIsInvalid() throws Exception {
-        String invalidAuthorizationHeader = "TokenWithoutBearerPrefix";
-
-        mockMvc.perform(post("/auth/refresh-token")
-                        .header("Authorization", invalidAuthorizationHeader)
-                        .contentType(MediaType.APPLICATION_JSON))
+    void shouldReturnBadRequest_whenRefreshTokenCookieIsMissing() throws Exception {
+        mockMvc.perform(post("/auth/refresh-token"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("No valid token found"));
+                .andExpect(jsonPath("$.message").value("Refresh Token is missing"));
     }
+
 
 
     @Test
@@ -216,19 +217,20 @@ class AuthControllerTest {
     @Test
     @WithMockUser
     void shouldReturnUserDetails_whenSessionIsValid() throws Exception {
-        String validToken = "valid-token";
-        AccessToken token = createMockAccessToken();
+        String validAccessToken = "valid-access-token";
+        AccessToken decodedAccessToken = createMockAccessToken();
 
-        given(accessTokenDecoder.decode(validToken)).willReturn(token);
-        given(userService.getUserById(1L)).willReturn(java.util.Optional.of(userResponse));
+        given(accessTokenDecoder.decode(validAccessToken)).willReturn(decodedAccessToken);
+        given(userService.getUserById(1L)).willReturn(Optional.of(userResponse));
 
         mockMvc.perform(get("/auth/check-session")
-                        .cookie(new MockCookie("jwtToken", validToken)))
+                        .cookie(new MockCookie("accessToken", validAccessToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("newuser"))
                 .andExpect(jsonPath("$.role").value("USER"))
                 .andExpect(jsonPath("$.points").value(100));
     }
+
 
     @Test
     @WithMockUser
@@ -343,6 +345,25 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+
+    @Test
+    @WithMockUser
+    void shouldReturnUnauthorized_whenAccessTokenIsMissing() throws Exception {
+        mockMvc.perform(get("/auth/check-session"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser
+    void shouldReturnUnauthorized_whenAccessTokenIsInvalid() throws Exception {
+        String invalidAccessToken = "invalid-access-token";
+
+        given(accessTokenDecoder.decode(invalidAccessToken)).willThrow(new InvalidAccessTokenException("Invalid JWT Token"));
+
+        mockMvc.perform(get("/auth/check-session")
+                        .cookie(new MockCookie("accessToken", invalidAccessToken)))
+                .andExpect(status().isUnauthorized());
+    }
 
 
 

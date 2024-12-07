@@ -22,6 +22,7 @@ public interface QuestionRepository  {
     Page<JpaQuestion> findAllByOrderByVotesDesc(Pageable pageable);
     Page<JpaQuestion> findAllByOrderByViewCountDesc(Pageable pageable);
     Page<JpaQuestion> findQuestionsWithNoAnswers(Pageable pageable);
+    Long countByJpaUserId(Long userId);
 
 
 

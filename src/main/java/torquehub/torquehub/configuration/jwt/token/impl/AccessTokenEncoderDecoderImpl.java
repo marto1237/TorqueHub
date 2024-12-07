@@ -27,8 +27,13 @@ public class AccessTokenEncoderDecoderImpl implements AccessTokenEncoder, Access
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
+    public Key getKey() {
+        return key;
+    }
+
     @Override
     public String encode(AccessToken accessToken) {
+        long expirationTime = accessToken.getRole() == null ? 7 : 1; // Refresh: 7 days, Access: 1 minute
         Map<String, Object> claimsMap = new HashMap<>();
         if (accessToken.getRole() != null) {
             claimsMap.put("role", accessToken.getRole());
@@ -44,7 +49,7 @@ public class AccessTokenEncoderDecoderImpl implements AccessTokenEncoder, Access
         return Jwts.builder()
                 .setClaims(claimsMap)
                 .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(now.plus(10, ChronoUnit.HOURS)))
+                .setExpiration(Date.from(now.plus(expirationTime, ChronoUnit.DAYS)))
                 .signWith(key)
                 .compact();
     }

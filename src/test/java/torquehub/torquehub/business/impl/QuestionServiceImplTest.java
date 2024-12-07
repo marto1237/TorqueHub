@@ -310,4 +310,19 @@ class QuestionServiceImplTest {
 
         assertThrows(QuestionCreationException.class, () -> questionService.deleteQuestion(1L));
     }
+
+    @Test
+    void getQuestionCountOfUser_Success() {
+        Long userId = 1L;
+        Long expectedCount = 10L;
+
+        when(questionRepository.countByJpaUserId(userId)).thenReturn(expectedCount);
+
+        Long result = questionService.getQuestionCountOfUser(userId);
+
+        assertNotNull(result);
+        assertEquals(expectedCount, result);
+        verify(questionRepository).countByJpaUserId(userId);
+    }
+
 }

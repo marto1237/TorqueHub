@@ -14,7 +14,9 @@ import torquehub.torquehub.business.interfaces.BookmarkService;
 import torquehub.torquehub.configuration.utils.TokenUtil;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkAnswerRequest;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkQuestionRequest;
+import torquehub.torquehub.domain.response.answer_dtos.AnswerResponse;
 import torquehub.torquehub.domain.response.bookmark_dtos.BookmarkResponse;
+import torquehub.torquehub.domain.response.question_dtos.QuestionResponse;
 
 @RestController
 @RequestMapping("/bookmarks")
@@ -78,17 +80,12 @@ public class BookmarkController {
     }
 
     @GetMapping("/questions/{userId}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Page<BookmarkResponse>> getUserBookmarkedQuestions(
+    public ResponseEntity<Page<QuestionResponse>> getUserBookmarkedQuestions(
             @PathVariable Long userId,
-            @RequestHeader("Authorization") String token,
             Pageable pageable) {
         try {
-            Long tokenUserId = tokenUtil.getUserIdFromToken(token);
-            if (!tokenUserId.equals(userId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
-            }
-            Page<BookmarkResponse> bookmarks = bookmarkService.getUserBookmarkedQuestions(userId, pageable);
+
+            Page<QuestionResponse> bookmarks = bookmarkService.getUserBookmarkedQuestions(userId, pageable);
             return ResponseEntity.ok(bookmarks);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -96,17 +93,11 @@ public class BookmarkController {
     }
 
     @GetMapping("/answers/{userId}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Page<BookmarkResponse>> getUserBookmarkedAnswers(
+    public ResponseEntity<Page<AnswerResponse>> getUserBookmarkedAnswers(
             @PathVariable Long userId,
-            @RequestHeader("Authorization") String token,
             Pageable pageable) {
         try {
-            Long tokenUserId = tokenUtil.getUserIdFromToken(token);
-            if (!tokenUserId.equals(userId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
-            }
-            Page<BookmarkResponse> bookmarks = bookmarkService.getUserBookmarkedAnswers(userId, pageable);
+            Page<AnswerResponse> bookmarks = bookmarkService.getUserBookmarkedAnswers(userId, pageable);
             return ResponseEntity.ok(bookmarks);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);

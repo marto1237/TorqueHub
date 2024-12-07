@@ -443,4 +443,19 @@ class AnswerServiceImplTest {
 
         assertThrows(AnswerNotFoundException.class, () -> answerService.isAnswerOwner(answerId, username));
     }
+
+    @Test
+    void getAnswerCountOfUser_Success() {
+        Long userId = 1L;
+        Long expectedCount = 5L;
+
+        when(answerRepository.countByJpaUserId(userId)).thenReturn(expectedCount);
+
+        Long result = answerService.getAnswerCountOfUser(userId);
+
+        assertNotNull(result);
+        assertEquals(expectedCount, result);
+        verify(answerRepository).countByJpaUserId(userId);
+    }
+
 }

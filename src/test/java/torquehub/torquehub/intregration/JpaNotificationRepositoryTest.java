@@ -39,9 +39,7 @@ class JpaNotificationRepositoryTest {
             .withDatabaseName("testdb")
             .withUsername("testuser")
             .withPassword("testpassword")
-            .withCommand("--character-set-server=utf8mb4",
-                    "--collation-server=utf8mb4_unicode_ci",
-                    "--skip-character-set-client-handshake");
+            .withReuse(true);
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
@@ -79,6 +77,7 @@ class JpaNotificationRepositoryTest {
                 .password("password")
                 .salt("randomSalt")
                 .points(10)
+                .createdAt(LocalDateTime.now())
                 .build();
         entityManager.persist(user);
     }

@@ -23,6 +23,7 @@ public interface AnswerService {
     Page<AnswerResponse> getAnswersByQuestion(Long questionId, Pageable pageable, Long userId);
     boolean isAnswerOwner(Long answerId, String username);
     Long getQuestionIdByAnswerId(Long answerId);
+    Long getAnswerCountOfUser(Long userId);
 
 
 

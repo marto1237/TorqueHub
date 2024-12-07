@@ -41,9 +41,7 @@ class JpaQuestionRepositoryTest {
             .withDatabaseName("testdb")
             .withUsername("testuser")
             .withPassword("testpassword")
-            .withCommand("--character-set-server=utf8mb4",
-                    "--collation-server=utf8mb4_unicode_ci",
-                    "--skip-character-set-client-handshake");
+            .withReuse(true);
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
@@ -82,6 +80,7 @@ class JpaQuestionRepositoryTest {
                 .password("password")
                 .salt("randomSalt")
                 .points(10)
+                .createdAt(LocalDateTime.now())
                 .build();
         entityManager.persist(user);
 
@@ -246,4 +245,33 @@ class JpaQuestionRepositoryTest {
         // Assert
         assertThat(unansweredQuestions.getTotalElements()).isEqualTo(1);
     }
+
+    @Test
+    @DisplayName("Count questions by user ID")
+    void testCountByUserId() {
+        // Arrange
+        JpaQuestion question1 = JpaQuestion.builder()
+                .title("Question 1")
+                .description("Description 1")
+                .jpaUser(user)
+                .askedTime(LocalDateTime.now())
+                .lastActivityTime(LocalDateTime.now())
+                .build();
+        JpaQuestion question2 = JpaQuestion.builder()
+                .title("Question 2")
+                .description("Description 2")
+                .jpaUser(user)
+                .askedTime(LocalDateTime.now())
+                .lastActivityTime(LocalDateTime.now())
+                .build();
+        questionRepository.save(question1);
+        questionRepository.save(question2);
+
+        // Act
+        Long count = questionRepository.countByJpaUserId(user.getId());
+
+        // Assert
+        assertThat(count).isEqualTo(2);
+    }
+
 }

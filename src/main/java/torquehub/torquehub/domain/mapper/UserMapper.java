@@ -26,6 +26,7 @@ public interface UserMapper {
 
     @Mapping(source = "jpaRole.name", target = "role")
     @Mapping(target = "points", source = "points")
+    @Mapping(source = "createdAt", target = "accountCreationDate")
     UserResponse toResponse(JpaUser jpaUser);
 }
 

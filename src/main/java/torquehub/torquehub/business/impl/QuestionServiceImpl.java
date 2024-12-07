@@ -260,6 +260,11 @@ public class QuestionServiceImpl implements QuestionService {
         }
     }
 
+    @Override
+    public Long getQuestionCountOfUser(Long userId) {
+        return questionRepository.countByJpaUserId(userId);
+    }
+
     private Set<JpaTag> convertTagNamesToTags(Set<String> tagNames) {
         return tagNames.stream()
                 .map(tagName -> {

@@ -1,7 +1,9 @@
 package torquehub.torquehub.controllers;
 
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -14,21 +16,20 @@ import torquehub.torquehub.configuration.jwt.token.exeption.InvalidAccessTokenEx
 import torquehub.torquehub.configuration.jwt.token.impl.BlacklistService;
 import torquehub.torquehub.domain.request.login_dtos.LoginRequest;
 import torquehub.torquehub.domain.request.user_dtos.UserCreateRequest;
-import torquehub.torquehub.domain.response.login_dtos.LoginResponse;
 import torquehub.torquehub.domain.response.MessageResponse;
+import torquehub.torquehub.domain.response.login_dtos.LoginResponse;
 import torquehub.torquehub.domain.response.user_dtos.UserResponse;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 
 @RestController
 @RequestMapping("/auth")
 @Validated
 public class AuthController {
 
-    // Define constants for repeated literals
-    private static final String JWT_TOKEN_COOKIE = "jwtToken";
+    private static final String ACCESS_TOKEN_COOKIE = "accessToken";
+    private static final String REFRESH_TOKEN_COOKIE = "refreshToken";
     private static final String SAME_SITE_STRICT = "Strict";
-    private static final long SECONDS_IN_A_DAY = 24 * 60 * 60L;
+    private static final long ACCESS_TOKEN_EXPIRATION = 300L; // 5 minutes
+    private static final long REFRESH_TOKEN_EXPIRATION = 86400L; // 1 day
 
     private final UserService userService;
     private final TokenService tokenService;
@@ -51,36 +52,43 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginDto,
                                                @RequestParam(defaultValue = "false") boolean rememberMe) {
-        try{
+        try {
             LoginResponse response = userService.login(loginDto);
             if (response != null && response.getId() != null) {
-                // If login is successful, generate JWT token
-                AccessToken accessToken = tokenService.createAccessToken(response);   // Call method to generate AccessToken
-                String jwtToken = accessTokenEncoder.encode(accessToken);  // Encode the AccessToken into JWT
+                // Generate Access and Refresh Tokens
+                AccessToken accessToken = tokenService.createAccessToken(response);
+                String accessTokenString = accessTokenEncoder.encode(accessToken);
 
-                long cookieMaxAge = 60; // 1 day or 1 week
-                ResponseCookie jwtCookie = ResponseCookie.from(JWT_TOKEN_COOKIE, jwtToken)
+                AccessToken refreshToken = tokenService.createRefreshToken(response);
+                String refreshTokenString = accessTokenEncoder.encode(refreshToken);
+
+                // Create cookies
+                ResponseCookie accessCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE, accessTokenString)
                         .httpOnly(true)
-                        .secure(true) // Use 'true' in production to enable HTTPS
+                        .secure(true) // Enable in production
                         .path("/")
-                        .maxAge(cookieMaxAge)
-                        .sameSite(SAME_SITE_STRICT)  //  CSRF protection
+                        .maxAge(ACCESS_TOKEN_EXPIRATION)
+                        .sameSite(SAME_SITE_STRICT)
+                        .build();
+
+                ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE, refreshTokenString)
+                        .httpOnly(true)
+                        .secure(true) // Enable in production
+                        .path("/")
+                        .maxAge(REFRESH_TOKEN_EXPIRATION)
+                        .sameSite(SAME_SITE_STRICT)
                         .build();
 
                 return ResponseEntity.status(HttpStatus.OK)
-                        .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                        .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+                        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
                         .body(response);
             } else {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
-        }catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-
-
     }
 
     @PostMapping("/register")
@@ -91,43 +99,40 @@ public class AuthController {
 
     @PostMapping("/refresh-token")
     public ResponseEntity<MessageResponse> refreshAccessToken(
-            @CookieValue(value = "jwtToken", required = false) String jwtToken,
-            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+            @CookieValue(value = REFRESH_TOKEN_COOKIE, required = false) String refreshToken) {
 
         MessageResponse response = new MessageResponse();
 
         try {
-            // Extract token from either cookie or Authorization header
-            String token = null;
-
-            if (jwtToken != null) {
-                token = jwtToken;
-            } else if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                token = authorizationHeader.substring(7);
-            }
-
-            if (token == null) {
-                response.setMessage("No valid token found");
+            if (refreshToken == null) {
+                response.setMessage("Refresh Token is missing");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
 
+            // Decode and validate the Refresh Token
+            AccessToken decodedRefreshToken = accessTokenDecoder.decode(refreshToken);
 
-            // Decode and validate the refresh token
-            AccessToken accessToken = accessTokenDecoder.decode(token);
-            String newAccessToken = accessTokenEncoder.encode(accessToken);
+            if (blacklistService.isTokenBlacklisted(refreshToken)) {
+                response.setMessage("Refresh Token is invalid");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
 
-            // Set the new access token in the HTTP-only cookie
-            ResponseCookie newJwtCookie = ResponseCookie.from(JWT_TOKEN_COOKIE, newAccessToken)
+            // Generate a new Access Token
+            AccessToken newAccessToken = tokenService.createAccessToken(decodedRefreshToken);
+            String newAccessTokenString = accessTokenEncoder.encode(newAccessToken);
+
+            // Set the new Access Token in a cookie
+            ResponseCookie accessCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE, newAccessTokenString)
                     .httpOnly(true)
-                    .secure(true) // Set to true in production
+                    .secure(true) // Enable in production
                     .path("/")
-                    .maxAge(SECONDS_IN_A_DAY)
+                    .maxAge(300L) // 5 minutes
                     .sameSite(SAME_SITE_STRICT)
                     .build();
 
-            response.setMessage("Token refreshed successfully");
+            response.setMessage("Access Token refreshed successfully");
             return ResponseEntity.ok()
-                    .header(HttpHeaders.SET_COOKIE, newJwtCookie.toString())
+                    .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
                     .body(response);
         } catch (InvalidAccessTokenException e) {
             response.setMessage("Invalid Refresh Token");
@@ -138,54 +143,61 @@ public class AuthController {
         }
     }
 
-
     @PostMapping("/logout")
-    public ResponseEntity<MessageResponse> logout(@RequestHeader(value = "Authorization", required = false) String token) {
+    public ResponseEntity<MessageResponse> logout(
+            @CookieValue(value = ACCESS_TOKEN_COOKIE, required = false) String accessToken,
+            @CookieValue(value = REFRESH_TOKEN_COOKIE, required = false) String refreshToken) {
+
         MessageResponse response = new MessageResponse();
 
-        // Invalidate the JWT cookie by setting a past expiration date
-        ResponseCookie logoutCookie = ResponseCookie.from(JWT_TOKEN_COOKIE, "")
+        // Invalidate both tokens
+        if (accessToken != null) {
+            blacklistService.addTokenToBlacklist(accessToken);
+        }
+        if (refreshToken != null) {
+            blacklistService.addTokenToBlacklist(refreshToken);
+        }
+
+        // Clear cookies
+        ResponseCookie clearedAccessCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE, "")
                 .httpOnly(true)
-                .secure(true) // Set this to true only if HTTPS is used in production
+                .secure(true) // Enable in production
                 .path("/")
-                .maxAge(0) // Set expiry to 0 to remove the cookie
+                .maxAge(0) // Expire immediately
                 .sameSite(SAME_SITE_STRICT)
                 .build();
 
-        if (token != null && token.startsWith("Bearer ")) {
-            String jwt = token.substring(7);
-
-            // Add the token to the blacklist
-            try {
-                blacklistService.addTokenToBlacklist(jwt);
-            } catch (Exception e) {
-                // Log the error if blacklist operation fails
-                response.setMessage("Logout failed due to internal error while blacklisting the token.");
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .header(HttpHeaders.SET_COOKIE, logoutCookie.toString())
-                        .body(response);
-            }
-        }
+        ResponseCookie clearedRefreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE, "")
+                .httpOnly(true)
+                .secure(true) // Enable in production
+                .path("/")
+                .maxAge(0) // Expire immediately
+                .sameSite(SAME_SITE_STRICT)
+                .build();
 
         response.setMessage("Logged out successfully");
 
-        return ResponseEntity.status(HttpStatus.OK)
-                .header(HttpHeaders.SET_COOKIE, logoutCookie.toString())
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clearedAccessCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, clearedRefreshCookie.toString())
                 .body(response);
     }
 
-
     @GetMapping("/check-session")
-    public ResponseEntity<UserResponse> checkSession(@CookieValue(JWT_TOKEN_COOKIE) String jwtToken) {
+    public ResponseEntity<UserResponse> checkSession(
+            @CookieValue(value = ACCESS_TOKEN_COOKIE, required = false) String accessToken) {
         try {
-            AccessToken accessToken = accessTokenDecoder.decode(jwtToken); // Decode and validate JWT
-            UserResponse userResponse = userService.getUserById(accessToken.getUserID())
+            if (accessToken == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            AccessToken decodedAccessToken = accessTokenDecoder.decode(accessToken);
+            UserResponse userResponse = userService.getUserById(decodedAccessToken.getUserID())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             return ResponseEntity.ok(userResponse);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
-
 }

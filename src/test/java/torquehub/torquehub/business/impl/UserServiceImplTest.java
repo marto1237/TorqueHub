@@ -329,7 +329,7 @@ class UserServiceImplTest {
                 JpaUser.builder().id(2L).username("user2").build());
         when(userRepository.findAll()).thenReturn(userList);
         when(userMapper.toResponse(any(JpaUser.class)))
-                .thenReturn(new UserResponse(1L, "testUser", testEmail, "USER",10));
+                .thenReturn(new UserResponse(1L, "testUser", testEmail, "USER", LocalDateTime.now(), 10));
         List<UserResponse> result = userService.getAllUsers();
 
         assertEquals(2, result.size());
@@ -375,7 +375,7 @@ class UserServiceImplTest {
         when(roleRepository.findByName("USER")).thenReturn(Optional.of(userJpaRole));
         when(userRepository.save(any(JpaUser.class))).thenReturn(testJpaUser);
         when(userMapper.toResponse(any(JpaUser.class)))
-                .thenReturn(new UserResponse(1L, "testUser", testEmail, "USER", 10));
+                .thenReturn(new UserResponse(1L, "testUser", testEmail, "USER",LocalDateTime.now(), 10));
 
         UserResponse response = userService.createUser(requestWithoutRole);
 
@@ -459,7 +459,7 @@ class UserServiceImplTest {
             return savedUser;
         });
         when(userMapper.toResponse(any(JpaUser.class)))
-                .thenReturn(new UserResponse(1L, "testUser", testEmail, "USER", 10));
+                .thenReturn(new UserResponse(1L, "testUser", testEmail, "USER",LocalDateTime.now(), 10));
 
         userService.createUser(userCreateRequest);
 

@@ -7,18 +7,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import torquehub.torquehub.business.exeption.BookmarkAlreadyExistsException;
 import torquehub.torquehub.business.interfaces.BookmarkService;
+import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.BookmarkMapper;
+import torquehub.torquehub.domain.mapper.CommentMapper;
+import torquehub.torquehub.domain.mapper.QuestionMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
 import torquehub.torquehub.domain.model.jpa_models.JpaBookmark;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkAnswerRequest;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkQuestionRequest;
+import torquehub.torquehub.domain.response.answer_dtos.AnswerResponse;
 import torquehub.torquehub.domain.response.bookmark_dtos.BookmarkResponse;
-import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaBookmarkRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
+import torquehub.torquehub.domain.response.question_dtos.QuestionResponse;
+import torquehub.torquehub.persistence.jpa.impl.*;
 
 import java.time.LocalDateTime;
 
@@ -30,17 +32,33 @@ public class BookmarkServiceImpl implements BookmarkService {
     private final JpaUserRepository userRepository;
     private final JpaQuestionRepository questionRepository;
     private final BookmarkMapper bookmarkMapper;
+    private final QuestionMapper questionMapper;
+    private final AnswerMapper answerMapper;
+    private final JpaFollowRepository followRepository;
+    private final JpaVoteRepository voteRepository;
+    private final CommentMapper commentMapper;
+
 
     public BookmarkServiceImpl(JpaBookmarkRepository bookmarkRepository,
                                JpaAnswerRepository answerRepository,
                                JpaUserRepository userRepository,
                                JpaQuestionRepository questionRepository,
-                               BookmarkMapper bookmarkMapper) {
+                               BookmarkMapper bookmarkMapper,
+                               QuestionMapper questionMapper,
+                               AnswerMapper answerMapper,
+                               JpaFollowRepository followRepository,
+                               JpaVoteRepository voteRepository,
+                               CommentMapper commentMapper) {
         this.bookmarkRepository = bookmarkRepository;
         this.answerRepository = answerRepository;
         this.userRepository = userRepository;
         this.questionRepository = questionRepository;
         this.bookmarkMapper = bookmarkMapper;
+        this.questionMapper = questionMapper;
+        this.answerMapper = answerMapper;
+        this.followRepository = followRepository;
+        this.voteRepository = voteRepository;
+        this.commentMapper = commentMapper;
     }
 
 
@@ -105,16 +123,20 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     @Override
     @Cacheable(value = "userBookmarkedQuestions", key = "#userId + '-' + #pageable.pageNumber")
-    public Page<BookmarkResponse> getUserBookmarkedQuestions(Long userId, Pageable pageable) {
+    public Page<QuestionResponse> getUserBookmarkedQuestions(Long userId, Pageable pageable) {
         Page<JpaBookmark> jpaBookmarks = bookmarkRepository.findByUserIdAndJpaQuestionIsNotNull(userId, pageable);
-        return jpaBookmarks.map(bookmarkMapper::toResponse);
+        return jpaBookmarks.map(bookmark ->
+                questionMapper.toResponse(bookmark.getJpaQuestion())
+        );
     }
 
     @Override
     @Cacheable(value = "userBookmarkedAnswers", key = "#userId + '-' + #pageable.pageNumber")
-    public Page<BookmarkResponse> getUserBookmarkedAnswers(Long userId, Pageable pageable) {
+    public Page<AnswerResponse> getUserBookmarkedAnswers(Long userId, Pageable pageable) {
         Page<JpaBookmark> jpaBookmarks = bookmarkRepository.findByUserIdAndJpaAnswerIsNotNull(userId, pageable);
-        return jpaBookmarks.map(bookmarkMapper::toResponse);
+        return jpaBookmarks.map(bookmark ->
+                answerMapper.toResponse(bookmark.getJpaAnswer(), userId, bookmarkRepository, followRepository, voteRepository, commentMapper)
+        );
     }
 
 }

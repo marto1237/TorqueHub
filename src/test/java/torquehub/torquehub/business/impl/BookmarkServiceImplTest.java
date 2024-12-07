@@ -9,14 +9,18 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import torquehub.torquehub.domain.mapper.AnswerMapper;
 import torquehub.torquehub.domain.mapper.BookmarkMapper;
+import torquehub.torquehub.domain.mapper.QuestionMapper;
 import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
 import torquehub.torquehub.domain.model.jpa_models.JpaBookmark;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
 import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkAnswerRequest;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkQuestionRequest;
+import torquehub.torquehub.domain.response.answer_dtos.AnswerResponse;
 import torquehub.torquehub.domain.response.bookmark_dtos.BookmarkResponse;
+import torquehub.torquehub.domain.response.question_dtos.QuestionResponse;
 import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaBookmarkRepository;
 import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
@@ -24,7 +28,9 @@ import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -45,6 +51,12 @@ class BookmarkServiceImplTest {
 
     @Mock
     private BookmarkMapper bookmarkMapper;
+
+    @Mock
+    private QuestionMapper questionMapper;
+
+    @Mock
+    private AnswerMapper answerMapper;
 
     @InjectMocks
     private BookmarkServiceImpl bookmarkService;
@@ -140,27 +152,66 @@ class BookmarkServiceImplTest {
     void getUserBookmarkedQuestions_shouldReturnPagedResults() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<JpaBookmark> page = new PageImpl<>(Collections.singletonList(testBookmark));
-        when(bookmarkRepository.findByUserIdAndJpaQuestionIsNotNull(1L, pageable)).thenReturn(page);
-        when(bookmarkMapper.toResponse(any(JpaBookmark.class))).thenReturn(bookmarkResponse);
 
-        Page<BookmarkResponse> result = bookmarkService.getUserBookmarkedQuestions(1L, pageable);
+        when(bookmarkRepository.findByUserIdAndJpaQuestionIsNotNull(1L, pageable)).thenReturn(page);
+
+        QuestionResponse mockResponse = QuestionResponse.builder()
+                .id(1L)
+                .title("Test Question")
+                .description("Test Description")
+                .tags(Set.of("java", "spring"))
+                .views(100)
+                .votes(10)
+                .totalAnswers(5)
+                .username("testUser")
+                .reputationUpdate(null)
+                .askedTime(LocalDateTime.now())
+                .build();
+
+        when(questionMapper.toResponse(testBookmark.getJpaQuestion())).thenReturn(mockResponse);
+
+        Page<QuestionResponse> result = bookmarkService.getUserBookmarkedQuestions(1L, pageable);
 
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
         assertEquals(1L, result.getContent().get(0).getId());
+        assertEquals("Test Question", result.getContent().get(0).getTitle());
     }
+
+
 
     @Test
     void getUserBookmarkedAnswers_shouldReturnPagedResults() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<JpaBookmark> page = new PageImpl<>(Collections.singletonList(testBookmark));
-        when(bookmarkRepository.findByUserIdAndJpaAnswerIsNotNull(1L, pageable)).thenReturn(page);
-        when(bookmarkMapper.toResponse(any(JpaBookmark.class))).thenReturn(bookmarkResponse);
 
-        Page<BookmarkResponse> result = bookmarkService.getUserBookmarkedAnswers(1L, pageable);
+        when(bookmarkRepository.findByUserIdAndJpaAnswerIsNotNull(1L, pageable)).thenReturn(page);
+
+        AnswerResponse mockResponse = AnswerResponse.builder()
+                .id(1L)
+                .text("Test Answer")
+                .username("testUser")
+                .userPoints(50)
+                .votes(20)
+                .isEdited(false)
+                .comments(Collections.emptyList())
+                .reputationUpdate(null)
+                .postedTime(new Date())
+                .isBookmarked(true)
+                .isFollowing(false)
+                .userVote("upvote")
+                .build();
+
+        when(answerMapper.toResponse(eq(testBookmark.getJpaAnswer()), anyLong(), any(), any(), any(), any()))
+                .thenReturn(mockResponse);
+
+        Page<AnswerResponse> result = bookmarkService.getUserBookmarkedAnswers(1L, pageable);
 
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
         assertEquals(1L, result.getContent().get(0).getId());
+        assertEquals("Test Answer", result.getContent().get(0).getText());
     }
+
+
 }

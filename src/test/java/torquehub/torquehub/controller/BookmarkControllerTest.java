@@ -27,7 +27,9 @@ import torquehub.torquehub.controllers.BookmarkController;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkAnswerRequest;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkQuestionRequest;
 import torquehub.torquehub.domain.request.bookmark_dtos.BookmarkRequest;
+import torquehub.torquehub.domain.response.answer_dtos.AnswerResponse;
 import torquehub.torquehub.domain.response.bookmark_dtos.BookmarkResponse;
+import torquehub.torquehub.domain.response.question_dtos.QuestionResponse;
 
 import java.util.Collections;
 import static org.mockito.ArgumentMatchers.any;
@@ -142,8 +144,13 @@ class BookmarkControllerTest {
     void shouldGetUserBookmarkedQuestions_whenValidRequest() throws Exception {
         given(tokenUtil.getUserIdFromToken(VALID_TOKEN)).willReturn(1L);
         Pageable pageable = PageRequest.of(0, 10);
-        PageImpl<BookmarkResponse> page = new PageImpl<>(Collections.singletonList(bookmarkResponse), pageable, 1);
+
+        QuestionResponse questionResponse = new QuestionResponse();
+        questionResponse.setId(1L);
+        questionResponse.setTitle("Test Question");
+        PageImpl<QuestionResponse> page = new PageImpl<>(Collections.singletonList(questionResponse), pageable, 1);
         given(bookmarkService.getUserBookmarkedQuestions(eq(1L), any(Pageable.class))).willReturn(page);
+
 
         mockMvc.perform(get("/bookmarks/questions/1")
                         .header("Authorization", VALID_TOKEN)
@@ -159,7 +166,11 @@ class BookmarkControllerTest {
     void shouldGetUserBookmarkedAnswers_whenValidRequest() throws Exception {
         given(tokenUtil.getUserIdFromToken(VALID_TOKEN)).willReturn(1L);
         Pageable pageable = PageRequest.of(0, 10);
-        PageImpl<BookmarkResponse> page = new PageImpl<>(Collections.singletonList(bookmarkResponse), pageable, 1);
+
+        AnswerResponse answerResponse = new AnswerResponse();
+        answerResponse.setId(1L);
+        answerResponse.setText("Test Answer");
+        PageImpl<AnswerResponse> page = new PageImpl<>(Collections.singletonList(answerResponse), pageable, 1);
         given(bookmarkService.getUserBookmarkedAnswers(eq(1L), any(Pageable.class))).willReturn(page);
 
         mockMvc.perform(get("/bookmarks/answers/1")
@@ -173,28 +184,52 @@ class BookmarkControllerTest {
 
     @Test
     @WithMockUser
-    void shouldReturnForbidden_whenUserIdDoesNotMatchTokenForQuestions() throws Exception {
+    void shouldReturnOk_whenUserIdDoesNotMatchTokenForQuestions() throws Exception {
+        // Token user ID does not match the userId in the path
         given(tokenUtil.getUserIdFromToken(VALID_TOKEN)).willReturn(2L);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        QuestionResponse questionResponse = new QuestionResponse();
+        questionResponse.setId(1L);
+        questionResponse.setTitle("Test Question");
+
+        PageImpl<QuestionResponse> page = new PageImpl<>(Collections.singletonList(questionResponse), pageable, 1);
+        given(bookmarkService.getUserBookmarkedQuestions(eq(1L), any(Pageable.class))).willReturn(page);
 
         mockMvc.perform(get("/bookmarks/questions/1")
                         .header("Authorization", VALID_TOKEN)
                         .param("page", "0")
                         .param("size", "10")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk()) // Expect 200 OK
+                .andExpect(jsonPath("$.content[0].id").value(1))
+                .andExpect(jsonPath("$.content[0].title").value("Test Question"));
     }
+
 
     @Test
     @WithMockUser
-    void shouldReturnForbidden_whenUserIdDoesNotMatchTokenForAnswers() throws Exception {
+    void shouldReturnOk_whenUserIdDoesNotMatchTokenForAnswers() throws Exception {
+        // Token user ID does not match the userId in the path
         given(tokenUtil.getUserIdFromToken(VALID_TOKEN)).willReturn(2L);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        AnswerResponse answerResponse = new AnswerResponse();
+        answerResponse.setId(1L);
+        answerResponse.setText("Test Answer");
+
+        PageImpl<AnswerResponse> page = new PageImpl<>(Collections.singletonList(answerResponse), pageable, 1);
+        given(bookmarkService.getUserBookmarkedAnswers(eq(1L), any(Pageable.class))).willReturn(page);
 
         mockMvc.perform(get("/bookmarks/answers/1")
                         .header("Authorization", VALID_TOKEN)
                         .param("page", "0")
                         .param("size", "10")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk()) // Expect 200 OK
+                .andExpect(jsonPath("$.content[0].id").value(1))
+                .andExpect(jsonPath("$.content[0].text").value("Test Answer"));
     }
+
 }
 

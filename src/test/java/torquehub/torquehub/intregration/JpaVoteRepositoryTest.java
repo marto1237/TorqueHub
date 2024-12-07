@@ -73,6 +73,7 @@ class JpaVoteRepositoryTest {
                 .salt("salt")
                 .points(10)
                 .jpaRole(role)
+                .createdAt(LocalDateTime.now())
                 .build();
         entityManager.persist(user);
 

@@ -9,6 +9,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import torquehub.torquehub.domain.model.plain_models.BaseUser;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Data
 @Builder
@@ -43,5 +45,8 @@ public class JpaUser extends BaseUser {
     private JpaRole jpaRole;
 
     private int points = 0;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
 
 }

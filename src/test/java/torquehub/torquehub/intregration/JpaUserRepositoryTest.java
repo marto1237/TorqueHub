@@ -18,6 +18,7 @@ import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
 import torquehub.torquehub.persistence.jpa.interfaces.SpringDataJpaUserRepository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,9 +34,7 @@ class JpaUserRepositoryTest {
             .withDatabaseName("testdb")
             .withUsername("testuser")
             .withPassword("testpassword")
-            .withCommand("--character-set-server=utf8mb4",
-                    "--collation-server=utf8mb4_unicode_ci",
-                    "--skip-character-set-client-handshake");
+            .withReuse(true);
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
@@ -79,6 +78,7 @@ class JpaUserRepositoryTest {
                 .salt("randomSalt")
                 .jpaRole(defaultRole)
                 .points(10)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         // Act
@@ -102,6 +102,7 @@ class JpaUserRepositoryTest {
                 .password("password123")
                 .salt("randomSalt")
                 .jpaRole(defaultRole)
+                .createdAt(LocalDateTime.now())
                 .build();
         JpaUser savedUser = userRepository.save(user);
 
@@ -123,6 +124,7 @@ class JpaUserRepositoryTest {
                 .password("password123")
                 .salt("randomSalt")
                 .jpaRole(defaultRole)
+                .createdAt(LocalDateTime.now())
                 .build();
         userRepository.save(user);
 
@@ -144,6 +146,7 @@ class JpaUserRepositoryTest {
                 .password("password123")
                 .salt("randomSalt")
                 .jpaRole(defaultRole)
+                .createdAt(LocalDateTime.now())
                 .build();
         userRepository.save(user);
 
@@ -164,6 +167,7 @@ class JpaUserRepositoryTest {
                 .password("password123")
                 .salt("randomSalt")
                 .jpaRole(defaultRole)
+                .createdAt(LocalDateTime.now())
                 .build();
         JpaUser savedUser = userRepository.save(user);
 
@@ -185,6 +189,7 @@ class JpaUserRepositoryTest {
                 .password("password1")
                 .salt("salt1")
                 .jpaRole(defaultRole)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         JpaUser user2 = JpaUser.builder()
@@ -193,6 +198,7 @@ class JpaUserRepositoryTest {
                 .password("password2")
                 .salt("salt2")
                 .jpaRole(defaultRole)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         userRepository.save(user1);

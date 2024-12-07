@@ -80,4 +80,9 @@ public class JpaQuestionRepository implements QuestionRepository {
     public Page<JpaQuestion> findQuestionsWithNoAnswers(Pageable pageable) {
         return questionRepository.findQuestionsWithNoAnswers(pageable);
     }
+
+    @Override
+    public Long countByJpaUserId(Long userId) {
+        return questionRepository.countByJpaUserId(userId);
+    }
 }

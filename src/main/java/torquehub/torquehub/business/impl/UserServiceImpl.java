@@ -99,6 +99,7 @@
                         .password(hashedPassword)
                         .salt(salt)
                         .jpaRole(jpaRole)
+                        .createdAt(LocalDateTime.now())
                         .build();
 
                 // Save user

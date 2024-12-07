@@ -18,4 +18,6 @@ public interface AnswerRepository {
 
     Page<JpaAnswer> findByQuestionId(Long questionId, Pageable pageable);
 
+    Long countByJpaUserId(Long userId);
+
 }
