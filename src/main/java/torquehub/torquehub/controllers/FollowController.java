@@ -9,11 +9,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import torquehub.torquehub.business.interfaces.FollowService;
 import torquehub.torquehub.configuration.utils.TokenUtil;
-import torquehub.torquehub.domain.request.follow_dtos.FollowAnswerRequest;
-import torquehub.torquehub.domain.request.follow_dtos.FollowQuestionRequest;
-import torquehub.torquehub.domain.request.follow_dtos.FollowedAnswerRequest;
-import torquehub.torquehub.domain.request.follow_dtos.FollowedQuestionRequest;
+import torquehub.torquehub.domain.request.follow_dtos.*;
+import torquehub.torquehub.domain.response.MessageResponse;
 import torquehub.torquehub.domain.response.follow_dtos.FollowResponse;
+import torquehub.torquehub.domain.response.follow_dtos.FollowedAnswerResponse;
+import torquehub.torquehub.domain.response.follow_dtos.FollowedQuestionResponse;
 
 import java.util.List;
 
@@ -122,5 +122,76 @@ public class FollowController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
+
+    @PatchMapping("/mute/{followId}")
+    @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = {"followedQuestions", "followedAnswers"}, allEntries = true)
+    public ResponseEntity<MessageResponse> toggleMute(
+            @PathVariable Long followId,
+            @RequestParam boolean isMuted,
+            @RequestHeader("Authorization") String token) {
+        MessageResponse messageResponse = new MessageResponse();
+        try {
+            Long userId = tokenUtil.getUserIdFromToken(token);
+            MuteFollowRequest muteFollowRequest = new MuteFollowRequest(userId, followId, isMuted);
+            followService.muteFollow(muteFollowRequest);
+            messageResponse.setMessage("Follow muted successfully");
+            return ResponseEntity.ok(messageResponse);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PatchMapping("/batch-mute")
+    @PreAuthorize("isAuthenticated()")
+    @CacheEvict(value = {"followedQuestions", "followedAnswers"}, allEntries = true)
+    public ResponseEntity<MessageResponse> batchToggleMuteFollows(
+            @RequestBody List<MuteFollowRequest> muteRequests,
+            @RequestHeader("Authorization") String token) {
+        try {
+            Long userId = tokenUtil.getUserIdFromToken(token);
+
+            // Attach userId to all requests
+            muteRequests.forEach(request -> request.setUserId(userId));
+
+            followService.batchToggleMuteFollows(muteRequests);
+
+            MessageResponse messageResponse = new MessageResponse();
+            messageResponse.setMessage("Follows muted/unmuted successfully");
+            return ResponseEntity.ok(messageResponse);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+
+
+    @GetMapping("/user/questions")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Page<FollowedQuestionResponse>> getQuestions(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+        Long userId = tokenUtil.getUserIdFromToken(token);
+        PageRequest pageable = PageRequest.of(page, size);
+        FollowedQuestionRequest request = new FollowedQuestionRequest(userId, pageable);
+        Page<FollowedQuestionResponse> followedQuestions = followService.getQuestions(request);
+        return ResponseEntity.ok(followedQuestions);
+    }
+
+    @GetMapping("/user/answers")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Page<FollowedAnswerResponse>> getAnswers(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+        Long userId = tokenUtil.getUserIdFromToken(token);
+        PageRequest pageable = PageRequest.of(page, size);
+        FollowedAnswerRequest request = new FollowedAnswerRequest(userId, pageable);
+        Page<FollowedAnswerResponse> followedAnswers = followService.getAnswers(request);
+        return ResponseEntity.ok(followedAnswers);
+    }
+
+
 
 }

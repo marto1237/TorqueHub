@@ -12,10 +12,8 @@ import org.springframework.http.ResponseEntity;
 import torquehub.torquehub.business.interfaces.FollowService;
 import torquehub.torquehub.configuration.utils.TokenUtil;
 import torquehub.torquehub.controllers.FollowController;
-import torquehub.torquehub.domain.request.follow_dtos.FollowAnswerRequest;
-import torquehub.torquehub.domain.request.follow_dtos.FollowQuestionRequest;
-import torquehub.torquehub.domain.request.follow_dtos.FollowedAnswerRequest;
-import torquehub.torquehub.domain.request.follow_dtos.FollowedQuestionRequest;
+import torquehub.torquehub.domain.request.follow_dtos.*;
+import torquehub.torquehub.domain.response.MessageResponse;
 import torquehub.torquehub.domain.response.follow_dtos.FollowResponse;
 
 import java.util.Arrays;
@@ -24,8 +22,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class FollowControllerTest {
     @InjectMocks
@@ -219,4 +216,66 @@ class FollowControllerTest {
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
+
+    @Test
+    void shouldMuteFollowSuccessfullyInController() {
+        String token = "Bearer token";
+        Long followId = 1L;
+
+        when(tokenUtil.getUserIdFromToken(token)).thenReturn(1L);
+        when(followService.muteFollow(any(MuteFollowRequest.class))).thenReturn(true);
+
+        ResponseEntity<MessageResponse> response = followController.toggleMute(followId, true, token);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("Follow muted successfully", response.getBody().getMessage());
+        verify(followService).muteFollow(any(MuteFollowRequest.class));
+    }
+
+    @Test
+    void shouldHandleExceptionWhenMuteFollowFails() {
+        String token = "Bearer token";
+        Long followId = 1L;
+
+        when(tokenUtil.getUserIdFromToken(token)).thenReturn(1L);
+        doThrow(new RuntimeException("Internal error")).when(followService).muteFollow(any(MuteFollowRequest.class));
+
+        ResponseEntity<MessageResponse> response = followController.toggleMute(followId, true, token);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+    }
+
+    @Test
+    void shouldBatchMuteFollowsSuccessfullyInController() {
+        String token = "Bearer token";
+        List<MuteFollowRequest> muteRequests = List.of(
+                new MuteFollowRequest(1L, 1L, true),
+                new MuteFollowRequest(1L, 2L, false)
+        );
+
+        when(tokenUtil.getUserIdFromToken(token)).thenReturn(1L);
+        when(followService.batchToggleMuteFollows(anyList())).thenReturn(true);
+
+        ResponseEntity<MessageResponse> response = followController.batchToggleMuteFollows(muteRequests, token);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("Follows muted/unmuted successfully", response.getBody().getMessage());
+        verify(followService).batchToggleMuteFollows(anyList());
+    }
+
+    @Test
+    void shouldHandleExceptionWhenBatchMuteFollowsFails() {
+        String token = "Bearer token";
+        List<MuteFollowRequest> muteRequests = List.of(
+                new MuteFollowRequest(1L, 1L, true)
+        );
+
+        when(tokenUtil.getUserIdFromToken(token)).thenReturn(1L);
+        doThrow(new RuntimeException("Internal error")).when(followService).batchToggleMuteFollows(anyList());
+
+        ResponseEntity<MessageResponse> response = followController.batchToggleMuteFollows(muteRequests, token);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+    }
+
 }

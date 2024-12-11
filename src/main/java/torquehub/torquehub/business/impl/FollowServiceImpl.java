@@ -13,15 +13,11 @@ import torquehub.torquehub.domain.model.jpa_models.JpaUser;
 import torquehub.torquehub.domain.model.jpa_models.JpaAnswer;
 import torquehub.torquehub.domain.model.jpa_models.JpaFollow;
 import torquehub.torquehub.domain.model.jpa_models.JpaQuestion;
-import torquehub.torquehub.domain.request.follow_dtos.FollowAnswerRequest;
-import torquehub.torquehub.domain.request.follow_dtos.FollowQuestionRequest;
-import torquehub.torquehub.domain.request.follow_dtos.FollowedAnswerRequest;
-import torquehub.torquehub.domain.request.follow_dtos.FollowedQuestionRequest;
+import torquehub.torquehub.domain.request.follow_dtos.*;
 import torquehub.torquehub.domain.response.follow_dtos.FollowResponse;
-import torquehub.torquehub.persistence.jpa.impl.JpaAnswerRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaFollowRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaQuestionRepository;
-import torquehub.torquehub.persistence.jpa.impl.JpaUserRepository;
+import torquehub.torquehub.domain.response.follow_dtos.FollowedAnswerResponse;
+import torquehub.torquehub.domain.response.follow_dtos.FollowedQuestionResponse;
+import torquehub.torquehub.persistence.jpa.impl.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -164,4 +160,59 @@ public class FollowServiceImpl implements FollowService {
         followRepository.deleteAll(follows);
         return true;
     }
+
+    @Override
+    public boolean muteFollow(MuteFollowRequest muteFollowRequest) {
+        JpaFollow follow = followRepository.findById(muteFollowRequest.getFollowId())
+                .orElseThrow(() -> new IllegalArgumentException("Follow ID not found"));
+        if (!follow.getJpaUser().getId().equals(muteFollowRequest.getUserId())) {
+            throw new IllegalArgumentException("Unauthorized: Follow does not belong to this user");
+        }
+        follow.setMuted(muteFollowRequest.getMuteStatus());
+        followRepository.save(follow);
+        return true;
+    }
+
+
+    @Override
+    @Transactional
+    public boolean batchToggleMuteFollows(List<MuteFollowRequest> muteRequests) {
+        List<Long> followIds = muteRequests.stream()
+                .map(MuteFollowRequest::getFollowId)
+                .toList();
+
+        List<JpaFollow> follows = followRepository.findAllById(followIds);
+
+        for (JpaFollow follow : follows) {
+            MuteFollowRequest request = muteRequests.stream()
+                    .filter(mr -> mr.getFollowId().equals(follow.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Follow ID not found in request"));
+
+            if (!follow.getJpaUser().getId().equals(request.getUserId())) {
+                throw new IllegalArgumentException("Unauthorized: Follow does not belong to this user");
+            }
+
+            follow.setMuted(request.getMuteStatus());
+        }
+
+        followRepository.saveAll(follows);
+        return true;
+    }
+
+
+
+    @Override
+    public Page<FollowedQuestionResponse> getQuestions(FollowedQuestionRequest request) {
+        Page<JpaFollow> followedQuestions = followRepository.findByUserIdAndJpaQuestionIsNotNull(request.getUserId(), request.getPageable());
+        return followedQuestions.map(followMapper::toFollowedQuestionResponse);
+    }
+
+
+    @Override
+    public Page<FollowedAnswerResponse> getAnswers(FollowedAnswerRequest request) {
+        Page<JpaFollow> followedAnswers = followRepository.findByUserIdAndJpaAnswerIsNotNull(request.getUserId(), request.getPageable());
+        return followedAnswers.map(followMapper::toFollowedAnswerResponse);
+    }
+
 }

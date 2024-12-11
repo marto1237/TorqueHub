@@ -16,6 +16,8 @@ import torquehub.torquehub.domain.model.jpa_models.*;
 import torquehub.torquehub.domain.request.follow_dtos.*;
 import torquehub.torquehub.domain.response.follow_dtos.FollowResponse;
 import torquehub.torquehub.persistence.jpa.impl.*;
+
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -45,16 +47,49 @@ class FollowServiceImplTest {
     @Mock
     private FollowMapper followMapper;
 
+    private JpaUser jpaUser;
+    private JpaFollow jpaFollow1;
+    private JpaFollow jpaFollow2;
+    private MuteFollowRequest muteFollowRequest1;
+    private MuteFollowRequest muteFollowRequest2;
+
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);
+
+        jpaUser = JpaUser.builder()
+                .id(1L)
+                .username("testUser")
+                .email("test@example.com")
+                .password("password")
+                .salt("salt")
+                .jpaRole(new JpaRole())
+                .points(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        jpaFollow1 = JpaFollow.builder()
+                .id(1L)
+                .jpaUser(jpaUser)
+                .isMuted(false)
+                .followedAt(LocalDateTime.now())
+                .build();
+
+        jpaFollow2 = JpaFollow.builder()
+                .id(2L)
+                .jpaUser(jpaUser)
+                .isMuted(true)
+                .followedAt(LocalDateTime.now())
+                .build();
+
+        muteFollowRequest1 = new MuteFollowRequest(1L, 1L, true);
+        muteFollowRequest2 = new MuteFollowRequest(1L, 2L, false);
     }
 
     @Test
     void shouldCreateFollowWhenFollowDoesNotExistForQuestion() {
         Long userId = 1L;
         Long questionId = 2L;
-        JpaUser jpaUser = new JpaUser();
         JpaQuestion jpaQuestion = new JpaQuestion();
         JpaFollow jpaFollow = new JpaFollow();
         FollowResponse followResponse = new FollowResponse();
@@ -104,7 +139,6 @@ class FollowServiceImplTest {
     void shouldCreateFollowWhenFollowDoesNotExistForAnswer() {
         Long userId = 1L;
         Long answerId = 2L;
-        JpaUser jpaUser = new JpaUser();
         JpaAnswer jpaAnswer = new JpaAnswer();
         JpaFollow jpaFollow = new JpaFollow();
         FollowResponse followResponse = new FollowResponse();
@@ -302,5 +336,85 @@ class FollowServiceImplTest {
 
         verify(followRepository, never()).save(any(JpaFollow.class));
     }
+
+    @Test
+    void shouldMuteFollowSuccessfully() {
+        Long followId = 1L;
+        Long userId = 1L;
+        MuteFollowRequest muteRequest = new MuteFollowRequest(userId, followId, true);
+        JpaFollow jpaFollow = new JpaFollow();
+        jpaFollow.setId(followId);
+        jpaFollow.setJpaUser(new JpaUser());
+        jpaFollow.getJpaUser().setId(userId);
+
+        when(followRepository.findById(followId)).thenReturn(Optional.of(jpaFollow));
+        when(followRepository.save(any(JpaFollow.class))).thenReturn(jpaFollow);
+
+        boolean result = followService.muteFollow(muteRequest);
+
+        assertTrue(result);
+        assertTrue(jpaFollow.isMuted());
+        verify(followRepository).save(jpaFollow);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenMuteFollowUnauthorized() {
+        Long followId = 1L;
+        Long userId = 1L;
+        MuteFollowRequest muteRequest = new MuteFollowRequest(userId, followId, true);
+
+        JpaFollow jpaFollow = new JpaFollow();
+        jpaFollow.setId(followId);
+        jpaFollow.setJpaUser(new JpaUser());
+        jpaFollow.getJpaUser().setId(2L); // Different userId
+
+        when(followRepository.findById(followId)).thenReturn(Optional.of(jpaFollow));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            followService.muteFollow(muteRequest);
+        });
+
+        assertEquals("Unauthorized: Follow does not belong to this user", exception.getMessage());
+    }
+
+
+
+    @Test
+    void shouldBatchToggleMuteFollowsSuccessfully() {
+        List<MuteFollowRequest> muteRequests = List.of(muteFollowRequest1, muteFollowRequest2);
+        List<JpaFollow> follows = List.of(jpaFollow1, jpaFollow2);
+
+        when(followRepository.findAllById(anyList())).thenReturn(follows);
+        when(followRepository.saveAll(anyList())).thenReturn(follows);
+
+        boolean result = followService.batchToggleMuteFollows(muteRequests);
+
+        assertTrue(result);
+        assertTrue(jpaFollow1.isMuted());
+        assertFalse(jpaFollow2.isMuted());
+        verify(followRepository).saveAll(follows);
+    }
+
+
+    @Test
+    void shouldThrowExceptionWhenBatchMuteFollowUnauthorized() {
+        List<MuteFollowRequest> muteRequests = List.of(new MuteFollowRequest(1L, 1L, true));
+
+        JpaFollow jpaFollow = new JpaFollow();
+        jpaFollow.setId(1L);
+        jpaFollow.setJpaUser(new JpaUser());
+        jpaFollow.getJpaUser().setId(2L); // Different userId
+
+        when(followRepository.findAllById(anyList())).thenReturn(List.of(jpaFollow));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            followService.batchToggleMuteFollows(muteRequests);
+        });
+
+        assertEquals("Unauthorized: Follow does not belong to this user", exception.getMessage());
+    }
+
+
+
 
 }
